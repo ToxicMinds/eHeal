@@ -1,0 +1,93 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@theme inline {
+    --font-sans: "Atkinson Hyperlegible Next Variable", system-ui, sans-serif;
+    --font-heading: "Eczar Variable", Georgia, serif;
+    --font-mono: "Atkinson Hyperlegible Mono Variable", ui-monospace, monospace;
+
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+
+    /* The two voices of a consultation, and the marks made on a transcript. */
+    --color-practitioner: #2b3a8c;
+    --color-practitioner-tint: #e8ebf8;
+    --color-patient: #1a6b57;
+    --color-patient-tint: #e2f1ec;
+    --color-turmeric: #e3a008;      /* attention: uncertainty, low confidence */
+    --color-turmeric-tint: #fcefc7;
+    --color-turmeric-ink: #5c4100;
+    --color-madder: #a61e2a;        /* failure */
+    --color-madder-tint: #fbe9ea;
+}
+
+:root {
+    --background: #f3f5f9;
+    --foreground: #171a2b;
+    --card: #ffffff;
+    --card-foreground: #171a2b;
+    --popover: #ffffff;
+    --popover-foreground: #171a2b;
+    --primary: #2b3a8c;
+    --primary-foreground: #ffffff;
+    --secondary: #e8ebf8;
+    --secondary-foreground: #1f2b6b;
+    --muted: #e9ecf3;
+    --muted-foreground: #4b5166;
+    --accent: #e8ebf8;
+    --accent-foreground: #1f2b6b;
+    --destructive: #a61e2a;
+    --border: #d5d9e4;
+    --input: #8891a7;
+    --ring: #2b3a8c;
+    --radius: 0.5rem;
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    html {
+        @apply font-sans;
+    }
+    body {
+        @apply bg-background text-foreground antialiased;
+    }
+    button:not(:disabled),
+    [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
+    :focus-visible {
+        outline: 3px solid var(--ring);
+        outline-offset: 2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+}
