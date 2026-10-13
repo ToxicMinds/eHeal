@@ -56,6 +56,15 @@ hosted project the owner creates them in the Supabase dashboard.
 Hosted sign-in rules (no public sign-up, 12-character passwords) are applied with
 `scripts/configure-hosted-auth.sh`.
 
+## Publish the web app
+
+    git push origin main
+    scripts/deploy-web.sh                  # builds on Render from main and waits until it is live
+    (cd apps/web && E2E_BASE_URL=https://eheal-app.onrender.com E2E_EMAIL=... E2E_PASSWORD=... pnpm exec playwright test)
+
+The last line drives the live app in a browser with a dedicated test account, never the
+owner's.
+
 ## Layout
 
     apps/web                 web app
