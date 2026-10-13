@@ -1,0 +1,18 @@
+node_modules/
+.turbo/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+.env
+.env.*
+# never commit audio, models or vault data
+*.wav
+*.mp3
+*.m4a
+*.enc
+models/
+vault/
