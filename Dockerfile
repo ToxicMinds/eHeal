@@ -3,10 +3,12 @@ FROM python:3.12-slim
 COPY --from=ghcr.io/astral-sh/uv:0.10.12 /uv /usr/local/bin/uv
 
 ARG EHEAL_MODEL=base
+# One thread: on a fractional-CPU host, more threads fight over the quota (measured 6x slower).
 ENV EHEAL_MODEL=${EHEAL_MODEL} \
     EHEAL_HOME=/srv/eheal \
     EHEAL_DEPLOYMENT=cloud-demo \
     EHEAL_PORT=10000 \
+    EHEAL_CPU_THREADS=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_NO_CACHE=1 \
     PATH=/app/.venv/bin:$PATH
