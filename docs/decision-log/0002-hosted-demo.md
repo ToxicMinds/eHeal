@@ -1,6 +1,6 @@
 # 0002 — Hosted demo deployment
 
-Status: accepted 2026-10-13 at the product owner's explicit request.
+Status: superseded by 0003 on 13 October 2026. The hosted demo and the `cloud-demo` mode are removed in slice 1.3.
 
 ## Context
 
