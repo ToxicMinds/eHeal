@@ -1,0 +1,13 @@
+# Hosted demo of the clinical worker. Synthetic data only.
+# See docs/decision-log/0002-hosted-demo.md.
+services:
+  - type: web
+    name: eheal-demo
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: EHEAL_ACCESS_TOKEN
+        sync: false # entered once in the Render dashboard; at least 32 characters
