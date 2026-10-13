@@ -1,0 +1,6 @@
+**
+!apps/clinical-worker/pyproject.toml
+!apps/clinical-worker/uv.lock
+!apps/clinical-worker/README.md
+!apps/clinical-worker/src/**
+**/__pycache__

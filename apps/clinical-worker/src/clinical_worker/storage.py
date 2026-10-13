@@ -5,6 +5,7 @@ replaces this module's internals. Paths are built only from UUIDs and fixed
 names, so no user-supplied string ever reaches the filesystem."""
 
 import os
+import shutil
 from collections.abc import AsyncIterator
 from pathlib import Path
 from uuid import UUID
@@ -44,6 +45,9 @@ class Storage:
             path.unlink(missing_ok=True)
             raise
         return size
+
+    def purge(self, appointment_id: UUID) -> None:
+        shutil.rmtree(self._root / str(appointment_id), ignore_errors=True)
 
     def write_transcript(self, transcript: Transcript) -> Path:
         path = self.transcript_path(transcript.appointment_id)

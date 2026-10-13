@@ -14,9 +14,11 @@ from .schema import Segment, Speaker, Transcript, TranscriptionModel
 
 
 @lru_cache(maxsize=1)
-def _load(model_path: str, device: str, compute_type: str) -> WhisperModel:
+def _load(model_path: str, device: str, compute_type: str, cpu_threads: int) -> WhisperModel:
     # A directory path means faster-whisper never contacts Hugging Face.
-    return WhisperModel(model_path, device=device, compute_type=compute_type)
+    return WhisperModel(
+        model_path, device=device, compute_type=compute_type, cpu_threads=cpu_threads
+    )
 
 
 def transcribe(
@@ -30,7 +32,9 @@ def transcribe(
     if not settings.model_path.is_dir():
         raise WorkerError(ErrorCategory.TRANSCRIPTION_MODEL_UNAVAILABLE)
     try:
-        model = _load(str(settings.model_path), settings.device, settings.compute_type)
+        model = _load(
+            str(settings.model_path), settings.device, settings.compute_type, settings.cpu_threads
+        )
         raw_segments, info = model.transcribe(str(path), language=language, vad_filter=True)
         segments = [
             Segment(

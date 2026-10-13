@@ -18,8 +18,12 @@ def audio_duration_seconds(path: Path, max_duration_seconds: float) -> float:
             elif container.duration is not None:
                 duration = container.duration / av.time_base
             else:
-                raise WorkerError(ErrorCategory.AUDIO_DURATION_INVALID)
-            next(container.decode(stream), None)  # prove at least the start decodes
+                duration = None
+            first = next(container.decode(stream), None)  # prove at least the start decodes
+            if duration is None:
+                # Browser recordings (webm) carry no duration header: count the samples.
+                frames = [first, *container.decode(stream)] if first is not None else []
+                duration = sum(f.samples / f.sample_rate for f in frames)
     except (av.FFmpegError, ValueError, OSError):
         raise WorkerError(ErrorCategory.AUDIO_CORRUPT) from None
     if not 0 < duration <= max_duration_seconds:

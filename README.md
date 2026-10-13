@@ -10,7 +10,7 @@ Assumptions made where it is silent are in [docs/decision-log](docs/decision-log
 
 ## Status
 
-Phase 1, Slice 1: one audio file in, one speaker-labelled transcript out, all local.
+Phase 1, Slice 1: one audio file in, one speaker-labelled transcript out, with a minimal browser interface.
 
 ## Prerequisites
 
@@ -50,6 +50,21 @@ The transcript is returned and also written to
 `~/.local/share/eheal/data/<appointment id>/transcript/raw.json`.
 Omit `language` to auto-detect. `speaker` is `patient` or `practitioner`.
 
+## Browser interface
+
+Open `http://127.0.0.1:8765/` while the worker runs. Paste the token, choose an
+audio file or record from the microphone, and transcribe.
+
+## Hosted demo
+
+A container build of the same worker runs in `cloud-demo` mode for trying the
+pipeline from a browser. It keeps no audio or transcript after each request.
+**Synthetic audio only**; see [decision 0002](docs/decision-log/0002-hosted-demo.md).
+
+    docker build -t eheal-demo .                      # bakes in the `base` model
+    docker run -p 10000:10000 \
+      -e EHEAL_ACCESS_TOKEN=<32+ characters> -e EHEAL_PUBLIC_HOST=<public hostname> eheal-demo
+
 ## Configuration
 
 | Variable | Default | Meaning |
@@ -61,6 +76,10 @@ Omit `language` to auto-detect. `speaker` is `patient` or `practitioner`.
 | `EHEAL_PORT` | `8765` | Port on 127.0.0.1. The host is not configurable. |
 | `EHEAL_MAX_BYTES` | 200 MB | Upload size limit. |
 | `EHEAL_MAX_DURATION_SECONDS` | 7200 | Audio length limit. |
+| `EHEAL_CPU_THREADS` | library default | Threads used for transcription. |
+| `EHEAL_DEPLOYMENT` | `local` | `cloud-demo` only inside the hosted container. |
+| `EHEAL_ACCESS_TOKEN` | — | Required in `cloud-demo`. |
+| `EHEAL_PUBLIC_HOST` | — | Required in `cloud-demo`. |
 
 ## Failure behaviour
 
