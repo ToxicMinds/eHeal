@@ -2,12 +2,13 @@
 
 import secrets
 import time
+from pathlib import Path
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from .audio import audio_duration_seconds
 from .config import AUDIO_FORMATS, HOST, Settings
@@ -17,16 +18,33 @@ from .schema import Speaker, Transcript
 from .storage import Storage
 from .transcribe import transcribe
 
+STATIC = Path(__file__).parent / "static"
+STATIC_FILES = {"/": "index.html", "/app.js": "app.js", "/app.css": "app.css"}
+SECURITY_HEADERS = {
+    "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; "
+    "connect-src 'self'; media-src blob:; base-uri 'none'; form-action 'none'; "
+    "frame-ancestors 'none'",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "no-store",
+}
+
 
 def create_app(settings: Settings, token: str) -> FastAPI:
     app = FastAPI(title="clinical-worker", docs_url=None, redoc_url=None, openapi_url=None)
     storage = Storage(settings.data_dir)
     allowed_hosts = {f"{HOST}:{settings.port}", f"localhost:{settings.port}"}
+    allowed_origins = {f"http://{host}" for host in allowed_hosts}
+    if settings.public_host:
+        allowed_hosts.add(settings.public_host)
+        allowed_origins.add(f"https://{settings.public_host}")
 
     def local_only(request: Request) -> None:
-        # Blocks DNS rebinding (foreign Host) and browser cross-site requests (any Origin;
-        # no browser client exists yet).
-        if request.headers.get("host") not in allowed_hosts or "origin" in request.headers:
+        # Blocks DNS rebinding (foreign Host) and cross-site browser requests (foreign Origin).
+        if (
+            request.headers.get("host") not in allowed_hosts
+            or request.headers.get("origin", next(iter(allowed_origins))) not in allowed_origins
+        ):
             raise HTTPException(status_code=403, detail="Forbidden")
 
     def authorised(request: Request) -> None:
@@ -42,9 +60,24 @@ def create_app(settings: Settings, token: str) -> FastAPI:
             content={"error_category": exc.category.value, "message": exc.public_message},
         )
 
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
+        response = await call_next(request)
+        response.headers.update(SECURITY_HEADERS)
+        return response
+
     @app.get("/health", dependencies=[Depends(local_only)])
     def health() -> dict[str, str]:
-        return {"status": "ok"}
+        return {"status": "ok", "deployment": settings.deployment, "model": settings.model}
+
+    def static_route(filename: str):  # type: ignore[no-untyped-def]
+        def serve() -> FileResponse:
+            return FileResponse(STATIC / filename)
+
+        return serve
+
+    for route, filename in STATIC_FILES.items():
+        app.get(route, dependencies=[Depends(local_only)])(static_route(filename))
 
     @app.post(
         "/appointments/{appointment_id}/transcriptions",
@@ -93,6 +126,9 @@ def create_app(settings: Settings, token: str) -> FastAPI:
                 exception_type=type(exc.__cause__).__name__ if exc.__cause__ else None,
             )
             raise
+        finally:
+            if not settings.retain_files:
+                storage.purge(appointment_id)
         log_event(
             "transcription.completed",
             **ids,

@@ -4,12 +4,15 @@ import wave
 from pathlib import Path
 from uuid import uuid4
 
+import av
 import pytest
-from conftest import FIXTURE, make_client
+from conftest import FIXTURE, TOKEN, make_client
 from fastapi.testclient import TestClient
 from httpx2 import Response
+from pydantic import SecretStr
 
 from clinical_worker import transcribe as transcribe_module
+from clinical_worker.app import create_app
 from clinical_worker.config import Settings
 from clinical_worker.schema import Transcript
 
@@ -35,7 +38,11 @@ def _silence(seconds: int = 3) -> bytes:
 
 
 def test_health(client: TestClient) -> None:
-    assert client.get("/health").json() == {"status": "ok"}
+    assert client.get("/health").json() == {
+        "status": "ok",
+        "deployment": "local",
+        "model": "tiny",
+    }
 
 
 def test_transcribes_fixture_and_exports_json(
@@ -161,3 +168,65 @@ def test_rejects_foreign_host_and_browser_origin(
     client: TestClient, headers: dict[str, str]
 ) -> None:
     assert client.get("/health", headers=headers).status_code == 403
+
+
+def test_same_origin_browser_request_is_allowed(client: TestClient) -> None:
+    assert client.get("/health", headers={"Origin": "http://127.0.0.1:8765"}).status_code == 200
+
+
+def test_serves_interface_with_strict_content_security_policy(client: TestClient) -> None:
+    page = client.get("/")
+    assert page.status_code == 200
+    assert "Synthetic data only" in page.text
+    assert "script-src 'self'" in page.headers["content-security-policy"]
+    assert client.get("/app.js").status_code == 200
+    assert client.get("/app.css").status_code == 200
+    assert client.get("/../config.py").status_code in (403, 404)
+
+
+def _unseekable_webm() -> bytes:
+    """Re-encode the fixture the way a browser recorder does: Opus in WebM, no duration."""
+
+    class Pipe(io.BytesIO):
+        def seekable(self) -> bool:
+            return False
+
+    sink = Pipe()
+    with av.open(str(FIXTURE)) as source, av.open(sink, "w", format="webm") as out:
+        stream = out.add_stream("libopus", rate=48000)
+        resampler = av.AudioResampler(format="s16", layout="mono", rate=48000, frame_size=960)
+        for frame in source.decode(audio=0):
+            for resampled in resampler.resample(frame):
+                out.mux(stream.encode(resampled))
+        out.mux(stream.encode(None))
+    return sink.getvalue()
+
+
+def test_transcribes_browser_style_recording(client: TestClient) -> None:
+    _, response = _post(client, _unseekable_webm(), "webm", language="en")
+    assert response.status_code == 200, response.text
+    text = " ".join(s["machine_text"] for s in response.json()["segments"]).lower()
+    assert "sleeping properly" in text
+
+
+def test_cloud_demo_accepts_public_host_and_keeps_nothing(settings: Settings) -> None:
+    cloud = Settings(
+        home=settings.home,
+        model="tiny",
+        deployment="cloud-demo",
+        access_token=SecretStr(TOKEN * 4),
+        public_host="demo.example",
+    )
+    app = create_app(cloud, TOKEN * 4)
+    with TestClient(app, base_url="https://demo.example") as client:
+        assert client.get("/health").json()["deployment"] == "cloud-demo"
+        assert client.get("/", headers={"Origin": "https://demo.example"}).status_code == 200
+        assert client.get("/health", headers={"Origin": "https://evil.example"}).status_code == 403
+        client.headers["Authorization"] = f"Bearer {TOKEN}"
+        _, wrong = _post(client, FIXTURE.read_bytes())
+        assert wrong.status_code == 401
+        client.headers["Authorization"] = f"Bearer {TOKEN * 4}"
+        _, response = _post(client, FIXTURE.read_bytes(), language="en")
+    assert response.status_code == 200
+    assert response.json()["segments"]
+    assert not [p for p in cloud.data_dir.rglob("*") if p.is_file()]

@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from clinical_worker.__main__ import SCHEMA_DIR, schema_json
-from clinical_worker.config import HOST, load_settings
+from clinical_worker.config import HOST, Settings, load_settings
 from clinical_worker.log import log_event
 from clinical_worker.schema import SCHEMA_VERSION, Segment, Transcript, TranscriptionModel
 from clinical_worker.storage import Storage
@@ -88,3 +88,35 @@ def test_storage_writes_private_files_under_uuid_paths(tmp_path: Path) -> None:
     assert path.parent.stat().st_mode & 0o777 == 0o700
     assert Transcript.model_validate_json(path.read_text()) == transcript
     assert not list(path.parent.glob("*.partial"))
+
+
+def test_local_mode_binds_localhost_and_retains_files() -> None:
+    settings = Settings()
+    assert settings.bind_host == "127.0.0.1"
+    assert settings.retain_files
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        {},  # no token, no host
+        {"EHEAL_ACCESS_TOKEN": "short", "EHEAL_PUBLIC_HOST": "demo.example"},
+        {"EHEAL_ACCESS_TOKEN": "x" * 32},  # no host
+    ],
+)
+def test_cloud_demo_refuses_to_start_without_token_and_host(env: dict[str, str]) -> None:
+    with pytest.raises(ValidationError):
+        load_settings({"EHEAL_DEPLOYMENT": "cloud-demo", **env})
+
+
+def test_cloud_demo_settings() -> None:
+    settings = load_settings(
+        {
+            "EHEAL_DEPLOYMENT": "cloud-demo",
+            "EHEAL_ACCESS_TOKEN": "x" * 32,
+            "RENDER_EXTERNAL_HOSTNAME": "demo.onrender.com",
+        }
+    )
+    assert settings.public_host == "demo.onrender.com"
+    assert not settings.retain_files
+    assert "x" * 32 not in repr(settings)  # the token never appears in logs or tracebacks

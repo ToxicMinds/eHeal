@@ -10,7 +10,7 @@ from pathlib import Path
 
 import uvicorn
 
-from .config import HOST, Settings, load_settings
+from .config import Settings, load_settings
 from .schema import SCHEMA_VERSION, Transcript
 
 SCHEMA_DIR = Path(__file__).resolve().parents[4] / "packages" / "schemas"
@@ -33,11 +33,16 @@ def _serve(settings: Settings) -> None:
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     settings.home.mkdir(mode=0o700, parents=True, exist_ok=True)
-    token = secrets.token_urlsafe(32)
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-    with os.fdopen(os.open(settings.token_path, flags, 0o600), "w") as out:
-        out.write(token)
-    uvicorn.run(create_app(settings, token), host=HOST, port=settings.port, access_log=False)
+    if settings.access_token is not None:
+        token = settings.access_token.get_secret_value()
+    else:
+        token = secrets.token_urlsafe(32)
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+        with os.fdopen(os.open(settings.token_path, flags, 0o600), "w") as out:
+            out.write(token)
+    uvicorn.run(
+        create_app(settings, token), host=settings.bind_host, port=settings.port, access_log=False
+    )
 
 
 def main() -> None:
