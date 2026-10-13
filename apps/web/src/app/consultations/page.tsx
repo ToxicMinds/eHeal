@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { StatusRail } from "@/components/status-rail";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import type { Tables } from "@/lib/database.types";
 import { RequireSession } from "@/lib/session";
 import { LANGUAGE_LABEL } from "@/lib/status";
@@ -33,7 +35,10 @@ function ConsultationList() {
 
   return (
     <>
-      <h1 className="font-heading text-4xl font-semibold tracking-tight">Consultations</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <h1 className="font-heading text-4xl font-semibold tracking-tight">Consultations</h1>
+        <Button asChild><Link href="/consultations/new/">New consultation</Link></Button>
+      </div>
       <div className="mt-6">
         {failed ? (
           <Alert variant="destructive">
@@ -47,7 +52,7 @@ function ConsultationList() {
           </p>
         ) : rows.length === 0 ? (
           <p className="rounded-xl border border-dashed bg-card p-8 text-muted-foreground">
-            No consultations yet.
+            No consultations yet. Create an invented one to try the workflow.
           </p>
         ) : (
           <div className="overflow-x-auto rounded-xl border bg-card">
@@ -64,7 +69,11 @@ function ConsultationList() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} className="border-b last:border-b-0">
-                    <td className="px-4 py-3 font-mono">{row.synthetic_patient_ref}</td>
+                    <td className="px-4 py-3 font-mono">
+                      <Link href={`/consultation/?id=${row.id}`} className="font-semibold text-practitioner underline underline-offset-4">
+                        {row.synthetic_patient_ref}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap">{formatWhen(row.scheduled_at)}</td>
                     <td className="px-4 py-3">{LANGUAGE_LABEL[row.language]}</td>
                     <td className="px-4 py-3"><StatusRail status={row.status} /></td>

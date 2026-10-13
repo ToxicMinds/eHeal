@@ -34,15 +34,126 @@ export type Database = {
   }
   public: {
     Tables: {
+      audio_tracks: {
+        Row: {
+          consultation_id: string
+          created_at: string
+          duration_seconds: number | null
+          format: string
+          id: string
+          offset_seconds: number
+          sha256: string
+          size_bytes: number
+          speaker: Database["public"]["Enums"]["speaker"]
+          storage_path: string
+          validation: Database["public"]["Enums"]["track_validation"]
+          validation_error: string | null
+        }
+        Insert: {
+          consultation_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          format: string
+          id?: string
+          offset_seconds?: number
+          sha256: string
+          size_bytes: number
+          speaker: Database["public"]["Enums"]["speaker"]
+          storage_path: string
+          validation?: Database["public"]["Enums"]["track_validation"]
+          validation_error?: string | null
+        }
+        Update: {
+          consultation_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          format?: string
+          id?: string
+          offset_seconds?: number
+          sha256?: string
+          size_bytes?: number
+          speaker?: Database["public"]["Enums"]["speaker"]
+          storage_path?: string
+          validation?: Database["public"]["Enums"]["track_validation"]
+          validation_error?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_tracks_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_events: {
+        Row: {
+          actor_id: string
+          actor_role: string
+          consultation_id: string
+          event_hash: string
+          event_id: string
+          event_type: string
+          metadata_without_clinical_content: Json
+          previous_event_hash: string | null
+          resource_id: string | null
+          resource_type: string
+          result: string
+          seq: number
+          timestamp_utc: string
+        }
+        Insert: {
+          actor_id: string
+          actor_role: string
+          consultation_id: string
+          event_hash: string
+          event_id: string
+          event_type: string
+          metadata_without_clinical_content?: Json
+          previous_event_hash?: string | null
+          resource_id?: string | null
+          resource_type: string
+          result: string
+          seq?: never
+          timestamp_utc: string
+        }
+        Update: {
+          actor_id?: string
+          actor_role?: string
+          consultation_id?: string
+          event_hash?: string
+          event_id?: string
+          event_type?: string
+          metadata_without_clinical_content?: Json
+          previous_event_hash?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          result?: string
+          seq?: never
+          timestamp_utc?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consultations: {
         Row: {
           consent_recorded_at: string | null
           consent_recorded_by: string | null
           consent_withdrawn_at: string | null
+          consent_withdrawn_by: string | null
           created_at: string
           id: string
           language: Database["public"]["Enums"]["consultation_language"]
           practitioner_id: string
+          recorded_together: boolean
           scenario_notes: string
           scheduled_at: string
           status: Database["public"]["Enums"]["consultation_status"]
@@ -53,10 +164,12 @@ export type Database = {
           consent_recorded_at?: string | null
           consent_recorded_by?: string | null
           consent_withdrawn_at?: string | null
+          consent_withdrawn_by?: string | null
           created_at?: string
           id?: string
           language: Database["public"]["Enums"]["consultation_language"]
           practitioner_id: string
+          recorded_together?: boolean
           scenario_notes?: string
           scheduled_at: string
           status: Database["public"]["Enums"]["consultation_status"]
@@ -67,10 +180,12 @@ export type Database = {
           consent_recorded_at?: string | null
           consent_recorded_by?: string | null
           consent_withdrawn_at?: string | null
+          consent_withdrawn_by?: string | null
           created_at?: string
           id?: string
           language?: Database["public"]["Enums"]["consultation_language"]
           practitioner_id?: string
+          recorded_together?: boolean
           scenario_notes?: string
           scheduled_at?: string
           status?: Database["public"]["Enums"]["consultation_status"]
@@ -84,7 +199,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_consultation: {
+        Args: {
+          p_consent_recorded: boolean
+          p_language: Database["public"]["Enums"]["consultation_language"]
+          p_scenario_notes?: string
+          p_scheduled_at: string
+          p_synthetic_patient_ref: string
+        }
+        Returns: Json
+      }
+      declare_recorded_together: {
+        Args: { p_consultation_id: string; p_recorded_together: boolean }
+        Returns: Json
+      }
+      record_consent: { Args: { p_consultation_id: string }; Returns: Json }
+      register_audio_track: {
+        Args: {
+          p_consultation_id: string
+          p_duration_seconds?: number
+          p_format: string
+          p_sha256: string
+          p_size_bytes: number
+          p_speaker: Database["public"]["Enums"]["speaker"]
+        }
+        Returns: Json
+      }
+      remove_audio_track: {
+        Args: {
+          p_consultation_id: string
+          p_speaker: Database["public"]["Enums"]["speaker"]
+        }
+        Returns: Json
+      }
+      verify_audit_chain: {
+        Args: { p_consultation_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       consultation_language: "en" | "de" | "sk" | "auto"
@@ -105,6 +256,8 @@ export type Database = {
         | "corrected"
         | "consent_withdrawn"
         | "archived"
+      speaker: "practitioner" | "patient"
+      track_validation: "pending" | "valid" | "invalid"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -254,6 +407,8 @@ export const Constants = {
         "consent_withdrawn",
         "archived",
       ],
+      speaker: ["practitioner", "patient"],
+      track_validation: ["pending", "valid", "invalid"],
     },
   },
 } as const
