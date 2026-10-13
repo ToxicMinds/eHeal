@@ -40,8 +40,9 @@ checked on 13 October 2026:
 - Uploaded audio and transcripts are stored in Supabase. That is acceptable only for
   invented data.
 - Another engine can be added later without changing the web app or the database.
-- The Supabase secret key on the engine's machine can read the whole project. It is
-  kept in a private file and never committed.
+- The engine signs in as its own account, limited to the job functions and the audio
+  of the job it has claimed. The project's secret key, which can do everything, is
+  not given to the engine (changed after review; see the specification, section 11).
 
 ## Reversal path
 

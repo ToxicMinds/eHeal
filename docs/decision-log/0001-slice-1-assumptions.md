@@ -1,6 +1,6 @@
 # 0001 — Slice 1 assumptions
 
-Status: accepted 2026-10-13. Items 1, 5, 6 and 8 are superseded by decision 0003; the rest stand. Each item is the smallest reversible choice where
+Status: accepted 2026-10-13. Items 1, 5, 6 and 8 are superseded by decision 0003, and item 9 by the limits in the specification, section 11 (50 MB, seven formats). The rest stand. Each item is the smallest reversible choice where
 MASTER_BUILD_SPEC.md was silent or contradictory.
 
 | # | Context | Decision | Alternative considered | Consequence | Reversal path |
