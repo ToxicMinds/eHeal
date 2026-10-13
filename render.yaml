@@ -1,13 +1,34 @@
-# Hosted demo of the clinical worker. Synthetic data only.
-# See docs/decision-log/0002-hosted-demo.md.
+# The web app: a static build served by Render's free static hosting.
+# Sign-in, database and audio files are in Supabase; transcription runs on an
+# engine we control (MASTER_BUILD_SPEC.md section 7).
 services:
   - type: web
-    name: eheal-demo
-    runtime: docker
-    plan: free
-    region: frankfurt
+    name: eheal-app
+    runtime: static
     branch: main
-    dockerfilePath: ./Dockerfile
+    buildCommand: npx --yes pnpm@11.5.2 install --frozen-lockfile && npx --yes pnpm@11.5.2 --filter web build
+    staticPublishPath: apps/web/out
+    pullRequestPreviewsEnabled: false
     envVars:
-      - key: EHEAL_ACCESS_TOKEN
-        sync: false # entered once in the Render dashboard; at least 32 characters
+      - key: NODE_VERSION
+        value: 24.11.1
+      # Both values are public by design: row-level security protects the data.
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://mconctpleszerqhgaarj.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_Smyh0uribqZljZVtpFLyDA_kEdm4XQb
+    headers:
+      # The per-page script policy is written into each page at build time
+      # (apps/web/scripts/inject-csp.mjs). These headers add what a page cannot set itself.
+      - path: /*
+        name: Content-Security-Policy
+        value: frame-ancestors 'none'
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer

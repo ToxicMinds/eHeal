@@ -1,105 +1,74 @@
 # eHeal
 
-Local-first teleconsultation documentation platform.
+A consultation documentation tool for Ayurveda and integrative-care practitioners:
+two audio tracks in, a transcript the practitioner can check and correct out.
 
-**Development POC. Synthetic data only. Not for use with real patients.**
-Data is stored unencrypted until the vault slice lands.
+**Development proof of concept. Invented data only. Not for use with real patients.**
 
-The authoritative specification is [MASTER_BUILD_SPEC.md](MASTER_BUILD_SPEC.md).
-Assumptions made where it is silent are in [docs/decision-log](docs/decision-log/).
+- What we are building and in what order: [MASTER_BUILD_SPEC.md](MASTER_BUILD_SPEC.md)
+- Where we are: [docs/roadmap.md](docs/roadmap.md)
+- Why things are the way they are: [docs/decision-log](docs/decision-log/)
 
-## Status
+## What runs where
 
-Phase 1, Slice 1: one audio file in, one speaker-labelled transcript out, with a minimal browser interface.
+| Piece | Where | Cost |
+|---|---|---|
+| Web app (`apps/web`) | Render static site | Free |
+| Sign-in, database, audio files (`supabase`) | Supabase, Frankfurt | Free |
+| Transcription engine (`apps/clinical-worker`) | A machine we control | Free |
+
+Nothing in this project may be charged for (specification, section 3).
 
 ## Prerequisites
 
-- Node >= 22 and pnpm 11
-- [uv](https://docs.astral.sh/uv/) (installs Python 3.12 for the worker)
-- About 600 MB of disk for the Whisper models
+- Node 22 or newer and pnpm 11
+- [uv](https://docs.astral.sh/uv/), which installs Python 3.12 for the engine
+- Docker and the [Supabase command-line tool](https://supabase.com/docs/guides/cli), for the local stack
 
-## Setup
+## Set up
 
     pnpm install
-    cd apps/clinical-worker
-    uv sync
-    uv run clinical-worker fetch-model                    # default model: small (~460 MB)
-    EHEAL_MODEL=tiny uv run clinical-worker fetch-model   # used by the tests (~75 MB)
-
-`fetch-model` is the only step that uses the network.
+    supabase start                         # local sign-in, database and storage in Docker
+    (cd apps/web && node scripts/use-local-stack.mjs)
+    (cd apps/clinical-worker && uv sync && EHEAL_MODEL=tiny uv run clinical-worker fetch-model)
 
 ## Check everything
 
-    pnpm check        # tests, lint, format check, type checking
+    pnpm check                             # tests, lint and type checks for every package
+    (cd apps/web && pnpm e2e)              # builds the web app and drives it in a real browser
 
-## Run the worker
+The web tests need the local stack to be running.
 
-    cd apps/clinical-worker
-    uv run clinical-worker
+## Work on the web app
 
-It listens on `127.0.0.1:8765` only and writes a per-run token to
-`~/.local/share/eheal/worker.token`.
+    cd apps/web && pnpm dev                # http://localhost:3000
 
-    TOKEN=$(cat ~/.local/share/eheal/worker.token)
-    ID=$(python3 -c "import uuid; print(uuid.uuid4())")
-    curl -X POST "http://127.0.0.1:8765/appointments/$ID/transcriptions?speaker=patient&format=wav&language=en" \
-      -H "Authorization: Bearer $TOKEN" \
-      --data-binary @../../packages/test-fixtures/audio/en-patient-sleep.wav
+Accounts cannot be created from the app. Locally, the tests create their own. On the
+hosted project the owner creates them in the Supabase dashboard.
 
-The transcript is returned and also written to
-`~/.local/share/eheal/data/<appointment id>/transcript/raw.json`.
-Omit `language` to auto-detect. `speaker` is `patient` or `practitioner`.
+## Change the database
 
-## Browser interface
+    supabase migration new describe_the_change    # then write the SQL
+    supabase db reset                             # rebuild the local database from all migrations
+    supabase gen types typescript --local > apps/web/src/lib/database.types.ts
+    supabase db push                              # apply to the hosted project
 
-Open `http://127.0.0.1:8765/` while the worker runs. Paste the token, choose an
-audio file or record from the microphone, and transcribe.
-
-## Hosted demo
-
-A container build of the same worker runs in `cloud-demo` mode for trying the
-pipeline from a browser. It keeps no audio or transcript after each request.
-**Synthetic audio only**; see [decision 0002](docs/decision-log/0002-hosted-demo.md).
-
-    docker build -t eheal-demo .                      # bakes in the `base` model
-    docker run -p 10000:10000 \
-      -e EHEAL_ACCESS_TOKEN=<32+ characters> -e EHEAL_PUBLIC_HOST=<public hostname> eheal-demo
-
-## Configuration
-
-| Variable | Default | Meaning |
-|---|---|---|
-| `EHEAL_HOME` | `~/.local/share/eheal` | Models, data and token. Keep it out of cloud-synced folders. |
-| `EHEAL_MODEL` | `small` | Whisper model size (`tiny`, `base`, `small`, `medium`, `large-v3`). |
-| `EHEAL_DEVICE` | `cpu` | `cpu` or `cuda`. |
-| `EHEAL_COMPUTE_TYPE` | `int8` | CTranslate2 compute type. |
-| `EHEAL_PORT` | `8765` | Port on 127.0.0.1. The host is not configurable. |
-| `EHEAL_MAX_BYTES` | 200 MB | Upload size limit. |
-| `EHEAL_MAX_DURATION_SECONDS` | 7200 | Audio length limit. |
-| `EHEAL_CPU_THREADS` | library default | Threads used for transcription. |
-| `EHEAL_DEPLOYMENT` | `local` | `cloud-demo` only inside the hosted container. |
-| `EHEAL_ACCESS_TOKEN` | — | Required in `cloud-demo`. |
-| `EHEAL_PUBLIC_HOST` | — | Required in `cloud-demo`. |
-
-## Failure behaviour
-
-Errors return `{"error_category", "message"}` with no stack trace. Rejected
-uploads are deleted. If transcription itself fails, the audio is kept for a
-retry and no transcript is written.
-
-## Known limitations
-
-- Storage is plaintext; the encrypted vault is Slice 5.
-- Requests are synchronous: no job status, cancellation or duplicate-request protection yet.
-- Confidence is an uncalibrated heuristic from Whisper's log-probability.
-- One text-to-speech fixture; it says nothing about real-world accuracy.
-- The `small` model is weak for Slovak; use `large-v3` when those fixtures arrive.
-- No audit log yet.
+Hosted sign-in rules (no public sign-up, 12-character passwords) are applied with
+`scripts/configure-hosted-auth.sh`.
 
 ## Layout
 
-    apps/clinical-worker     Python FastAPI worker, localhost only
-    packages/schemas         JSON Schema generated from the worker's Pydantic models
-    packages/test-fixtures   Synthetic audio only
-    scripts/make-fixture.sh  Generates synthetic speech with Piper
-    docs/decision-log        Assumptions and decisions
+    apps/web                 web app
+    apps/clinical-worker     transcription engine
+    packages/schemas         JSON Schema generated from the engine's models
+    packages/test-fixtures   synthetic audio only
+    supabase                 migrations and local configuration
+    docs                     roadmap, decision log, archived specification
+    scripts                  helper scripts
+
+## Known limitations
+
+- The engine is still the single-track version from phase 0. It is connected to the
+  web app in slice 1.3.
+- The local Supabase stack listens on all network interfaces with well-known default
+  keys. Stop it with `supabase stop` when you are not developing.
