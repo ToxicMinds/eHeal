@@ -16,3 +16,6 @@ dist/
 *.enc
 models/
 vault/
+
+# synthetic fixtures are the one exception
+!packages/test-fixtures/audio/*.wav

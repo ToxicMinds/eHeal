@@ -1,0 +1,48 @@
+[project]
+name = "clinical-worker"
+version = "0.1.0"
+description = "Local-only transcription worker (development POC, synthetic data only)"
+readme = "README.md"
+authors = [
+    { name = "Nikhil Shanbhag", email = "nikshanbhag@gmail.com" }
+]
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "av<19",  # faster-whisper 1.2.1 passes metadata_errors, removed in av 19
+    "fastapi>=0.143.0",
+    "faster-whisper>=1.2.1",
+    "pydantic>=2.14.1",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+clinical-worker = "clinical_worker.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.10.12,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.0",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["faster_whisper.*"]
+ignore_missing_imports = true
