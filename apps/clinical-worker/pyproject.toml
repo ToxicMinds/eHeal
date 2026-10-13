@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.11,<3.14"
 dependencies = [
+    "av<19",  # faster-whisper 1.2.1 passes metadata_errors, removed in av 19
     "fastapi>=0.143.0",
     "faster-whisper>=1.2.1",
     "pydantic>=2.14.1",
@@ -15,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-clinical-worker = "clinical_worker:main"
+clinical-worker = "clinical_worker.__main__:main"
 
 [build-system]
 requires = ["uv_build>=0.10.12,<0.11.0"]
@@ -23,7 +24,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
+    "httpx2>=2.13.1",
     "mypy>=2.4.0",
     "pytest>=9.1.1",
     "ruff>=0.17.0",
