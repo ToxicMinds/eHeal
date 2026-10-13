@@ -10,7 +10,17 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"]],
   use: { baseURL: remote ?? "http://127.0.0.1:3210", trace: "retain-on-failure" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // A synthetic microphone, so recording can be tested without a person.
+        permissions: ["microphone"],
+        launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] },
+      },
+    },
+  ],
   webServer: remote
     ? undefined
     : { command: "pnpm exec serve out -l 3210 -L", url: "http://127.0.0.1:3210/sign-in/", reuseExistingServer: false },

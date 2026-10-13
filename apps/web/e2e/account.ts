@@ -1,11 +1,11 @@
 import { test as base, expect } from "@playwright/test";
-import { adminClient, freshPractitioner, localStack, PASSWORD } from "../tests/local-stack";
+import { createConsultation, localStack, newPractitioner, PASSWORD, rpc } from "../tests/local-stack";
 
 type Account = { email: string; password: string; references: string[] };
 
 /**
  * `account` is a practitioner who can sign in. Locally it is created fresh with two
- * consultations. Against a deployed app it is the account named in the environment.
+ * consultations. Against a deployed app it is the test account named in the environment.
  * `problems` collects anything the browser refused or reported; tests assert it stays empty.
  */
 export const test = base.extend<{ problems: string[] }, { account: Account }>({
@@ -17,15 +17,14 @@ export const test = base.extend<{ problems: string[] }, { account: Account }>({
         await provide({ email, password, references: [] });
         return;
       }
-      const admin = adminClient(localStack());
-      const email = "practitioner@e2e.test";
-      const id = await freshPractitioner(admin, email);
-      const { error } = await admin.from("consultations").insert([
-        { practitioner_id: id, synthetic_patient_ref: "SYN-0042", scheduled_at: "2026-10-05T08:30:00Z", language: "en", status: "ready_for_audio" },
-        { practitioner_id: id, synthetic_patient_ref: "SYN-0043", scheduled_at: "2026-10-06T08:30:00Z", language: "sk", status: "transcription_failed" },
-      ]);
-      if (error) throw error;
-      await provide({ email, password: PASSWORD, references: ["SYN-0043", "SYN-0042"] });
+      const who = await newPractitioner(localStack(), "e2e");
+      await createConsultation(who, { ref: "SYN-0042", consent: true });
+      const later = await rpc(who.client, "create_consultation", {
+        p_synthetic_patient_ref: "SYN-0043", p_scheduled_at: "2026-10-06T08:30:00Z",
+        p_language: "sk", p_consent_recorded: false,
+      });
+      if (!later.ok) throw new Error("could not prepare the second consultation");
+      await provide({ email: who.email, password: PASSWORD, references: ["SYN-0043", "SYN-0042"] });
     },
     { scope: "worker" },
   ],
@@ -39,3 +38,11 @@ export const test = base.extend<{ problems: string[] }, { account: Account }>({
   },
 });
 export { expect };
+
+export async function signIn(page: import("@playwright/test").Page, account: Account) {
+  await page.goto("/sign-in/");
+  await page.getByLabel("Email").fill(account.email);
+  await page.getByLabel("Password").fill(account.password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("heading", { name: "Consultations" })).toBeVisible();
+}

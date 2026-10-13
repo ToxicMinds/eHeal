@@ -1,74 +1,115 @@
-// MASTER_BUILD_SPEC.md section 20.4: nobody reaches another practitioner's data.
+// MASTER_BUILD_SPEC.md section 20.4: nobody reaches another practitioner's data,
+// and nobody changes state except through the database functions.
 import { beforeAll, describe, expect, it } from "vitest";
-import { adminClient, browserClient, freshPractitioner, localStack, PASSWORD } from "./local-stack";
+import {
+  adminClient, attachTrack, browserClient, createConsultation, FIXTURE_WAV, localStack,
+  newPractitioner, PASSWORD, rpc, type Practitioner,
+} from "./local-stack";
 
 const stack = localStack();
-const admin = adminClient(stack);
-const anna = "anna@access.test";
-const ben = "ben@access.test";
-let annaId: string;
-let benId: string;
-
-async function signedIn(email: string) {
-  const client = browserClient(stack);
-  const { error } = await client.auth.signInWithPassword({ email, password: PASSWORD });
-  if (error) throw error;
-  return client;
-}
+let anna: Practitioner;
+let ben: Practitioner;
+let annas: string;
+let bens: string;
 
 beforeAll(async () => {
-  annaId = await freshPractitioner(admin, anna);
-  benId = await freshPractitioner(admin, ben);
-  const { error } = await admin.from("consultations").insert([
-    { practitioner_id: annaId, synthetic_patient_ref: "SYN-1001", scheduled_at: "2026-10-01T09:00:00Z", language: "en", status: "ready_for_audio" },
-    { practitioner_id: benId, synthetic_patient_ref: "SYN-2002", scheduled_at: "2026-10-02T09:00:00Z", language: "de", status: "consent_pending" },
-  ]);
-  if (error) throw error;
+  anna = await newPractitioner(stack, "anna");
+  ben = await newPractitioner(stack, "ben");
+  annas = await createConsultation(anna, { ref: "SYN-1001" });
+  bens = await createConsultation(ben, { ref: "SYN-2002" });
+  expect((await attachTrack(anna, annas, "patient")).ok).toBe(true);
 });
 
-describe("consultations", () => {
-  it("shows a practitioner only their own", async () => {
-    const client = await signedIn(anna);
-    const { data, error } = await client.from("consultations").select("synthetic_patient_ref, practitioner_id");
-    expect(error).toBeNull();
-    expect(data).toEqual([{ synthetic_patient_ref: "SYN-1001", practitioner_id: annaId }]);
+describe("a practitioner", () => {
+  it("sees only their own consultations, tracks and audit events", async () => {
+    const consultations = await anna.client.from("consultations").select("id");
+    expect(consultations.data).toEqual([{ id: annas }]);
+    const tracks = await ben.client.from("audio_tracks").select("id");
+    expect(tracks.data).toEqual([]);
+    const events = await ben.client.from("audit_events").select("consultation_id");
+    expect(new Set(events.data?.map((event) => event.consultation_id))).toEqual(new Set([bens]));
   });
 
-  it("shows a signed-out visitor nothing", async () => {
-    const { data } = await browserClient(stack).from("consultations").select("id");
-    expect(data ?? []).toEqual([]);
+  it("cannot write any table directly, even their own rows", async () => {
+    const row = { practitioner_id: anna.id, synthetic_patient_ref: "SYN-1003", scheduled_at: "2026-10-03T09:00:00Z", language: "en", status: "approved" } as const;
+    expect((await anna.client.from("consultations").insert(row)).error).not.toBeNull();
+    await anna.client.from("consultations").update({ status: "approved" }).eq("id", annas);
+    await anna.client.from("consultations").delete().eq("id", annas);
+    await anna.client.from("audio_tracks").delete().eq("consultation_id", annas);
+    await anna.client.from("audit_events").delete().eq("consultation_id", annas);
+    await anna.client.from("audit_events").update({ event_type: "nothing.happened" }).eq("consultation_id", annas);
+
+    const after = await anna.client.from("consultations").select("status").eq("id", annas).single();
+    expect(after.data?.status).toBe("ready_for_audio");
+    expect((await anna.client.from("audio_tracks").select("id")).data).toHaveLength(1);
+    const events = await anna.client.from("audit_events").select("event_type").eq("consultation_id", annas).order("seq");
+    expect(events.data?.map((event) => event.event_type)).toEqual(["consultation.created", "consent.recorded", "audio.imported"]);
   });
 
-  it("cannot be written directly, even by their owner", async () => {
-    const client = await signedIn(anna);
-    const row = { practitioner_id: annaId, synthetic_patient_ref: "SYN-1003", scheduled_at: "2026-10-03T09:00:00Z", language: "en", status: "approved" } as const;
-    expect((await client.from("consultations").insert(row)).error).not.toBeNull();
-    await client.from("consultations").update({ status: "approved" }).eq("practitioner_id", annaId);
-    await client.from("consultations").delete().eq("practitioner_id", annaId);
-    await client.from("consultations").update({ status: "approved" }).eq("practitioner_id", benId);
-
-    const { data } = await admin.from("consultations").select("synthetic_patient_ref, status").in("practitioner_id", [annaId, benId]).order("synthetic_patient_ref");
-    expect(data).toEqual([
-      { synthetic_patient_ref: "SYN-1001", status: "ready_for_audio" },
-      { synthetic_patient_ref: "SYN-2002", status: "consent_pending" },
-    ]);
+  it("cannot act on someone else's consultation", async () => {
+    expect(await rpc(ben.client, "record_consent", { p_consultation_id: annas })).toMatchObject({ ok: false, error_category: "NOT_FOUND" });
+    expect(await rpc(ben.client, "remove_audio_track", { p_consultation_id: annas, p_speaker: "patient" })).toMatchObject({ ok: false, error_category: "NOT_FOUND" });
+    const check = await ben.client.rpc("verify_audit_chain", { p_consultation_id: annas });
+    expect(check.data).toBeNull();
   });
 
-  it("refuses a patient reference that is not synthetic", async () => {
-    const { error } = await admin.from("consultations").insert({ practitioner_id: annaId, synthetic_patient_ref: "Maria Novak", scheduled_at: "2026-10-03T09:00:00Z", language: "sk", status: "consent_pending" });
-    expect(error?.message).toMatch(/check constraint/);
+  it("cannot read, replace or delete someone else's audio", async () => {
+    const path = `${anna.id}/${annas}/patient`;
+    expect((await ben.client.storage.from("audio").download(path)).data).toBeNull();
+    expect((await ben.client.storage.from("audio").upload(path, FIXTURE_WAV)).error).not.toBeNull();
+    await ben.client.storage.from("audio").remove([path]);
+    const mine = await anna.client.storage.from("audio").download(path);
+    expect(mine.data?.size).toBe(FIXTURE_WAV.byteLength);
+  });
+
+  it("cannot put files anywhere but a track of their own consultation", async () => {
+    const upload = (path: string) => anna.client.storage.from("audio").upload(path, FIXTURE_WAV);
+    expect((await upload(`${anna.id}/${annas}/notes.txt`)).error).not.toBeNull();
+    expect((await upload(`${anna.id}/anything`)).error).not.toBeNull();
+    expect((await upload(`${anna.id}/${bens}/patient`)).error).not.toBeNull();
+    expect((await upload(`${ben.id}/${bens}/patient`)).error).not.toBeNull();
   });
 });
 
-describe("accounts", () => {
-  it("cannot be created by the public", async () => {
-    const { data, error } = await browserClient(stack).auth.signUp({ email: "stranger@access.test", password: PASSWORD });
+describe("a signed-out visitor", () => {
+  const visitor = browserClient(stack);
+
+  it("reads nothing", async () => {
+    for (const table of ["consultations", "audio_tracks", "audit_events"] as const) {
+      expect((await visitor.from(table).select("*")).data ?? []).toEqual([]);
+    }
+    expect((await visitor.storage.from("audio").download(`${anna.id}/${annas}/patient`)).data).toBeNull();
+  });
+
+  it("can call no function", async () => {
+    const create = await visitor.rpc("create_consultation", { p_synthetic_patient_ref: "SYN-1", p_scheduled_at: "2026-10-05T08:30:00Z", p_language: "en", p_consent_recorded: true });
+    expect(create.error).not.toBeNull();
+    expect((await visitor.rpc("record_consent", { p_consultation_id: annas })).error).not.toBeNull();
+  });
+
+  it("cannot create an account", async () => {
+    const { data, error } = await visitor.auth.signUp({ email: "stranger@eheal.test", password: PASSWORD });
     expect(error).not.toBeNull();
     expect(data.user).toBeNull();
   });
 
-  it("rejects a wrong password", async () => {
-    const { error } = await browserClient(stack).auth.signInWithPassword({ email: anna, password: "wrong-password-123" });
+  it("is refused with a wrong password", async () => {
+    const { error } = await visitor.auth.signInWithPassword({ email: anna.email, password: "wrong-password-123" });
     expect(error?.status).toBe(400);
+  });
+});
+
+describe("the engine credential", () => {
+  const engine = adminClient(stack);
+
+  it("can read, but cannot change tables directly", async () => {
+    expect((await engine.from("consultations").select("id").eq("id", annas)).data).toHaveLength(1);
+    expect((await engine.from("consultations").update({ status: "approved" }).eq("id", annas)).error).not.toBeNull();
+    expect((await engine.from("audit_events").delete().eq("consultation_id", annas)).error).not.toBeNull();
+    expect((await engine.from("audio_tracks").delete().eq("consultation_id", annas)).error).not.toBeNull();
+  });
+
+  it("cannot use the practitioner's functions", async () => {
+    expect((await engine.rpc("record_consent", { p_consultation_id: annas })).error).not.toBeNull();
   });
 });

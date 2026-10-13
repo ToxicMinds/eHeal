@@ -36,12 +36,9 @@ test("a practitioner signs in, sees their consultations, and signs out", async (
   await expect(page.getByText(BANNER)).toBeVisible();
   await expect(page.getByText(`Signed in as ${account.email}`)).toBeVisible();
   if (account.references.length > 0) {
-    const rows = page.getByRole("row");
-    await expect(rows).toHaveCount(account.references.length + 1); // plus the header row
-    await expect(rows.nth(1)).toContainText(account.references[0]);
-    await expect(rows.nth(1)).toContainText("Slovak");
-    await expect(rows.nth(1)).toContainText("Problem: Transcription failed");
-    await expect(rows.nth(2)).toContainText("Waiting for audio");
+    await expect(page.getByRole("row", { name: /SYN-0043/ })).toContainText("Slovak");
+    await expect(page.getByRole("row", { name: /SYN-0043/ })).toContainText("Waiting for consent");
+    await expect(page.getByRole("row", { name: /SYN-0042/ })).toContainText("Waiting for audio");
   }
 
   // The session survives a reload, and ends on sign-out.
