@@ -44,9 +44,10 @@ describe("a patient's WhatsApp number", () => {
     expect((await eva.client.from("whatsapp_contacts").select("phone, consultation_id")).data).toEqual([{ phone: number, consultation_id: id }]);
 
     // Later messages are recognised by the number alone; a delivery Meta repeats is recorded once.
-    const again = await receive(number, "Thank you!", "text", "wamid.repeated");
+    const repeated = `wamid.${randomUUID()}`;
+    const again = await receive(number, "Thank you!", "text", repeated);
     expect(again).toMatchObject({ ok: true, linked: false, consultation: { consultation_id: id } });
-    expect(await receive(number, "Thank you!", "text", "wamid.repeated")).toEqual({ ok: true, duplicate: true });
+    expect(await receive(number, "Thank you!", "text", repeated)).toEqual({ ok: true, duplicate: true });
     const messages = (await eva.client.from("whatsapp_messages").select("direction, body").eq("consultation_id", id).order("created_at")).data;
     expect(messages).toEqual([{ direction: "in", body: `Watson ${code.toLowerCase()}` }, { direction: "in", body: "Thank you!" }]);
   });
