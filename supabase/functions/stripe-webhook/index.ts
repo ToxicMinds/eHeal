@@ -10,7 +10,7 @@ Deno.serve(async (request) => {
   if (request.method !== "POST" || !signature) return new Response(null, { status: 400 });
   let event: Stripe.Event;
   try {
-    event = await stripe.webhooks.constructEventAsync(
+    event = await stripe().webhooks.constructEventAsync(
       await request.text(), signature, Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "", undefined, crypto);
   } catch {
     return new Response(null, { status: 400 });

@@ -43,7 +43,7 @@ Deno.serve(async (request) => {
     if (consultation.fee_cents === null) return reply(origin, 409, { error: "NO_FEE" });
     if (consultation.paid_at) return reply(origin, 409, { error: "ALREADY_PAID" });
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripe().checkout.sessions.create({
       mode: "payment",
       line_items: [{
         quantity: 1,
