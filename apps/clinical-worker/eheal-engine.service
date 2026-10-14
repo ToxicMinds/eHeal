@@ -1,0 +1,20 @@
+# The transcription engine as a systemd user service: starts at login, restarts after a crash.
+# Install (from the repository root):
+#   uv tool install --force ./apps/clinical-worker
+#   cp apps/clinical-worker/eheal-engine.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now eheal-engine
+# Settings come from ~/.config/eheal/engine.env. Logs: journalctl --user -u eheal-engine
+[Unit]
+Description=eHeal transcription engine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=%h/.local/bin/clinical-worker engine
+Restart=on-failure
+RestartSec=30
+# Transcription runs in the background without slowing the desktop.
+Nice=10
+
+[Install]
+WantedBy=default.target
