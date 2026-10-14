@@ -19,6 +19,8 @@ test("a patient pays the fee on Stripe and the practitioner sees it paid", async
   await patient.getByRole("button", { name: "Pay €12.50" }).click();
   await patient.waitForURL(/checkout\.stripe\.com/);
   await patient.locator("#email").fill("patient@example.com");
+  // Checkout lists several methods; the card fields appear once Card is chosen.
+  await patient.getByTestId("card-accordion-item").click();
   await patient.locator("#cardNumber").fill("4242 4242 4242 4242");
   await patient.locator("#cardExpiry").fill("12 / 34");
   await patient.locator("#cardCvc").fill("123");
