@@ -3,12 +3,12 @@ import type { ReactNode } from "react";
 import { STAGES, summarise, type ConsultationStatus, type Tone } from "@/lib/status";
 
 const CHIP: Record<Tone, { className: string; Icon: typeof Check }> = {
-  neutral: { className: "eh-chip", Icon: Clock },
-  current: { className: "eh-chip eh-chip--current", Icon: ArrowRight },
-  working: { className: "eh-chip eh-chip--current", Icon: LoaderCircle },
-  attention: { className: "eh-chip eh-chip--attention", Icon: Eye },
-  failed: { className: "eh-chip eh-chip--failed", Icon: CircleX },
-  done: { className: "eh-chip eh-chip--done", Icon: Check },
+  neutral: { className: "wa-chip", Icon: Clock },
+  current: { className: "wa-chip wa-chip--current", Icon: ArrowRight },
+  working: { className: "wa-chip wa-chip--current", Icon: LoaderCircle },
+  attention: { className: "wa-chip wa-chip--attention", Icon: Eye },
+  failed: { className: "wa-chip wa-chip--failed", Icon: CircleX },
+  done: { className: "wa-chip wa-chip--done", Icon: Check },
 };
 
 /** Where a consultation stands, in words, with an icon so it reads without colour. */
@@ -17,7 +17,7 @@ export function StatusChip({ status }: { status: ConsultationStatus }) {
   const { className, Icon } = CHIP[tone];
   return (
     <span className={className}>
-      <Icon aria-hidden className={`eh-icon eh-icon--sm${tone === "working" ? " eh-spin" : ""}`} />
+      <Icon aria-hidden className={`wa-icon wa-icon--sm${tone === "working" ? " wa-spin" : ""}`} />
       {label}
     </span>
   );
@@ -27,18 +27,18 @@ export function StatusChip({ status }: { status: ConsultationStatus }) {
 export function Journey({ status, lines }: { status: ConsultationStatus; lines: readonly string[] }) {
   const { stages } = summarise(status);
   return (
-    <ol className="eh-journey" aria-label="Progress">
+    <ol className="wa-journey" aria-label="Progress">
       {STAGES.map((name, index) => {
         const state = stages[index];
         return (
-          <li key={name} className={state === "pending" ? "eh-step" : `eh-step eh-step--${state}`}
+          <li key={name} className={state === "pending" ? "wa-step" : `wa-step wa-step--${state}`}
             aria-current={state === "current" || state === "attention" ? "step" : undefined}>
-            <span className="eh-step__name">
-              {state === "done" && <Check aria-hidden className="eh-icon eh-icon--sm" />}
-              {state === "failed" && <CircleX aria-hidden className="eh-icon eh-icon--sm" />}
+            <span className="wa-step__name">
+              {state === "done" && <Check aria-hidden className="wa-icon wa-icon--sm" />}
+              {state === "failed" && <CircleX aria-hidden className="wa-icon wa-icon--sm" />}
               {name}
             </span>
-            <span className="eh-step__state">{lines[index]}</span>
+            <span className="wa-step__state">{lines[index]}</span>
           </li>
         );
       })}
@@ -55,12 +55,12 @@ export function Notice({ tone = "neutral", title, children, actions }: {
 }) {
   const Icon = tone === "failed" ? CircleX : tone === "attention" ? TriangleAlert : Info;
   return (
-    <div className={tone === "neutral" ? "eh-notice" : `eh-notice eh-notice--${tone}`} role={tone === "failed" ? "alert" : "status"}>
-      <Icon aria-hidden className="eh-icon" />
-      <div className="eh-notice__body">
-        <p className="eh-notice__title">{title}</p>
-        {children && <p className="eh-text">{children}</p>}
-        {actions && <div className="eh-notice__actions">{actions}</div>}
+    <div className={tone === "neutral" ? "wa-notice" : `wa-notice wa-notice--${tone}`} role={tone === "failed" ? "alert" : "status"}>
+      <Icon aria-hidden className="wa-icon" />
+      <div className="wa-notice__body">
+        <p className="wa-notice__title">{title}</p>
+        {children && <p className="wa-text">{children}</p>}
+        {actions && <div className="wa-notice__actions">{actions}</div>}
       </div>
     </div>
   );

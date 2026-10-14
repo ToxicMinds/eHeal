@@ -10,11 +10,11 @@ import { connect, type CallState } from "@/lib/call";
 export default function JoinPage() {
   return (
     <>
-      <header className="eh-header">
-        <div className="eh-header__inner"><span className="eh-wordmark">Watson</span></div>
+      <header className="wa-header">
+        <div className="wa-header__inner"><span className="wa-wordmark">Watson</span></div>
       </header>
-      <main className="eh-page">
-        <Suspense fallback={<p className="eh-meta" role="status">Opening the call…</p>}>
+      <main className="wa-page">
+        <Suspense fallback={<p className="wa-meta" role="status">Opening the call…</p>}>
           <Join />
         </Suspense>
       </main>
@@ -87,39 +87,39 @@ function Join() {
   const live = state !== null && state !== "ended";
   return (
     <>
-      <div className="eh-pagehead__text">
-        <h1 className="eh-title">Your consultation</h1>
-        <p className="eh-meta">A video call with your practitioner. The conversation is recorded.</p>
+      <div className="wa-pagehead__text">
+        <h1 className="wa-title">Your consultation</h1>
+        <p className="wa-meta">A video call with your practitioner. The conversation is recorded.</p>
       </div>
-      <div className="eh-call">
-        <div className="eh-screen">
+      <div className="wa-call">
+        <div className="wa-screen">
           <video ref={remoteVideo} autoPlay playsInline aria-label="Your practitioner" />
           {state !== "connected" && (
-            <div className="eh-screen__note">
-              <p className="eh-heading" style={{ color: "inherit" }}>
+            <div className="wa-screen__note">
+              <p className="wa-heading" style={{ color: "inherit" }}>
                 {state === null ? "Turn on your camera and microphone to join." :
                   state === "ended" ? "The consultation has ended. You can close this page." : NOTE[state]}
               </p>
             </div>
           )}
-          {state === "connected" && <span className="eh-live" role="status">Recorded</span>}
-          <div className="eh-screen__self"><video ref={localVideo} autoPlay playsInline muted aria-label="You" /></div>
+          {state === "connected" && <span className="wa-live" role="status">Recorded</span>}
+          <div className="wa-screen__self"><video ref={localVideo} autoPlay playsInline muted aria-label="You" /></div>
         </div>
-        <div className="eh-call__bar">
+        <div className="wa-call__bar">
           {state === null ? (
-            <button type="button" className="eh-button eh-button--primary" onClick={join}>
-              <Video aria-hidden className="eh-icon" />Join the call
+            <button type="button" className="wa-button wa-button--primary" onClick={join}>
+              <Video aria-hidden className="wa-icon" />Join the call
             </button>
           ) : live ? (
             <>
-              <button type="button" className="eh-button eh-button--secondary" aria-pressed={muted} onClick={() => toggle("audio")}>
-                {muted ? <MicOff aria-hidden className="eh-icon" /> : <Mic aria-hidden className="eh-icon" />}{muted ? "Unmute" : "Mute"}
+              <button type="button" className="wa-button wa-button--secondary" aria-pressed={muted} onClick={() => toggle("audio")}>
+                {muted ? <MicOff aria-hidden className="wa-icon" /> : <Mic aria-hidden className="wa-icon" />}{muted ? "Unmute" : "Mute"}
               </button>
-              <button type="button" className="eh-button eh-button--secondary" aria-pressed={cameraOff} onClick={() => toggle("video")}>
-                {cameraOff ? <VideoOff aria-hidden className="eh-icon" /> : <Video aria-hidden className="eh-icon" />}{cameraOff ? "Turn camera on" : "Turn camera off"}
+              <button type="button" className="wa-button wa-button--secondary" aria-pressed={cameraOff} onClick={() => toggle("video")}>
+                {cameraOff ? <VideoOff aria-hidden className="wa-icon" /> : <Video aria-hidden className="wa-icon" />}{cameraOff ? "Turn camera on" : "Turn camera off"}
               </button>
-              <button type="button" className="eh-button eh-button--danger" onClick={leave}>
-                <PhoneOff aria-hidden className="eh-icon" />Leave
+              <button type="button" className="wa-button wa-button--danger" onClick={leave}>
+                <PhoneOff aria-hidden className="wa-icon" />Leave
               </button>
             </>
           ) : null}

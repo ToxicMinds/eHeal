@@ -47,9 +47,9 @@ test("start transcription, watch it run on a real engine, and read the transcrip
   // The page notices on its own and shows the two-voice transcript.
   await expect(page.getByRole("heading", { name: "Transcript" })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Ready to review")).toBeVisible();
-  const turns = page.locator(".eh-turn");
+  const turns = page.locator(".wa-turn");
   await expect(turns.filter({ hasText: "Practitioner" }).first()).toBeVisible();
   await expect(turns.filter({ hasText: "Patient" }).first()).toBeVisible();
-  await expect(page.locator(".eh-turns")).toContainText(/sleep/i);
+  await expect(page.locator(".wa-turns")).toContainText(/sleep/i);
   expect(problems).toEqual([]);
 });

@@ -115,10 +115,10 @@ export function AudioSlot({ speaker, track, consultationId, userId, editable, on
   }
 
   return (
-    <section className={speaker === "patient" ? "eh-slot eh-slot--patient" : "eh-slot"} aria-label={`${name} track`}>
-      <div className="eh-slot__head">
-        <h3 className="eh-slot__voice">{name}</h3>
-        <span className="eh-hint">
+    <section className={speaker === "patient" ? "wa-slot wa-slot--patient" : "wa-slot"} aria-label={`${name} track`}>
+      <div className="wa-slot__head">
+        <h3 className="wa-slot__voice">{name}</h3>
+        <span className="wa-hint">
           {recording ? "Recording" : track ? `Attached ${HHMM.format(new Date(track.created_at))}` : "Not attached"}
         </span>
       </div>
@@ -126,60 +126,60 @@ export function AudioSlot({ speaker, track, consultationId, userId, editable, on
       {track ? (
         <>
           <Player path={path} speaker={name} seconds={track.duration_seconds} />
-          <ul className="eh-facts"><li>{track.format.toUpperCase()}</li><li>{humanSize(track.size_bytes)}</li></ul>
-          <details className="eh-details">
+          <ul className="wa-facts"><li>{track.format.toUpperCase()}</li><li>{humanSize(track.size_bytes)}</li></ul>
+          <details className="wa-details">
             <summary>Details</summary>
-            <p className="eh-hint eh-mono" style={{ overflowWrap: "anywhere" }}>SHA-256 {track.sha256}</p>
+            <p className="wa-hint wa-mono" style={{ overflowWrap: "anywhere" }}>SHA-256 {track.sha256}</p>
           </details>
           {track.validation === "invalid" && (
-            <p className="eh-error" role="alert">{explain(track.validation_error ?? "AUDIO_CORRUPT")}</p>
+            <p className="wa-error" role="alert">{explain(track.validation_error ?? "AUDIO_CORRUPT")}</p>
           )}
           {editable && (
-            <div className="eh-actions">
-              <button type="button" className="eh-button eh-button--quiet eh-button--small" disabled={busy !== null}
+            <div className="wa-actions">
+              <button type="button" className="wa-button wa-button--quiet wa-button--small" disabled={busy !== null}
                 aria-label={`Replace ${name.toLowerCase()} audio`} onClick={remove}>Replace</button>
-              <button type="button" className="eh-button eh-button--quiet eh-button--small" disabled={busy !== null}
+              <button type="button" className="wa-button wa-button--quiet wa-button--small" disabled={busy !== null}
                 aria-label={`Remove ${name.toLowerCase()} audio`} onClick={remove}>Remove</button>
             </div>
           )}
         </>
       ) : !editable ? (
-        <p className="eh-hint">No audio attached.</p>
+        <p className="wa-hint">No audio attached.</p>
       ) : recording ? (
-        <div className="eh-rec">
-          <span className="eh-rec__dot" aria-hidden />
-          <span className="eh-rec__time" role="timer">{clock(recording.seconds)}</span>
-          <span className="eh-level" aria-hidden>
+        <div className="wa-rec">
+          <span className="wa-rec__dot" aria-hidden />
+          <span className="wa-rec__time" role="timer">{clock(recording.seconds)}</span>
+          <span className="wa-level" aria-hidden>
             {recording.levels.map((level, index) => <span key={index} style={{ height: `${level * 100}%` }} />)}
           </span>
-          <button type="button" className="eh-button eh-button--secondary eh-button--small" onClick={() => recorder.current?.stop()}>
-            <Square aria-hidden className="eh-icon eh-icon--sm" fill="currentColor" />Stop
+          <button type="button" className="wa-button wa-button--secondary wa-button--small" onClick={() => recorder.current?.stop()}>
+            <Square aria-hidden className="wa-icon wa-icon--sm" fill="currentColor" />Stop
           </button>
         </div>
       ) : take ? (
         <>
-          <p className="eh-hint">Recording ready: {clock(take.seconds)}, {humanSize(take.blob.size)}.</p>
+          <p className="wa-hint">Recording ready: {clock(take.seconds)}, {humanSize(take.blob.size)}.</p>
           <audio controls src={take.url} style={{ width: "100%" }} aria-label={`Recording for the ${name.toLowerCase()} track`} />
-          <div className="eh-actions">
-            <button type="button" className="eh-button eh-button--primary eh-button--small" disabled={busy !== null}
+          <div className="wa-actions">
+            <button type="button" className="wa-button wa-button--primary wa-button--small" disabled={busy !== null}
               onClick={() => attach(take.blob, take.format, take.seconds)}>Attach this recording</button>
-            <button type="button" className="eh-button eh-button--quiet eh-button--small" disabled={busy !== null}
+            <button type="button" className="wa-button wa-button--quiet wa-button--small" disabled={busy !== null}
               onClick={discardTake}>Discard</button>
           </div>
         </>
       ) : (
-        <div className="eh-drop" data-over={over}
+        <div className="wa-drop" data-over={over}
           onDragOver={(event) => { event.preventDefault(); setOver(true); }}
           onDragLeave={() => setOver(false)}
           onDrop={(event) => { event.preventDefault(); setOver(false); chooseFile(event.dataTransfer.files[0]); }}>
-          <Upload aria-hidden className="eh-icon" />
-          <span className="eh-drop__lead">{speaker === "patient" ? "Drop the patient's audio here" : "Drop your audio here"}</span>
-          <span className="eh-hint">wav, mp3, m4a, flac, ogg or webm, up to 50 MB and 2 hours</span>
-          <div className="eh-drop__actions">
-            <button type="button" className="eh-button eh-button--secondary eh-button--small" disabled={busy !== null}
+          <Upload aria-hidden className="wa-icon" />
+          <span className="wa-drop__lead">{speaker === "patient" ? "Drop the patient's audio here" : "Drop your audio here"}</span>
+          <span className="wa-hint">wav, mp3, m4a, flac, ogg or webm, up to 50 MB and 2 hours</span>
+          <div className="wa-drop__actions">
+            <button type="button" className="wa-button wa-button--secondary wa-button--small" disabled={busy !== null}
               onClick={() => fileInput.current?.click()}>Choose file</button>
-            <button type="button" className="eh-button eh-button--secondary eh-button--small" disabled={busy !== null}
-              onClick={startRecording}><Mic aria-hidden className="eh-icon eh-icon--sm" />Record with microphone</button>
+            <button type="button" className="wa-button wa-button--secondary wa-button--small" disabled={busy !== null}
+              onClick={startRecording}><Mic aria-hidden className="wa-icon wa-icon--sm" />Record with microphone</button>
           </div>
           <input ref={fileInput} type="file" hidden aria-label={`${name} audio file`}
             accept=".wav,.mp3,.m4a,.mp4,.flac,.ogg,.webm,audio/*"
@@ -187,8 +187,8 @@ export function AudioSlot({ speaker, track, consultationId, userId, editable, on
         </div>
       )}
 
-      {busy && <p className="eh-hint" role="status">{busy}</p>}
-      {problem && <p className="eh-error" role="alert">{problem}</p>}
+      {busy && <p className="wa-hint" role="status">{busy}</p>}
+      {problem && <p className="wa-error" role="alert">{problem}</p>}
     </section>
   );
 }
@@ -223,14 +223,14 @@ function Player({ path, speaker, seconds }: { path: string; speaker: string; sec
   }
 
   return (
-    <div className="eh-player">
-      <button type="button" className="eh-play" aria-label={`${playing ? "Pause" : "Play"} ${speaker.toLowerCase()} track`} onClick={toggle}>
-        {playing ? <Pause aria-hidden className="eh-icon" fill="currentColor" /> : <Play aria-hidden className="eh-icon" fill="currentColor" />}
+    <div className="wa-player">
+      <button type="button" className="wa-play" aria-label={`${playing ? "Pause" : "Play"} ${speaker.toLowerCase()} track`} onClick={toggle}>
+        {playing ? <Pause aria-hidden className="wa-icon" fill="currentColor" /> : <Play aria-hidden className="wa-icon" fill="currentColor" />}
       </button>
-      <div className="eh-scrub" role="presentation">
-        <div className="eh-scrub__fill" style={{ width: length ? `${Math.min(100, (at / length) * 100)}%` : "0%" }} />
+      <div className="wa-scrub" role="presentation">
+        <div className="wa-scrub__fill" style={{ width: length ? `${Math.min(100, (at / length) * 100)}%` : "0%" }} />
       </div>
-      <span className="eh-player__time">{clock(at)} / {length === null ? "–" : clock(length)}</span>
+      <span className="wa-player__time">{clock(at)} / {length === null ? "–" : clock(length)}</span>
     </div>
   );
 }

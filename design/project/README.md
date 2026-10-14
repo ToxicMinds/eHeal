@@ -57,4 +57,4 @@ A transcript reads as one column of turns. Down its left edge run two thin rails
 
 ## Using this system in code
 
-Components are plain CSS classes in `components/bundle.css` (prefix `eh-`), built on the tokens. Markup for each component is in its preview. The web app (`apps/web`) loads the same tokens and stylesheet, so a change here is a change there.
+Components are plain CSS classes in `components/bundle.css` (prefix `wa-`), built on the tokens. Markup for each component is in its preview. The web app (`apps/web`) loads the same tokens and stylesheet, so a change here is a change there.

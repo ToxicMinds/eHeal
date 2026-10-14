@@ -14,7 +14,7 @@ export default function Home() {
   }, [session.status, router]);
 
   return (
-    <p role="status" className="eh-page eh-meta">
+    <p role="status" className="wa-page wa-meta">
       Opening Watson…
     </p>
   );
