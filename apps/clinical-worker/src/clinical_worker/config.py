@@ -50,6 +50,10 @@ class Settings(BaseModel):
         return self.home / "models" / "llm" / self.form_model_file
 
     @property
+    def ocr_model_dir(self) -> Path:
+        return self.home / "models" / "ocr"
+
+    @property
     def work_dir(self) -> Path:
         return self.home / "work"
 

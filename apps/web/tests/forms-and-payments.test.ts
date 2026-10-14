@@ -52,7 +52,7 @@ describe("the patient's link", () => {
     expect(token).toMatch(/^[0-9a-f]{64}$/);
     const visitor = browserClient(stack);
     const { data } = await visitor.rpc("invite_details", { p_token: token });
-    expect(data).toEqual({ ok: true, scheduled_at: "2026-10-05T08:30:00+00:00", fee_cents: 4000, currency: "eur", paid: false, paid_at: null });
+    expect(data).toEqual({ ok: true, scheduled_at: "2026-10-05T08:30:00+00:00", fee_cents: 4000, currency: "eur", paid: false, paid_at: null, patient: null, documents: [] });
     expect((await visitor.rpc("invite_details", { p_token: "0".repeat(64) })).data).toEqual({ ok: false, error_category: "NOT_FOUND" });
     expect((await visitor.rpc("invite_details", { p_token: "' or 1=1 --" })).data).toEqual({ ok: false, error_category: "NOT_FOUND" });
   });

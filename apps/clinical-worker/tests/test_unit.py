@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -219,3 +220,146 @@ def test_form_answers_keep_only_real_lines_and_say_nothing_for_topics_not_discus
     assert answers["diet"].text is None and answers["diet"].evidence == []
     assert answers["work"].text is None  # missing from the output
     assert set(answers) == {"sleep", "diet", "work"}
+
+
+# Documents the patient sent (roadmap, 14 October): numbered lines in the prompt, quoted by page.
+
+SMALL_TEMPLATE = {
+    "title": "T",
+    "sections": [
+        {
+            "title": "S",
+            "fields": [{"key": "sleep", "label": "Sleep"}, {"key": "diet", "label": "Diet"}],
+        }
+    ],
+}
+LAB_PHOTO = (SCHEMA_DIR.parents[0] / "test-fixtures/documents/lab-report-sk.jpg").read_bytes()
+OCR_MODELS = load_settings({}).ocr_model_dir
+
+
+def _pdf(text: str) -> bytes:
+    """A one-page PDF whose text is in the file itself, as a lab's software writes it."""
+    stream = f"BT /F1 18 Tf 72 720 Td ({text}) Tj ET".encode()
+    bodies = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R"
+        b" /Resources << /Font << /F1 5 0 R >> >> >>",
+        b"<< /Length %d >>\nstream\n%s\nendstream" % (len(stream), stream),
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out, offsets = b"%PDF-1.4\n", []
+    for number, body in enumerate(bodies, start=1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n%s\nendobj\n" % (number, body)
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(bodies) + 1)
+    out += b"".join(b"%010d 00000 n \n" % offset for offset in offsets)
+    return out + b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (
+        len(bodies) + 1,
+        xref,
+    )
+
+
+def test_documents_become_numbered_lines_newest_first_within_a_budget() -> None:
+    from clinical_worker.form import DOCUMENT_CHARACTERS, document_lines
+
+    lines = document_lines(
+        [
+            {
+                "document_id": "new",
+                "file_name": "Blood test.pdf",
+                "pages": ["Ferritin 9 µg/L\n\n  low  ", "Page two"],
+            },
+            {"document_id": "old", "file_name": "Letter.pdf", "pages": ["An older letter"]},
+        ]
+    )
+    assert [(d.number, d.document_id, d.page, d.text) for d in lines] == [
+        (1, "new", 1, "Ferritin 9 µg/L"),
+        (2, "new", 1, "low"),
+        (3, "new", 2, "Page two"),
+        (4, "old", 1, "An older letter"),
+    ]
+    many = document_lines([{"document_id": "d", "file_name": "f", "pages": ["z" * 300] * 100}])
+    assert 0 < sum(len(d.text) for d in many) <= DOCUMENT_CHARACTERS
+
+
+def test_a_form_without_documents_is_asked_exactly_as_before() -> None:
+    from clinical_worker.form import DOCUMENT_RULES, DocumentLine, Line, Template, prompt, schema
+
+    template = Template.model_validate(SMALL_TEMPLATE)
+    lines = [Line(0, "patient", "I sleep badly.")]
+    system, user = prompt(template, lines, "en")
+    assert DOCUMENT_RULES not in system and "Documents" not in user
+    assert list(schema(template)["properties"]["sleep"]["properties"]) == ["lines", "answer"]
+
+    documents = [DocumentLine(1, "d", "Blood test.pdf", 1, "Ferritin 9 µg/L")]
+    system, user = prompt(template, lines, "en", documents)
+    assert system.endswith(DOCUMENT_RULES)
+    assert user.endswith(
+        "Documents the patient sent:\n[D1] Blood test.pdf, page 1: Ferritin 9 µg/L"
+    )
+    assert list(schema(template, True)["properties"]["sleep"]["properties"]) == [
+        "lines",
+        "documents",
+        "answer",
+    ]
+
+
+def test_document_numbers_become_quotes_and_unknown_ones_are_dropped() -> None:
+    from clinical_worker.form import DocumentLine, Line, Quote, Template, parse
+
+    raw = {
+        "sleep": {"lines": [0], "documents": [1, 1, 9], "answer": "Low iron stores."},
+        "diet": {"lines": [], "documents": [1], "answer": None},
+    }
+    documents = [DocumentLine(1, "d", "Blood test.pdf", 2, "Ferritin 9 µg/L")]
+    answers = {
+        a.key: a
+        for a in parse(
+            json.dumps(raw),
+            Template.model_validate(SMALL_TEMPLATE),
+            [Line(0, "patient", "x")],
+            documents,
+        )
+    }
+    assert answers["sleep"].quotes == [Quote("d", 2, "Ferritin 9 µg/L")]
+    assert answers["diet"].quotes == []  # no answer, so nothing to quote
+
+
+def test_a_pdf_is_read_from_its_own_text_without_ocr(tmp_path: Path) -> None:
+    from clinical_worker.documents import Reader
+
+    reader = Reader(tmp_path)  # no OCR models here: a PDF with text must not need them
+    assert reader.read(_pdf("Ferritin 9 ug/L, low. Haemoglobin 118 g/L."), "application/pdf") == [
+        "Ferritin 9 ug/L, low. Haemoglobin 118 g/L."
+    ]
+
+
+def test_a_photo_without_ocr_models_says_so_and_a_broken_file_is_unreadable(tmp_path: Path) -> None:
+    from clinical_worker.documents import Reader
+    from clinical_worker.errors import ErrorCategory, WorkerError
+
+    with pytest.raises(WorkerError) as missing:
+        Reader(tmp_path).read(LAB_PHOTO, "image/jpeg")
+    assert missing.value.category == ErrorCategory.OCR_MODEL_UNAVAILABLE
+    with pytest.raises(WorkerError) as broken:
+        Reader(tmp_path).read(b"not a pdf at all", "application/pdf")
+    assert broken.value.category == ErrorCategory.DOCUMENT_UNREADABLE
+
+
+@pytest.mark.skipif(
+    not OCR_MODELS.is_dir() or len(list(OCR_MODELS.glob("*.onnx"))) < 3,
+    reason="run `clinical-worker fetch-ocr-model` first",
+)
+def test_a_photo_of_a_slovak_lab_report_is_read_with_its_diacritics() -> None:
+    from clinical_worker.documents import Reader
+
+    [page] = Reader(OCR_MODELS).read(LAB_PHOTO, "image/jpeg")
+    for words in (
+        "Laboratórny výsledok",
+        "Feritín: 9",
+        "(referencia 15–150) — nízky",
+        "znížené zásoby železa",
+    ):
+        assert words in page

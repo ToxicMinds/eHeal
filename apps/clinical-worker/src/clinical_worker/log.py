@@ -27,6 +27,8 @@ ALLOWED_FIELDS = frozenset(
         "completion_tokens",
         "error_category",
         "exception_type",
+        "document_id",
+        "pages",
     }
 )
 

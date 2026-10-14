@@ -125,7 +125,9 @@ def empty_queue() -> None:
         input="update public.transcription_jobs set status = 'cancelled', finished_at = now()"
         " where status in ('queued', 'processing');"
         " update public.form_jobs set status = 'cancelled', finished_at = now()"
-        " where status in ('queued', 'processing');",
+        " where status in ('queued', 'processing');"
+        " update public.patient_documents set reading = 'failed'"
+        " where reading in ('waiting', 'reading');",
         text=True,
         check=True,
         capture_output=True,
@@ -410,3 +412,84 @@ def test_the_database_refuses_answers_that_do_not_match_the_form(
         ]
         == "VALIDATION"
     )
+
+
+class DocumentModel(StandInModel):
+    """Answers the first field from line 0 and document line D1 (and an invented D9)."""
+
+    def complete(self, system: str, user: str, schema: dict[str, Any], stop: Any) -> str:
+        keys = list(schema["properties"])
+        assert "documents" in schema["properties"][keys[0]]["properties"]
+        assert "[D1] Blood test.pdf, page 1: Ferritin 9 ug/L, low." in user
+        answers: dict[str, Any] = {k: {"lines": [], "documents": [], "answer": None} for k in keys}
+        answers[keys[0]] = {"lines": [0], "documents": [1, 9], "answer": "Low iron stores."}
+        return json.dumps(answers)
+
+
+def test_a_document_the_patient_sends_is_read_and_quoted_in_the_form(
+    engine: Engine, dana: tuple[str, str, Client]
+) -> None:
+    from test_unit import _pdf  # the one-page PDF with its own text
+
+    consultation_id = _queue(dana, SPEECH, SPEECH)
+    token = _data(
+        dana[2].table("consultations").select("invite_token").eq("id", consultation_id).single()
+    )["invite_token"]
+    patient = _client(STACK["public"])  # type: ignore[index]
+    number = f"+4219{random.randrange(10**7, 10**8)}"
+    assert _data(
+        patient.rpc("patient_identify", {"p_token": token, "p_name": "Jana", "p_contact": number})
+    )["ok"]
+    pdf = _pdf("Ferritin 9 ug/L, low.")
+    added = _data(
+        patient.rpc(
+            "patient_add_document",
+            {
+                "p_token": token,
+                "p_file_name": "Blood test.pdf",
+                "p_media_type": "application/pdf",
+                "p_size_bytes": len(pdf),
+            },
+        )
+    )
+    patient.storage.from_("documents").upload(
+        added["path"], pdf, {"content-type": "application/pdf"}
+    )
+    assert _data(
+        patient.rpc(
+            "patient_confirm_document", {"p_token": token, "p_document_id": added["document_id"]}
+        )
+    )["ok"]
+
+    assert engine.run_once()  # the transcript
+    assert engine.run_once()  # the document, before the form
+    document = _data(
+        dana[2]
+        .table("patient_documents")
+        .select("reading, page_texts")
+        .eq("id", added["document_id"])
+        .single()
+    )
+    assert document == {"reading": "read", "page_texts": ["Ferritin 9 ug/L, low."]}
+
+    engine.form_model = DocumentModel()  # type: ignore[assignment]
+    assert engine.run_once()  # the form, reading the document too
+    assert _status(dana, consultation_id) == "draft_ready"
+    form = _data(
+        dana[2].table("forms").select("id").eq("consultation_id", consultation_id).single()
+    )
+    first = _data(
+        dana[2]
+        .table("form_answers")
+        .select("machine_text, evidence, document_quotes")
+        .eq("form_id", form["id"])
+        .eq("position", 0)
+        .single()
+    )
+    assert first == {
+        "machine_text": "Low iron stores.",
+        "evidence": [0],
+        "document_quotes": [
+            {"document_id": added["document_id"], "page": 1, "text": "Ferritin 9 ug/L, low."}
+        ],
+    }

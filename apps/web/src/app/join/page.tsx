@@ -2,14 +2,18 @@
 
 import { Lock, Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { PatientDocuments, type SentDocument } from "@/components/patient-documents";
 import { euros } from "@/components/patient-panel";
 import { Notice } from "@/components/status";
 import { connect, type CallState } from "@/lib/call";
 import { dateTime } from "@/lib/status";
 import { supabase } from "@/lib/supabase";
 
-type Details = { scheduled_at: string; fee_cents: number | null; paid: boolean; paid_at: string | null };
+type Details = {
+  scheduled_at: string; fee_cents: number | null; paid: boolean; paid_at: string | null;
+  patient: { name: string; contact: string } | null; documents: SentDocument[];
+};
 const PAYMENT = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/payment`;
 
 /** Starts a payment (returns Stripe's page) or, with a session, confirms one. */
@@ -67,21 +71,22 @@ function Join() {
     void session.current?.leave();
   }, []);
 
+  const fetchDetails = useCallback(async (): Promise<Details | "missing"> => {
+    const { data } = await supabase.rpc("invite_details", { p_token: token });
+    const result = data as unknown as ({ ok: boolean } & Details) | null;
+    return result?.ok ? result : "missing";
+  }, [token]);
+
   useEffect(() => {
     if (!/^[0-9a-f]{64}$/.test(token)) return;
     let alive = true;
-    const read = async (): Promise<Details | "missing"> => {
-      // Back from Stripe: confirm the payment before reading the state.
-      if (returning) await payment({ token, session_id: returning });
-      const { data } = await supabase.rpc("invite_details", { p_token: token });
-      const result = data as ({ ok: boolean } & Details) | null;
-      return result?.ok ? result : "missing";
-    };
-    read().then((result) => alive && setDetails(result));
+    // Back from Stripe: confirm the payment before reading the state.
+    const confirmed = returning ? payment({ token, session_id: returning }) : Promise.resolve(null);
+    confirmed.then(fetchDetails).then((result) => alive && setDetails(result));
     return () => {
       alive = false;
     };
-  }, [token, returning]);
+  }, [token, returning, fetchDetails]);
 
   if (!/^[0-9a-f]{64}$/.test(token) || details === "missing") {
     return <Notice title="This link is not complete">Ask your practitioner to send it again.</Notice>;
@@ -198,6 +203,8 @@ function Join() {
         {problem && <Notice tone="failed" title="Could not join">{problem}</Notice>}
       </div>
       </>)}
+      <PatientDocuments token={token} patient={details.patient} documents={details.documents}
+        onChanged={() => fetchDetails().then(setDetails)} />
     </>
   );
 }

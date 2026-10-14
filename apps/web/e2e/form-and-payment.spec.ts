@@ -32,7 +32,19 @@ function filledForm(consultationId: string) {
     f as (insert into public.forms (consultation_id, job_id, transcript_id, template)
           select '${consultationId}', id, transcript_id, '${TEMPLATE.replace(/'/g, "''")}'::jsonb from fj returning id)
     insert into public.form_answers (form_id, field_key, position, machine_text, evidence) values ${rows.join(", ")};
-    update public.consultations set status = 'draft_ready' where id = '${consultationId}';`);
+    update public.consultations set status = 'draft_ready' where id = '${consultationId}';
+    with p as (insert into public.patients (practitioner_id, name, phone)
+               select practitioner_id, 'Jana Nováková', '+4219' || floor(random() * 90000000 + 10000000)::text
+               from public.consultations where id = '${consultationId}' returning id, practitioner_id),
+    c as (update public.consultations set patient_id = (select id from p) where id = '${consultationId}' returning id),
+    d as (insert into public.patient_documents (id, practitioner_id, patient_id, consultation_id, storage_path, file_name,
+                                                media_type, size_bytes, source, uploaded_at, reading, page_texts, read_at)
+          select gen_random_uuid(), p.practitioner_id, p.id, '${consultationId}', p.practitioner_id || '/' || gen_random_uuid(),
+                 'Blood test 3 Oct.pdf', 'application/pdf', 1000, 'patient', now(), 'read', array['Ferritin 9 µg/L, low'], now()
+          from p returning id)
+    update public.form_answers set document_quotes = jsonb_build_array(jsonb_build_object(
+             'document_id', (select id from d), 'page', 1, 'text', 'Ferritin 9 µg/L, low'))
+      where field_key = 'present_conditions' and form_id = (select id from public.forms where consultation_id = '${consultationId}');`);
 }
 
 async function consultation(account: { email: string; password: string }, fee?: number) {
@@ -57,6 +69,8 @@ test("check every answer of the filled-in form against its quote, then approve i
   await page.getByRole("link", { name: "Check the form" }).click();
 
   await expect(page.getByText("Watson suggests · decide yourself")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Jana Nováková" })).toBeVisible();
+  await expect(page.getByText(/and one document/)).toBeVisible();
   await expect(page.getByText("3 of 21 answered")).toBeVisible();
   await expect(page.getByText("3 answers still to check")).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve form" })).toBeDisabled();
@@ -76,6 +90,10 @@ test("check every answer of the filled-in form against its quote, then approve i
 
   const diagnosis = page.getByRole("article", { name: /Diagnosis: present conditions/ });
   await expect(diagnosis.getByText("Suggestion")).toBeVisible();
+  // A quote from the patient's document, by page, next to the one from the conversation.
+  await expect(diagnosis.getByRole("button", { name: "Blood test 3 Oct.pdf" })).toBeVisible();
+  await expect(diagnosis.getByText("page 1")).toBeVisible();
+  await expect(diagnosis.getByText("Ferritin 9 µg/L, low")).toBeVisible();
   await diagnosis.getByRole("button", { name: "Reject" }).click();
   await expect(diagnosis.getByText("Rejected")).toBeVisible();
 

@@ -1,0 +1,241 @@
+"use client";
+
+import { Check, CircleX, Eye, FileText, ImageIcon, LoaderCircle, Plus, RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Notice } from "@/components/status";
+import { call, explain, FIELD_MESSAGE } from "@/lib/api";
+import type { Tables } from "@/lib/database.types";
+import { DOCUMENT_ACCEPT, openDocument, sendDocument } from "@/lib/documents";
+import { dateTime, dayMonth } from "@/lib/status";
+import { supabase } from "@/lib/supabase";
+
+type Patient = Pick<Tables<"patients">, "id" | "name" | "phone" | "email">;
+type Document = Pick<Tables<"patient_documents">,
+  "id" | "consultation_id" | "file_name" | "media_type" | "source" | "uploaded_at" | "reading" | "page_texts" | "storage_path"
+> & { consultations: { scheduled_at: string } | null };
+
+async function fetchDocuments(patientId: string): Promise<Document[]> {
+  const { data } = await supabase.from("patient_documents")
+    .select("id, consultation_id, file_name, media_type, source, uploaded_at, reading, page_texts, storage_path, consultations(scheduled_at)")
+    .eq("patient_id", patientId).not("uploaded_at", "is", null).order("uploaded_at", { ascending: false });
+  return (data ?? []) as Document[];
+}
+
+const FROM: Record<string, string> = { patient: "sent by the patient", practitioner: "added by you", whatsapp: "sent on WhatsApp" };
+
+/** Who the patient is, and every document they or you added, with what Watson could read. */
+export function DocumentsPanel({ consultationId, patient, onChanged }: {
+  consultationId: string;
+  patient: Patient | null;
+  onChanged: () => void;
+}) {
+  const [loaded, setDocuments] = useState<Document[] | null>(null);
+  const [editing, setEditing] = useState(patient === null);
+  const [name, setName] = useState(patient?.name ?? "");
+  const [contact, setContact] = useState(patient?.phone ?? patient?.email ?? "");
+  const [fieldError, setFieldError] = useState<{ field: string; message: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
+
+  const patientId = patient?.id;
+  const load = useCallback(() => {
+    if (patientId) void fetchDocuments(patientId).then(setDocuments);
+  }, [patientId]);
+
+  useEffect(() => {
+    if (!patientId) return;
+    let current = true;
+    fetchDocuments(patientId).then((result) => current && setDocuments(result));
+    return () => {
+      current = false;
+    };
+  }, [patientId]);
+
+  // While Watson is reading something, look again every few seconds.
+  const reading = loaded?.some((document) => document.reading === "waiting" || document.reading === "reading");
+  useEffect(() => {
+    if (!reading) return;
+    const timer = setInterval(load, 4000);
+    return () => clearInterval(timer);
+  }, [reading, load]);
+
+  async function savePatient() {
+    setBusy(true);
+    setProblem(null);
+    setFieldError(null);
+    const outcome = await call("set_patient", { p_consultation_id: consultationId, p_name: name, p_contact: contact });
+    setBusy(false);
+    if (!outcome.ok) {
+      if (outcome.field) return setFieldError({ field: outcome.field, message: FIELD_MESSAGE[outcome.field] ?? explain(outcome.error_category) });
+      return setProblem(explain(outcome.error_category));
+    }
+    setEditing(false);
+    onChanged();
+  }
+
+  async function add(event: ChangeEvent<HTMLInputElement>) {
+    const chosen = [...(event.target.files ?? [])];
+    event.target.value = "";
+    if (chosen.length === 0) return;
+    setBusy(true);
+    setProblem(null);
+    const failures: string[] = [];
+    for (const file of chosen) {
+      const failed = await sendDocument(
+        file,
+        (mediaType) => call<{ document_id: string; path: string }>("add_document", {
+          p_consultation_id: consultationId, p_file_name: file.name, p_media_type: mediaType, p_size_bytes: file.size,
+        }),
+        (documentId) => call("confirm_document", { p_document_id: documentId }),
+      );
+      if (failed) failures.push(`${file.name}: ${failed}`);
+    }
+    setBusy(false);
+    if (failures.length > 0) setProblem(failures.join(" "));
+    load();
+  }
+
+  async function remove(document: Document) {
+    setBusy(true);
+    const outcome = await call<{ path: string }>("remove_document", { p_document_id: document.id });
+    if (outcome.ok) await supabase.storage.from("documents").remove([outcome.path]);
+    else setProblem(explain(outcome.error_category));
+    setBusy(false);
+    setRemoving(null);
+    load();
+  }
+
+  async function readAgain(document: Document) {
+    const outcome = await call("read_document_again", { p_document_id: document.id });
+    if (!outcome.ok) setProblem(explain(outcome.error_category));
+    load();
+  }
+
+  async function open(document: Document) {
+    if (!(await openDocument(document.storage_path))) setProblem("The document could not be opened. Try again.");
+  }
+
+  const error = (field: string) => fieldError?.field === field ? fieldError.message : null;
+  const documents = patient ? loaded : [];
+  const fromPatient = documents?.filter((document) => document.source !== "practitioner").length ?? 0;
+  const read = documents?.filter((document) => document.reading === "read").length ?? 0;
+  return (
+    <section className="wa-panel" aria-labelledby="documents-title">
+      <div className="wa-panel__head">
+        <div style={{ display: "grid", gap: 4 }}>
+          <h2 className="wa-heading" id="documents-title">Documents</h2>
+          {documents && documents.length > 0 && (
+            <ul className="wa-facts">
+              <li>{fromPatient} sent by the patient</li>
+              <li>{read} read by Watson</li>
+            </ul>
+          )}
+        </div>
+        {patient && !editing && (
+          <button type="button" className="wa-button wa-button--secondary wa-button--small" disabled={busy} onClick={() => picker.current?.click()}>
+            <Plus aria-hidden className="wa-icon wa-icon--sm" />Add a document
+          </button>
+        )}
+        <input ref={picker} type="file" accept={DOCUMENT_ACCEPT} multiple hidden aria-label="Documents to add" onChange={add} />
+      </div>
+
+      {editing ? (
+        <form className="wa-form" style={{ gap: 12 }} onSubmit={(event) => { event.preventDefault(); void savePatient(); }}>
+          <p className="wa-text">
+            {patient ? "Change the patient\u2019s name, phone number or email." :
+              "Who is the patient? The patient can also fill this in from their link. Their documents are kept under their phone number or email."}
+          </p>
+          <div className="wa-field">
+            <label className="wa-label" htmlFor="patient-name">Patient&apos;s name</label>
+            <input id="patient-name" className="wa-input" value={name} maxLength={120} aria-invalid={Boolean(error("name"))}
+              onChange={(event) => setName(event.target.value)} />
+            {error("name") && <p className="wa-error">{error("name")}</p>}
+          </div>
+          <div className="wa-field">
+            <label className="wa-label" htmlFor="patient-contact">Phone or email</label>
+            <input id="patient-contact" className="wa-input" value={contact} maxLength={254} aria-invalid={Boolean(error("contact"))}
+              onChange={(event) => setContact(event.target.value)} />
+            {error("contact") ? <p className="wa-error">{error("contact")}</p> : <p className="wa-hint">With the country code, like +421 900 123 456.</p>}
+          </div>
+          <div className="wa-actions">
+            <button type="submit" className="wa-button wa-button--primary" disabled={busy}>Save patient</button>
+            {patient && <button type="button" className="wa-button wa-button--quiet" onClick={() => setEditing(false)}>Cancel</button>}
+          </div>
+        </form>
+      ) : patient && (
+        <p className="wa-meta" style={{ margin: 0 }}>
+          {patient.name} · {patient.phone ?? patient.email}{" "}
+          <button type="button" className="wa-button wa-button--quiet wa-button--small" onClick={() => setEditing(true)}>Change</button>
+        </p>
+      )}
+
+      {documents && documents.length > 0 && (
+        <ul className="wa-docs" aria-label="The patient's documents">
+          {documents.map((document) => (
+            <li key={document.id} className="wa-doc">
+              {document.media_type === "application/pdf" ? <FileText aria-hidden className="wa-icon" /> : <ImageIcon aria-hidden className="wa-icon" />}
+              <div className="wa-doc__body">
+                <p className="wa-doc__name">{document.file_name}</p>
+                <p className="wa-doc__meta">
+                  {document.reading === "read" && document.page_texts && `${document.page_texts.length} ${document.page_texts.length === 1 ? "page" : "pages"} · `}
+                  {FROM[document.source]} {dateTime(document.uploaded_at!)}
+                  {document.consultation_id !== consultationId && document.consultations &&
+                    ` · from the consultation of ${dayMonth(document.consultations.scheduled_at)}`}
+                </p>
+              </div>
+              <div className="wa-doc__end">
+                <Reading document={document} onTryAgain={() => readAgain(document)} />
+                {removing === document.id ? (
+                  <>
+                    <button type="button" className="wa-button wa-button--danger wa-button--small" disabled={busy} onClick={() => remove(document)}>Remove for good</button>
+                    <button type="button" className="wa-button wa-button--quiet wa-button--small" onClick={() => setRemoving(null)}>Keep</button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="wa-button wa-button--secondary wa-button--small" aria-label={`Open ${document.file_name}`}
+                      onClick={() => open(document)}>
+                      <Eye aria-hidden className="wa-icon wa-icon--sm" />Open
+                    </button>
+                    <button type="button" className="wa-button wa-button--quiet wa-button--small" aria-label={`Remove ${document.file_name}`}
+                      onClick={() => setRemoving(document.id)}>
+                      Remove
+                    </button>
+                  </>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {documents && documents.length === 0 && patient && !editing && (
+        <p className="wa-text">No documents yet. The patient can send them from their link.</p>
+      )}
+      {problem && <Notice tone="failed" title="That did not work">{problem}</Notice>}
+      {documents && documents.length > 0 && (
+        <p className="wa-hint">Watson uses what it reads when it fills in your form, and shows the page each answer comes from. Only you can open these documents.</p>
+      )}
+    </section>
+  );
+}
+
+function Reading({ document, onTryAgain }: { document: Document; onTryAgain: () => void }) {
+  switch (document.reading) {
+    case "read":
+      return <span className="wa-chip wa-chip--done"><Check aria-hidden className="wa-icon wa-icon--sm" />Read by Watson</span>;
+    case "unreadable":
+      return <span className="wa-chip"><Eye aria-hidden className="wa-icon wa-icon--sm" />Read it yourself</span>;
+    case "failed":
+      return (
+        <>
+          <span className="wa-chip wa-chip--failed"><CircleX aria-hidden className="wa-icon wa-icon--sm" />Not read</span>
+          <button type="button" className="wa-button wa-button--quiet wa-button--small" onClick={onTryAgain}>
+            <RotateCcw aria-hidden className="wa-icon wa-icon--sm" />Try again
+          </button>
+        </>
+      );
+    default:
+      return <span className="wa-chip wa-chip--current"><LoaderCircle aria-hidden className="wa-icon wa-icon--sm wa-spin" />Reading…</span>;
+  }
+}

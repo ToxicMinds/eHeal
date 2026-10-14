@@ -32,6 +32,18 @@ const MESSAGE: Record<string, string> = {
   NOT_SIGNED_IN: "You are signed out. Sign in again.",
   VALIDATION: "One of the values was not accepted. Check the form and try again.",
   STORAGE_UNAVAILABLE: "The service could not be reached. Check your connection and try again.",
+  PATIENT_MISSING: "Add the patient's name and phone number or email first.",
+  DOCUMENT_FORMAT_UNSUPPORTED: "Send a PDF or a photo (JPEG, PNG or WebP).",
+  DOCUMENT_TOO_LARGE: "This file is larger than 10 MB. Send a smaller copy, or a photo of each page.",
+  DOCUMENT_LIMIT: "This consultation already has 20 documents, the most it takes.",
+  DOCUMENT_FILE_MISSING: "The file did not arrive. Send it again.",
+  DOCUMENT_CORRUPT: "The file did not arrive whole. Send it again.",
+};
+
+/** For a refused name or phone number: what to type instead. */
+export const FIELD_MESSAGE: Record<string, string> = {
+  name: "Enter a name.",
+  contact: "Enter a phone number with its country code, like +421 900 123 456, or an email address.",
 };
 
 /** A sentence a practitioner can act on, for any refusal. Never a stack trace. */

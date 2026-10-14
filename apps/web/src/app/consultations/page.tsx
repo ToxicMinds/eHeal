@@ -16,7 +16,10 @@ type Row = {
   language: keyof typeof LANGUAGE_LABEL; status: ConsultationStatus;
   fee_cents: number | null; paid_at: string | null;
   forms: { form_answers: { machine_text: string | null }[] }[];
+  patients: { name: string } | null;
 };
+/** The patient's name once known, else the consultation's reference. */
+const who = (row: Row) => row.patients?.name ?? row.synthetic_patient_ref;
 type Engine = { online: boolean; last_seen_at: string | null };
 
 export default function ConsultationsPage() {
@@ -50,7 +53,7 @@ function Dashboard() {
     // Row-level security returns only the signed-in practitioner's consultations.
     supabase
       .from("consultations")
-      .select("id, synthetic_patient_ref, scheduled_at, updated_at, language, status, fee_cents, paid_at, forms(form_answers(machine_text))")
+      .select("id, synthetic_patient_ref, scheduled_at, updated_at, language, status, fee_cents, paid_at, forms(form_answers(machine_text)), patients(name)")
       .order("scheduled_at", { ascending: false })
       .then(({ data, error }) => (error ? setFailed(true) : setRows(data as unknown as Row[])));
     supabase.rpc("engine_status").then(({ data }) => setEngine(data as Engine | null));
@@ -140,7 +143,7 @@ function Dashboard() {
               <ul className="wa-done-list">
                 {done.map((row) => (
                   <li key={row.id}>
-                    <Link href={`/consultation/?id=${row.id}`} className="wa-row__ref" style={{ color: "inherit" }}>{row.synthetic_patient_ref}</Link>
+                    <Link href={`/consultation/?id=${row.id}`} className="wa-row__ref" style={{ color: "inherit" }}>{who(row)}</Link>
                     <span className="wa-meta">{dateTime(row.scheduled_at)} · {LANGUAGE_LABEL[row.language]}</span>
                     <span style={{ marginLeft: "auto" }}><StatusChip status={row.status} /></span>
                   </li>
@@ -165,7 +168,7 @@ function Case({ row }: { row: Row }) {
   return (
     <Link href={formReady ? `/form/?id=${row.id}` : `/consultation/?id=${row.id}`} className={`wa-case ${edge}`}>
       <div className="wa-case__top">
-        <span className="wa-case__ref">{row.synthetic_patient_ref}</span>
+        <span className={row.patients ? "wa-case__name" : "wa-case__ref"}>{who(row)}</span>
         <StatusChip status={row.status} />
       </div>
       <p className="wa-case__meta">{[dateTime(row.scheduled_at), LANGUAGE_LABEL[row.language], fee].filter(Boolean).join(" · ")}</p>

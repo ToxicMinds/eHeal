@@ -156,6 +156,7 @@ export type Database = {
           language: Database["public"]["Enums"]["consultation_language"]
           paid_amount_cents: number | null
           paid_at: string | null
+          patient_id: string | null
           practitioner_id: string
           recorded_together: boolean
           scenario_notes: string
@@ -177,6 +178,7 @@ export type Database = {
           language: Database["public"]["Enums"]["consultation_language"]
           paid_amount_cents?: number | null
           paid_at?: string | null
+          patient_id?: string | null
           practitioner_id: string
           recorded_together?: boolean
           scenario_notes?: string
@@ -198,6 +200,7 @@ export type Database = {
           language?: Database["public"]["Enums"]["consultation_language"]
           paid_amount_cents?: number | null
           paid_at?: string | null
+          patient_id?: string | null
           practitioner_id?: string
           recorded_together?: boolean
           scenario_notes?: string
@@ -207,7 +210,15 @@ export type Database = {
           synthetic_patient_ref?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "consultations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       engines: {
         Row: {
@@ -229,6 +240,7 @@ export type Database = {
       }
       form_answers: {
         Row: {
+          document_quotes: Json
           evidence: number[]
           field_key: string
           form_id: string
@@ -238,6 +250,7 @@ export type Database = {
           review: string
         }
         Insert: {
+          document_quotes?: Json
           evidence?: number[]
           field_key: string
           form_id: string
@@ -247,6 +260,7 @@ export type Database = {
           review?: string
         }
         Update: {
+          document_quotes?: Json
           evidence?: number[]
           field_key?: string
           form_id?: string
@@ -400,6 +414,114 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      patient_documents: {
+        Row: {
+          claimed_at: string | null
+          consultation_id: string
+          created_at: string
+          engine_user_id: string | null
+          error_category: string | null
+          file_name: string
+          id: string
+          media_type: string
+          page_texts: string[] | null
+          patient_id: string
+          practitioner_id: string
+          read_at: string | null
+          reading: Database["public"]["Enums"]["document_reading"]
+          reading_attempt: number
+          size_bytes: number
+          source: string
+          storage_path: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          claimed_at?: string | null
+          consultation_id: string
+          created_at?: string
+          engine_user_id?: string | null
+          error_category?: string | null
+          file_name: string
+          id?: string
+          media_type: string
+          page_texts?: string[] | null
+          patient_id: string
+          practitioner_id: string
+          read_at?: string | null
+          reading?: Database["public"]["Enums"]["document_reading"]
+          reading_attempt?: number
+          size_bytes: number
+          source: string
+          storage_path: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          claimed_at?: string | null
+          consultation_id?: string
+          created_at?: string
+          engine_user_id?: string | null
+          error_category?: string | null
+          file_name?: string
+          id?: string
+          media_type?: string
+          page_texts?: string[] | null
+          patient_id?: string
+          practitioner_id?: string
+          read_at?: string | null
+          reading?: Database["public"]["Enums"]["document_reading"]
+          reading_attempt?: number
+          size_bytes?: number
+          source?: string
+          storage_path?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_documents_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          practitioner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          practitioner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          practitioner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       transcript_segments: {
         Row: {
@@ -575,6 +697,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_document: {
+        Args: {
+          p_consultation_id: string
+          p_file_name: string
+          p_media_type: string
+          p_size_bytes: number
+        }
+        Returns: Json
+      }
       approve_form: { Args: { p_form_id: string }; Returns: Json }
       cancel_transcription: {
         Args: { p_consultation_id: string }
@@ -584,6 +715,7 @@ export type Database = {
         Args: { p_consultation_id: string }
         Returns: Json
       }
+      confirm_document: { Args: { p_document_id: string }; Returns: Json }
       create_consultation: {
         Args: {
           p_consent_recorded: boolean
@@ -599,8 +731,13 @@ export type Database = {
         Args: { p_consultation_id: string; p_recorded_together: boolean }
         Returns: Json
       }
+      engine_claim_document: { Args: never; Returns: Json }
       engine_claim_form_job: { Args: never; Returns: Json }
       engine_claim_job: { Args: never; Returns: Json }
+      engine_complete_document: {
+        Args: { p_attempt: number; p_document_id: string; p_pages: string[] }
+        Returns: Json
+      }
       engine_complete_form_job: {
         Args: {
           p_answers: Json
@@ -616,6 +753,14 @@ export type Database = {
           p_job_id: string
           p_metrics?: Json
           p_transcript: Json
+        }
+        Returns: Json
+      }
+      engine_fail_document: {
+        Args: {
+          p_attempt: number
+          p_document_id: string
+          p_error_category: string
         }
         Returns: Json
       }
@@ -648,6 +793,28 @@ export type Database = {
       }
       engine_status: { Args: never; Returns: Json }
       invite_details: { Args: { p_token: string }; Returns: Json }
+      patient_add_document: {
+        Args: {
+          p_file_name: string
+          p_media_type: string
+          p_size_bytes: number
+          p_token: string
+        }
+        Returns: Json
+      }
+      patient_confirm_document: {
+        Args: { p_document_id: string; p_token: string }
+        Returns: Json
+      }
+      patient_identify: {
+        Args: { p_contact: string; p_name: string; p_token: string }
+        Returns: Json
+      }
+      patient_remove_document: {
+        Args: { p_document_id: string; p_token: string }
+        Returns: Json
+      }
+      read_document_again: { Args: { p_document_id: string }; Returns: Json }
       record_consent: { Args: { p_consultation_id: string }; Returns: Json }
       record_payment: {
         Args: {
@@ -679,6 +846,7 @@ export type Database = {
         }
         Returns: Json
       }
+      remove_document: { Args: { p_document_id: string }; Returns: Json }
       review_form_answer: {
         Args: {
           p_decision: string
@@ -689,6 +857,10 @@ export type Database = {
         Returns: Json
       }
       set_form_template: { Args: { p_definition: Json }; Returns: Json }
+      set_patient: {
+        Args: { p_consultation_id: string; p_contact: string; p_name: string }
+        Returns: Json
+      }
       start_form: { Args: { p_consultation_id: string }; Returns: Json }
       start_transcription: {
         Args: { p_consultation_id: string }
@@ -719,6 +891,7 @@ export type Database = {
         | "corrected"
         | "consent_withdrawn"
         | "archived"
+      document_reading: "waiting" | "reading" | "read" | "unreadable" | "failed"
       job_stage:
         | "validating"
         | "transcribing_practitioner"
@@ -882,6 +1055,7 @@ export const Constants = {
         "consent_withdrawn",
         "archived",
       ],
+      document_reading: ["waiting", "reading", "read", "unreadable", "failed"],
       job_stage: [
         "validating",
         "transcribing_practitioner",
