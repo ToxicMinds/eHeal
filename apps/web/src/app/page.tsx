@@ -15,7 +15,7 @@ export default function Home() {
 
   return (
     <p role="status" className="eh-page eh-meta">
-      Opening eHeal…
+      Opening Watson…
     </p>
   );
 }

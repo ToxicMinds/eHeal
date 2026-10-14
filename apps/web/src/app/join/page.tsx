@@ -11,7 +11,7 @@ export default function JoinPage() {
   return (
     <>
       <header className="eh-header">
-        <div className="eh-header__inner"><span className="eh-wordmark">eHeal</span></div>
+        <div className="eh-header__inner"><span className="eh-wordmark">Watson</span></div>
       </header>
       <main className="eh-page">
         <Suspense fallback={<p className="eh-meta" role="status">Opening the call…</p>}>

@@ -36,9 +36,9 @@ test("start transcription, watch it run on a real engine, and read the transcrip
   execFileSync("uv", ["run", "--project", ENGINE, "python", "-c",
     "from clinical_worker.config import load_settings; from clinical_worker.engine import Engine; Engine(load_settings()).run_once()"], {
     env: {
-      ...process.env, EHEAL_ENV_FILE: "/nonexistent", EHEAL_MODEL: "tiny",
-      EHEAL_SUPABASE_URL: stack.url, EHEAL_SUPABASE_PUBLISHABLE_KEY: stack.publishableKey,
-      EHEAL_ENGINE_EMAIL: engine.email, EHEAL_ENGINE_PASSWORD: PASSWORD,
+      ...process.env, WATSON_ENV_FILE: "/nonexistent", WATSON_MODEL: "tiny",
+      WATSON_SUPABASE_URL: stack.url, WATSON_SUPABASE_PUBLISHABLE_KEY: stack.publishableKey,
+      WATSON_ENGINE_EMAIL: engine.email, WATSON_ENGINE_PASSWORD: PASSWORD,
     },
     stdio: "ignore",
     timeout: 120_000,

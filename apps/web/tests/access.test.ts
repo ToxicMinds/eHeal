@@ -88,7 +88,7 @@ describe("a signed-out visitor", () => {
   });
 
   it("cannot create an account", async () => {
-    const { data, error } = await visitor.auth.signUp({ email: "stranger@eheal.test", password: PASSWORD });
+    const { data, error } = await visitor.auth.signUp({ email: "stranger@watson.test", password: PASSWORD });
     expect(error).not.toBeNull();
     expect(data.user).toBeNull();
   });

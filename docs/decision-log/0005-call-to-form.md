@@ -4,9 +4,9 @@ Status: accepted 14 October 2026, by the owner. Where it differs from
 MASTER_BUILD_SPEC.md version 2.2 (sections 2, 13, 15, 20.6 and 21), this record wins
 until the specification is rewritten.
 
-The owner described eHeal as one flow:
+The owner described Watson as one flow:
 
-1. A doctor and a patient talk in eHeal by video.
+1. A doctor and a patient talk in Watson by video.
 2. The conversation is recorded.
 3. The recording is transcribed.
 4. An AI reads the transcript to understand what the patient wants solved, what the doctor

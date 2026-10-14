@@ -1,6 +1,6 @@
 # Transcript
 
-The conversation as one column of turns, with two rails down its left edge: eHeal's signature.
+The conversation as one column of turns, with two rails down its left edge: Watson's signature.
 
 - Each turn shows the speaker ("Practitioner" in `practitioner`, "Patient" in `patient`), its start time in `mono`, and what was said in `transcript` type.
 - The rails are the two audio tracks laid on their side: the left rail is the patient's, the right one the practitioner's. A turn lights its speaker's rail. A turn that overlaps the other speaker lights both rails and carries the "Overlaps" tag.

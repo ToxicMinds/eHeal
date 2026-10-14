@@ -11,7 +11,7 @@ no public deployment (sections 3.3, 4.1, 10, 29.4, 45).
 
 ## Decision
 
-Add a second, explicit mode, `EHEAL_DEPLOYMENT=cloud-demo`, used only by the
+Add a second, explicit mode, `WATSON_DEPLOYMENT=cloud-demo`, used only by the
 container image. The default mode is unchanged and still binds to 127.0.0.1.
 
 In `cloud-demo` the worker:

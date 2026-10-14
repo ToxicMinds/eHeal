@@ -43,7 +43,9 @@ def _run_engine(settings: Settings) -> None:
         and settings.engine_password.get_secret_value()
         and settings.supabase_publishable_key
     ):
-        sys.exit("Set EHEAL_ENGINE_EMAIL, EHEAL_ENGINE_PASSWORD, EHEAL_SUPABASE_PUBLISHABLE_KEY.")
+        sys.exit(
+            "Set WATSON_ENGINE_EMAIL, WATSON_ENGINE_PASSWORD, WATSON_SUPABASE_PUBLISHABLE_KEY."
+        )
     Engine(settings).run_forever()
 
 

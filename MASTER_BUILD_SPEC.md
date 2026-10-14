@@ -1,8 +1,8 @@
-# eHeal — Master Build Specification
+# Watson — Master Build Specification
 
 **Version 2.2 · 14 October 2026 · Status: authoritative**
 
-This document says what eHeal is, how it is built, and in what order. It replaces version 1, which is kept unchanged at `docs/archive/MASTER_BUILD_SPEC-v1.md`. Appendix A lists every change from version 1 and why it was made. Versions 2.1 and 2.2 apply the findings of two independent reviews; those changes are listed at the end of Appendix A. Progress against the roadmap is tracked in `docs/roadmap.md`.
+This document says what Watson is, how it is built, and in what order. It replaces version 1, which is kept unchanged at `docs/archive/MASTER_BUILD_SPEC-v1.md`. Appendix A lists every change from version 1 and why it was made. Versions 2.1 and 2.2 apply the findings of two independent reviews; those changes are listed at the end of Appendix A. Progress against the roadmap is tracked in `docs/roadmap.md`.
 
 **Owner's decision of 14 October 2026 ([decision 0005](docs/decision-log/0005-call-to-form.md)):** the product flow is video call → recording → transcription → an AI that fills in the doctor's questionnaire and may suggest a diagnosis. The consultation room comes next, before the structured draft. Where this document differs, decision 0005 wins until the document is rewritten.
 
@@ -22,7 +22,7 @@ It is written for two readers: the product owner, who decides, and whoever build
 
 ## 1. What we are building
 
-eHeal is a consultation documentation tool for Ayurveda and integrative-care practitioners in Europe who see patients remotely.
+Watson is a consultation documentation tool for Ayurveda and integrative-care practitioners in Europe who see patients remotely.
 
 **The first product**
 
@@ -1226,6 +1226,7 @@ Version 2.2 applies a second review, of version 2.1 and the slice 1.3 migration.
 | S8 | Smaller errors: the Piper voices, the phase 2 exit, the reference engine, leftovers from version 2.0. | Corrected. | 2, 6.1, 12.6, 20.8, 21.3, A |
 | S9 | The owner made the free rule permanent and confirmed no payment method is on file. | Section 3, OD-6 and OD-9 updated. | 3, 22 |
 | S10 | The owner found the on-screen reminders that data is invented unnecessary. | The banner and reminders are removed from the app. The `SYN-` format still refuses names. | 5.1, 14, 21.2 |
+| S11 | The owner found that the name "eHeal" did not feel right and asked for one with a story. | Renamed Watson: the practitioner is Sherlock, the app is their Watson ([decision 0006](docs/decision-log/0006-renamed-watson.md)). | All |
 
 # Appendix B — Where each section of version 1 went
 

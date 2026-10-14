@@ -45,7 +45,7 @@ export default function SignIn() {
   return (
     <main className="eh-signin">
       <section className="eh-thesis" aria-labelledby="what-it-does">
-        <span className="eh-wordmark">eHeal</span>
+        <span className="eh-wordmark">Watson</span>
         <h1 id="what-it-does" className="eh-thesis__lead">
           Turn a consultation&apos;s two audio tracks into a transcript you can check and correct.
         </h1>

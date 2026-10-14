@@ -35,7 +35,7 @@ export function browserClient(stack: Stack) {
 
 /** A brand-new practitioner with a unique email, signed in the way a browser would be. */
 export async function newPractitioner(stack: Stack, label: string) {
-  const email = `${label}-${randomUUID().slice(0, 8)}@eheal.test`;
+  const email = `${label}-${randomUUID().slice(0, 8)}@watson.test`;
   const created = await adminClient(stack).auth.admin.createUser({ email, password: PASSWORD, email_confirm: true });
   if (created.error) throw created.error;
   const client = browserClient(stack);
@@ -84,7 +84,7 @@ export async function attachTrack(who: Practitioner, consultationId: string, spe
 
 /** Runs SQL as the database owner. For tests that must tamper with data directly. */
 export function sqlAsOwner(sql: string) {
-  return execSync(`docker exec -i supabase_db_eHeal psql -U postgres -d postgres -At -v ON_ERROR_STOP=1`, {
+  return execSync(`docker exec -i supabase_db_watson psql -U postgres -d postgres -At -v ON_ERROR_STOP=1`, {
     input: sql, encoding: "utf8",
   }).trim();
 }

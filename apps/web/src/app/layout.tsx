@@ -6,7 +6,7 @@ import "./globals.css";
 import { SessionProvider } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: { default: "eHeal", template: "%s · eHeal" },
+  title: { default: "Watson", template: "%s · Watson" },
   description: "Consultation documentation workspace.",
   robots: { index: false, follow: false },
 };

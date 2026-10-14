@@ -1,11 +1,11 @@
 # The transcription engine as a systemd user service: starts at login, restarts after a crash.
 # Install (from the repository root):
-#   uv tool install --force ./apps/clinical-worker
-#   cp apps/clinical-worker/eheal-engine.service ~/.config/systemd/user/
-#   systemctl --user daemon-reload && systemctl --user enable --now eheal-engine
-# Settings come from ~/.config/eheal/engine.env. Logs: journalctl --user -u eheal-engine
+#   uv tool install --force --python 3.12 ./apps/clinical-worker
+#   cp apps/clinical-worker/watson-engine.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now watson-engine
+# Settings come from ~/.config/watson/engine.env. Logs: journalctl --user -u watson-engine
 [Unit]
-Description=eHeal transcription engine
+Description=Watson transcription engine
 After=network-online.target
 Wants=network-online.target
 

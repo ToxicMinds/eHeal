@@ -11,7 +11,7 @@ export function AppShell({ user, children }: { user: User; children: ReactNode }
     <>
       <header className="eh-header">
         <div className="eh-header__inner">
-          <Link href="/consultations/" className="eh-wordmark" aria-label="eHeal, consultations">eHeal</Link>
+          <Link href="/consultations/" className="eh-wordmark" aria-label="Watson, consultations">Watson</Link>
           <div className="eh-account">
             <span className="eh-account__email">Signed in as <strong>{user.email}</strong></span>
             <button type="button" className="eh-button eh-button--secondary eh-button--small"
