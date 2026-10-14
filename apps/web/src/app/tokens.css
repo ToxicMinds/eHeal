@@ -24,6 +24,7 @@
   --on-screen: #ffffff;
   --focus: var(--practitioner);
   --shadow-paper: 0 1px 2px rgba(22, 27, 38, 0.08);
+  --shadow-raised: 0 1px 2px rgba(22, 27, 38, 0.06), 0 4px 14px rgba(22, 27, 38, 0.07);
 }
 [data-theme="dark"] {
   --ground: #0f1218;
@@ -50,6 +51,7 @@
   --on-screen: #ffffff;
   --focus: var(--practitioner);
   --shadow-paper: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -78,6 +80,7 @@
   --on-screen: #ffffff;
   --focus: var(--practitioner);
   --shadow-paper: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(0, 0, 0, 0.35);
     color-scheme: dark;
   }
 }
