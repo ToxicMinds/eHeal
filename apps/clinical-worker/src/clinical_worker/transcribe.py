@@ -1,16 +1,34 @@
-"""Local transcription with faster-whisper. Loads models from disk only."""
+"""One track in, timed segments out, with faster-whisper loaded from disk only."""
 
 import math
-from datetime import UTC, datetime
+from collections.abc import Callable
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from uuid import UUID, uuid4
 
-from faster_whisper import WhisperModel
+from faster_whisper import WhisperModel, decode_audio
 
-from .config import Settings
-from .errors import ErrorCategory, WorkerError
-from .schema import Segment, Speaker, Transcript, TranscriptionModel
+from .config import DETECTABLE_LANGUAGES, Settings
+from .errors import ErrorCategory, Stopped, WorkerError
+
+SAMPLE_RATE = 16000
+
+
+@dataclass(frozen=True)
+class RawSegment:
+    start: float
+    end: float
+    text: str
+    confidence: float | None
+    possibly_not_speech: bool
+
+
+@dataclass(frozen=True)
+class TrackTranscription:
+    segments: list[RawSegment]
+    language: str
+    language_probability: float | None  # set only when the language was detected
+    duration_seconds: float
 
 
 @lru_cache(maxsize=1)
@@ -21,42 +39,60 @@ def _load(model_path: str, device: str, compute_type: str, cpu_threads: int) -> 
     )
 
 
-def transcribe(
-    path: Path,
-    *,
-    appointment_id: UUID,
-    speaker: Speaker,
-    language: str | None,
-    settings: Settings,
-) -> Transcript:
+def model_revision(settings: Settings) -> str | None:
+    """Recorded by `clinical-worker fetch-model` next to the model files."""
+    marker = settings.model_path / "revision.txt"
+    return marker.read_text().strip() or None if marker.is_file() else None
+
+
+def transcribe_track(
+    path: Path, language: str | None, settings: Settings, should_stop: Callable[[], bool]
+) -> TrackTranscription:
+    """Transcribes one speaker's audio. `language=None` means "mixed or unsure"."""
     if not settings.model_path.is_dir():
         raise WorkerError(ErrorCategory.TRANSCRIPTION_MODEL_UNAVAILABLE)
     try:
         model = _load(
             str(settings.model_path), settings.device, settings.compute_type, settings.cpu_threads
         )
-        raw_segments, info = model.transcribe(str(path), language=language, vad_filter=True)
-        segments = [
-            Segment(
-                segment_id=uuid4(),
-                speaker=speaker,
-                start_seconds=s.start,
-                end_seconds=s.end,
-                machine_text=s.text.strip(),
-                confidence=None
-                if s.no_speech_prob > settings.no_speech_threshold
-                else round(min(1.0, math.exp(s.avg_logprob)), 3),
+        audio = decode_audio(str(path), sampling_rate=SAMPLE_RATE)
+        probability = None
+        if language is None:
+            # Detection chooses only among the languages we support (section 12.2).
+            _, _, all_probabilities = model.detect_language(audio, vad_filter=True)
+            allowed = [(code, p) for code, p in all_probabilities if code in DETECTABLE_LANGUAGES]
+            language, probability = max(allowed, key=lambda item: item[1])
+            probability = round(float(probability), 3)
+        raw_segments, _ = model.transcribe(
+            audio,
+            language=language,
+            vad_filter=True,  # digital silence produces no text
+            condition_on_previous_text=False,  # limits runaway repetition
+            temperature=(0.0, 0.2, 0.4),  # at most three attempts per window
+        )
+        segments = []
+        for raw in raw_segments:  # lazy: decoding happens as we iterate
+            if should_stop():
+                raise Stopped
+            text = raw.text.strip()
+            if not text:
+                continue
+            segments.append(
+                RawSegment(
+                    start=float(raw.start),
+                    end=float(raw.end),
+                    text=text,
+                    confidence=round(min(1.0, math.exp(raw.avg_logprob)), 3),
+                    possibly_not_speech=raw.no_speech_prob > settings.no_speech_threshold,
+                )
             )
-            for s in raw_segments  # lazy generator: decoding happens here
-        ]
+    except (WorkerError, Stopped):
+        raise
     except Exception as exc:
         raise WorkerError(ErrorCategory.TRANSCRIPTION_FAILED) from exc
-    return Transcript(
-        appointment_id=appointment_id,
-        source_languages=[info.language],
-        created_at_utc=datetime.now(UTC),
-        transcription_model=TranscriptionModel(
-            model=settings.model, device=settings.device, compute_type=settings.compute_type
-        ),
+    return TrackTranscription(
         segments=segments,
+        language=language,
+        language_probability=probability,
+        duration_seconds=round(len(audio) / SAMPLE_RATE, 2),
     )

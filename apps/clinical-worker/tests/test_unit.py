@@ -1,122 +1,187 @@
 from datetime import UTC, datetime
-from pathlib import Path
 from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
 
 from clinical_worker.__main__ import SCHEMA_DIR, schema_json
-from clinical_worker.config import HOST, Settings, load_settings
+from clinical_worker.config import load_settings
 from clinical_worker.log import log_event
-from clinical_worker.schema import SCHEMA_VERSION, Segment, Transcript, TranscriptionModel
-from clinical_worker.storage import Storage
+from clinical_worker.merge import merge
+from clinical_worker.schema import (
+    SCHEMA_VERSION,
+    Segment,
+    Speaker,
+    Track,
+    Transcript,
+    TranscriptionModel,
+)
+from clinical_worker.transcribe import RawSegment
 
 
-def _segment(**overrides: object) -> dict[str, object]:
+def raw(start: float, end: float, text: str = "words") -> RawSegment:
+    return RawSegment(start=start, end=end, text=text, confidence=0.9, possibly_not_speech=False)
+
+
+class TestMerge:
+    def test_orders_by_time_across_speakers(self) -> None:
+        segments = merge(
+            {"practitioner": [raw(0, 2, "a"), raw(6, 8, "c")], "patient": [raw(3, 5, "b")]},
+            {},
+            recorded_together=False,
+            tolerance_seconds=0.25,
+        )
+        assert [s.machine_text for s in segments] == ["a", "b", "c"]
+        assert [s.position for s in segments] == [0, 1, 2]
+        assert [s.speaker for s in segments] == ["practitioner", "patient", "practitioner"]
+
+    def test_breaks_ties_practitioner_first_then_track_order(self) -> None:
+        segments = merge(
+            {"patient": [raw(1, 2, "p1"), raw(1, 2, "p2")], "practitioner": [raw(1, 2, "d1")]},
+            {},
+            recorded_together=False,
+            tolerance_seconds=0.25,
+        )
+        assert [s.machine_text for s in segments] == ["d1", "p1", "p2"]
+
+    def test_applies_each_track_offset(self) -> None:
+        segments = merge(
+            {"practitioner": [raw(0, 1, "a")], "patient": [raw(0, 1, "b")]},
+            {"patient": 5.0},
+            recorded_together=True,
+            tolerance_seconds=0.25,
+        )
+        assert [(s.machine_text, s.start_seconds) for s in segments] == [("a", 0.0), ("b", 5.0)]
+
+    def test_marks_overlap_only_when_the_tracks_share_a_clock(self) -> None:
+        tracks: dict[Speaker, list[RawSegment]] = {
+            "practitioner": [raw(0, 3, "a")],
+            "patient": [raw(2, 4, "b")],
+        }
+        together = merge(tracks, {}, recorded_together=True, tolerance_seconds=0.25)
+        assert [s.overlap for s in together] == [True, True]
+        apart = merge(tracks, {}, recorded_together=False, tolerance_seconds=0.25)
+        assert [s.overlap for s in apart] == [None, None]
+
+    def test_ignores_overlap_within_the_tolerance_and_within_one_speaker(self) -> None:
+        brief = merge(
+            {"practitioner": [raw(0, 2.1)], "patient": [raw(2.0, 4)]},
+            {},
+            recorded_together=True,
+            tolerance_seconds=0.25,
+        )
+        assert [s.overlap for s in brief] == [False, False]
+        same = merge(
+            {"practitioner": [raw(0, 3), raw(1, 4)], "patient": []},
+            {},
+            recorded_together=True,
+            tolerance_seconds=0.25,
+        )
+        assert [s.overlap for s in same] == [False, False]
+
+
+def transcript(**overrides: object) -> dict[str, object]:
+    model = TranscriptionModel(model="tiny", device="cpu", compute_type="int8")
+    tracks = [
+        Track(
+            speaker=speaker,
+            audio_sha256="a" * 64,
+            duration_seconds=7.5,
+            sync_method="none",
+            language="en",
+            transcription_model=model,
+        )
+        for speaker in ("practitioner", "patient")
+    ]
+    segment = Segment(
+        segment_id=uuid4(),
+        position=0,
+        speaker="patient",
+        start_seconds=0,
+        end_seconds=1,
+        machine_text="x",
+    )
     return {
-        "segment_id": str(uuid4()),
-        "speaker": "patient",
-        "start_seconds": 2.5,
-        "end_seconds": 7.8,
-        "machine_text": "Example transcript text.",
+        "consultation_id": uuid4(),
+        "created_at_utc": datetime.now(UTC),
+        "ordering": "approximate",
+        "low_confidence_threshold": 0.5,
+        "tracks": tracks,
+        "segments": [segment],
         **overrides,
     }
 
 
-def test_segment_defaults_match_spec() -> None:
-    segment = Segment.model_validate(_segment())
-    assert segment.reviewed_text is None
-    assert segment.confidence is None
-    assert segment.review_status == "unreviewed"
-    assert segment.overlap is False
+class TestTranscriptSchema:
+    def test_accepts_a_consistent_transcript(self) -> None:
+        assert Transcript.model_validate(transcript()).schema_version == "2.0.0"
+
+    @pytest.mark.parametrize(
+        "overrides",
+        [
+            {"tracks": []},
+            {
+                "segments": [
+                    Segment(
+                        segment_id=uuid4(),
+                        position=3,
+                        speaker="patient",
+                        start_seconds=0,
+                        end_seconds=1,
+                        machine_text="x",
+                    )
+                ]
+            },
+            {
+                "segments": [
+                    Segment(
+                        segment_id=uuid4(),
+                        position=0,
+                        speaker="patient",
+                        start_seconds=0,
+                        end_seconds=1,
+                        machine_text="x",
+                        overlap=True,
+                    )
+                ]
+            },
+            {"diagnosis": "anything"},
+        ],
+    )
+    def test_refuses_an_inconsistent_transcript(self, overrides: dict[str, object]) -> None:
+        with pytest.raises(ValidationError):
+            Transcript.model_validate(transcript(**overrides))
+
+    def test_refuses_a_segment_that_ends_before_it_starts(self) -> None:
+        with pytest.raises(ValidationError):
+            Segment(
+                segment_id=uuid4(),
+                position=0,
+                speaker="patient",
+                start_seconds=2,
+                end_seconds=1,
+                machine_text="x",
+            )
+
+    def test_committed_json_schema_is_current(self) -> None:
+        committed = (SCHEMA_DIR / f"transcript-{SCHEMA_VERSION}.schema.json").read_text()
+        assert committed == schema_json(), "run: uv run clinical-worker export-schema"
 
 
-@pytest.mark.parametrize(
-    "overrides",
-    [
-        {"end_seconds": 1.0},  # ends before it starts
-        {"start_seconds": -1.0},
-        {"speaker": "doctor"},
-        {"confidence": 1.5},
-        {"diagnosis": "anything"},  # unknown fields are rejected, not silently kept
-    ],
-)
-def test_segment_rejects_invalid(overrides: dict[str, object]) -> None:
-    with pytest.raises(ValidationError):
-        Segment.model_validate(_segment(**overrides))
+class TestSettings:
+    def test_environment_wins_over_the_file(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        file = tmp_path / "engine.env"
+        file.write_text("EHEAL_MODEL=medium\nEHEAL_ENGINE_EMAIL=engine@example.test\n")
+        settings = load_settings({"EHEAL_ENV_FILE": str(file), "EHEAL_MODEL": "tiny"})
+        assert (settings.model, settings.engine_email) == ("tiny", "engine@example.test")
+
+    def test_password_never_appears_in_its_representation(self) -> None:
+        settings = load_settings(
+            {"EHEAL_ENV_FILE": "/nonexistent", "EHEAL_ENGINE_PASSWORD": "s3cret-value"}
+        )
+        assert "s3cret-value" not in repr(settings)
 
 
-def test_committed_json_schema_is_current() -> None:
-    committed = (SCHEMA_DIR / f"transcript-{SCHEMA_VERSION}.schema.json").read_text()
-    assert committed == schema_json(), "run: uv run clinical-worker export-schema"
-
-
-def test_settings_from_environment() -> None:
-    settings = load_settings({"EHEAL_MODEL": "medium", "EHEAL_DEVICE": "cuda", "OTHER": "x"})
-    assert (settings.model, settings.device, settings.compute_type) == ("medium", "cuda", "int8")
-    assert settings.model_path.name == "faster-whisper-medium"
-
-
-def test_settings_reject_bad_environment() -> None:
-    with pytest.raises(ValidationError):
-        load_settings({"EHEAL_PORT": "80"})
-    with pytest.raises(ValidationError):
-        load_settings({"EHEAL_HOST": "0.0.0.0"})  # noqa: S104  host is not configurable
-
-
-def test_host_is_localhost() -> None:
-    assert HOST == "127.0.0.1"
-
-
-def test_log_event_rejects_fields_outside_allow_list() -> None:
+def test_log_event_refuses_fields_outside_the_allow_list() -> None:
     with pytest.raises(ValueError, match="machine_text"):
         log_event("x", machine_text="anything")
-
-
-def test_storage_writes_private_files_under_uuid_paths(tmp_path: Path) -> None:
-    appointment_id = uuid4()
-    transcript = Transcript(
-        appointment_id=appointment_id,
-        source_languages=["en"],
-        created_at_utc=datetime.now(UTC),
-        transcription_model=TranscriptionModel(model="tiny", device="cpu", compute_type="int8"),
-        segments=[Segment.model_validate(_segment())],
-    )
-    path = Storage(tmp_path).write_transcript(transcript)
-    assert path == tmp_path / str(appointment_id) / "transcript" / "raw.json"
-    assert path.stat().st_mode & 0o777 == 0o600
-    assert path.parent.stat().st_mode & 0o777 == 0o700
-    assert Transcript.model_validate_json(path.read_text()) == transcript
-    assert not list(path.parent.glob("*.partial"))
-
-
-def test_local_mode_binds_localhost_and_retains_files() -> None:
-    settings = Settings()
-    assert settings.bind_host == "127.0.0.1"
-    assert settings.retain_files
-
-
-@pytest.mark.parametrize(
-    "env",
-    [
-        {},  # no token, no host
-        {"EHEAL_ACCESS_TOKEN": "short", "EHEAL_PUBLIC_HOST": "demo.example"},
-        {"EHEAL_ACCESS_TOKEN": "x" * 32},  # no host
-    ],
-)
-def test_cloud_demo_refuses_to_start_without_token_and_host(env: dict[str, str]) -> None:
-    with pytest.raises(ValidationError):
-        load_settings({"EHEAL_DEPLOYMENT": "cloud-demo", **env})
-
-
-def test_cloud_demo_settings() -> None:
-    settings = load_settings(
-        {
-            "EHEAL_DEPLOYMENT": "cloud-demo",
-            "EHEAL_ACCESS_TOKEN": "x" * 32,
-            "RENDER_EXTERNAL_HOSTNAME": "demo.onrender.com",
-        }
-    )
-    assert settings.public_host == "demo.onrender.com"
-    assert not settings.retain_files
-    assert "x" * 32 not in repr(settings)  # the token never appears in logs or tracebacks
