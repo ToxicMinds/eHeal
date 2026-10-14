@@ -194,11 +194,206 @@ export type Database = {
         }
         Relationships: []
       }
+      engines: {
+        Row: {
+          label: string
+          last_seen_at: string | null
+          user_id: string
+        }
+        Insert: {
+          label: string
+          last_seen_at?: string | null
+          user_id: string
+        }
+        Update: {
+          label?: string
+          last_seen_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transcript_segments: {
+        Row: {
+          confidence: number | null
+          end_seconds: number
+          id: string
+          machine_text: string
+          overlap: boolean | null
+          position: number
+          possibly_not_speech: boolean
+          review_status: string
+          reviewed_text: string | null
+          speaker: Database["public"]["Enums"]["speaker"]
+          start_seconds: number
+          transcript_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          end_seconds: number
+          id: string
+          machine_text: string
+          overlap?: boolean | null
+          position: number
+          possibly_not_speech?: boolean
+          review_status?: string
+          reviewed_text?: string | null
+          speaker: Database["public"]["Enums"]["speaker"]
+          start_seconds: number
+          transcript_id: string
+        }
+        Update: {
+          confidence?: number | null
+          end_seconds?: number
+          id?: string
+          machine_text?: string
+          overlap?: boolean | null
+          position?: number
+          possibly_not_speech?: boolean
+          review_status?: string
+          reviewed_text?: string | null
+          speaker?: Database["public"]["Enums"]["speaker"]
+          start_seconds?: number
+          transcript_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcript_segments_transcript_id_fkey"
+            columns: ["transcript_id"]
+            isOneToOne: false
+            referencedRelation: "transcripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transcription_jobs: {
+        Row: {
+          attempt: number
+          claimed_at: string | null
+          consultation_id: string
+          engine_user_id: string | null
+          error_category: string | null
+          failed_speaker: Database["public"]["Enums"]["speaker"] | null
+          finished_at: string | null
+          heartbeat_at: string | null
+          id: string
+          metrics: Json
+          queued_at: string
+          requested_by: string
+          stage: Database["public"]["Enums"]["job_stage"] | null
+          status: Database["public"]["Enums"]["job_status"]
+        }
+        Insert: {
+          attempt?: number
+          claimed_at?: string | null
+          consultation_id: string
+          engine_user_id?: string | null
+          error_category?: string | null
+          failed_speaker?: Database["public"]["Enums"]["speaker"] | null
+          finished_at?: string | null
+          heartbeat_at?: string | null
+          id?: string
+          metrics?: Json
+          queued_at?: string
+          requested_by: string
+          stage?: Database["public"]["Enums"]["job_stage"] | null
+          status?: Database["public"]["Enums"]["job_status"]
+        }
+        Update: {
+          attempt?: number
+          claimed_at?: string | null
+          consultation_id?: string
+          engine_user_id?: string | null
+          error_category?: string | null
+          failed_speaker?: Database["public"]["Enums"]["speaker"] | null
+          finished_at?: string | null
+          heartbeat_at?: string | null
+          id?: string
+          metrics?: Json
+          queued_at?: string
+          requested_by?: string
+          stage?: Database["public"]["Enums"]["job_stage"] | null
+          status?: Database["public"]["Enums"]["job_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcription_jobs_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transcripts: {
+        Row: {
+          consultation_id: string
+          created_at: string
+          id: string
+          job_id: string
+          low_confidence_threshold: number
+          ordering: Database["public"]["Enums"]["transcript_ordering"]
+          review_status: Database["public"]["Enums"]["transcript_review_status"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          schema_version: string
+          tracks: Json
+        }
+        Insert: {
+          consultation_id: string
+          created_at?: string
+          id?: string
+          job_id: string
+          low_confidence_threshold: number
+          ordering: Database["public"]["Enums"]["transcript_ordering"]
+          review_status?: Database["public"]["Enums"]["transcript_review_status"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          schema_version: string
+          tracks: Json
+        }
+        Update: {
+          consultation_id?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          low_confidence_threshold?: number
+          ordering?: Database["public"]["Enums"]["transcript_ordering"]
+          review_status?: Database["public"]["Enums"]["transcript_review_status"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          schema_version?: string
+          tracks?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcripts_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transcripts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "transcription_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      cancel_transcription: {
+        Args: { p_consultation_id: string }
+        Returns: Json
+      }
+      confirm_audio_deleted: {
+        Args: { p_consultation_id: string }
+        Returns: Json
+      }
       create_consultation: {
         Args: {
           p_consent_recorded: boolean
@@ -213,6 +408,36 @@ export type Database = {
         Args: { p_consultation_id: string; p_recorded_together: boolean }
         Returns: Json
       }
+      engine_claim_job: { Args: never; Returns: Json }
+      engine_complete_job: {
+        Args: {
+          p_attempt: number
+          p_job_id: string
+          p_metrics?: Json
+          p_transcript: Json
+        }
+        Returns: Json
+      }
+      engine_fail_job: {
+        Args: {
+          p_attempt: number
+          p_error_category: string
+          p_job_id: string
+          p_metrics?: Json
+          p_speaker?: Database["public"]["Enums"]["speaker"]
+        }
+        Returns: Json
+      }
+      engine_heartbeat: {
+        Args: {
+          p_attempt: number
+          p_audio_seconds?: number
+          p_job_id: string
+          p_stage: Database["public"]["Enums"]["job_stage"]
+        }
+        Returns: Json
+      }
+      engine_status: { Args: never; Returns: Json }
       record_consent: { Args: { p_consultation_id: string }; Returns: Json }
       register_audio_track: {
         Args: {
@@ -225,6 +450,10 @@ export type Database = {
         }
         Returns: Json
       }
+      register_engine: {
+        Args: { p_label: string; p_user_id: string }
+        Returns: undefined
+      }
       remove_audio_track: {
         Args: {
           p_consultation_id: string
@@ -232,10 +461,15 @@ export type Database = {
         }
         Returns: Json
       }
+      start_transcription: {
+        Args: { p_consultation_id: string }
+        Returns: Json
+      }
       verify_audit_chain: {
         Args: { p_consultation_id: string }
         Returns: boolean
       }
+      withdraw_consent: { Args: { p_consultation_id: string }; Returns: Json }
     }
     Enums: {
       consultation_language: "en" | "de" | "sk" | "auto"
@@ -256,8 +490,20 @@ export type Database = {
         | "corrected"
         | "consent_withdrawn"
         | "archived"
+      job_stage:
+        | "validating"
+        | "transcribing_practitioner"
+        | "transcribing_patient"
+        | "merging"
+      job_status: "queued" | "processing" | "completed" | "failed" | "cancelled"
       speaker: "practitioner" | "patient"
       track_validation: "pending" | "valid" | "invalid"
+      transcript_ordering: "exact" | "approximate"
+      transcript_review_status:
+        | "unreviewed"
+        | "under_review"
+        | "reviewed"
+        | "superseded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -407,8 +653,22 @@ export const Constants = {
         "consent_withdrawn",
         "archived",
       ],
+      job_stage: [
+        "validating",
+        "transcribing_practitioner",
+        "transcribing_patient",
+        "merging",
+      ],
+      job_status: ["queued", "processing", "completed", "failed", "cancelled"],
       speaker: ["practitioner", "patient"],
       track_validation: ["pending", "valid", "invalid"],
+      transcript_ordering: ["exact", "approximate"],
+      transcript_review_status: [
+        "unreviewed",
+        "under_review",
+        "reviewed",
+        "superseded",
+      ],
     },
   },
 } as const

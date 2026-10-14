@@ -22,11 +22,71 @@ as $$
 $$;
 
 -- Administration only: the owner registers an engine account with the master key.
+-- To revoke an engine, delete its row here (effective at once) and ban its account.
 create function public.register_engine(p_user_id uuid, p_label text) returns void
-language sql security definer set search_path = ''
+language plpgsql security definer set search_path = ''
 as $$
+begin
+  -- An engine can read the audio of any job it claims, so it must never be a practitioner.
+  if exists (select 1 from public.consultations where practitioner_id = p_user_id) then
+    raise exception 'This account has consultations. An engine needs an account of its own.';
+  end if;
   insert into public.engines (user_id, label) values (p_user_id, p_label)
   on conflict (user_id) do update set label = excluded.label;
+end;
+$$;
+
+-- Engine accounts may not act as practitioners. Every other practitioner function and
+-- storage rule works only on the caller's own consultations, so refusing this one is enough.
+create or replace function public.create_consultation(
+  p_synthetic_patient_ref text,
+  p_scheduled_at timestamptz,
+  p_language public.consultation_language,
+  p_consent_recorded boolean,
+  p_scenario_notes text default ''
+) returns jsonb
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_user uuid := (select auth.uid());
+  v_id uuid;
+  v_status public.consultation_status :=
+    case when p_consent_recorded then 'ready_for_audio' else 'consent_pending' end;
+begin
+  if v_user is null then
+    return private.refuse('NOT_SIGNED_IN');
+  end if;
+  if private.is_engine() then
+    return private.refuse('NOT_A_PRACTITIONER');
+  end if;
+  if p_synthetic_patient_ref is null or p_synthetic_patient_ref !~ '^SYN-[0-9]{1,8}$' then
+    return private.refuse('VALIDATION', 'synthetic_patient_ref');
+  end if;
+  if p_scheduled_at is null then
+    return private.refuse('VALIDATION', 'scheduled_at');
+  end if;
+  if char_length(coalesce(p_scenario_notes, '')) > 500 then
+    return private.refuse('VALIDATION', 'scenario_notes');
+  end if;
+
+  insert into public.consultations (
+    practitioner_id, synthetic_patient_ref, scheduled_at, language, status,
+    consent_recorded_at, consent_recorded_by, scenario_notes
+  ) values (
+    v_user, p_synthetic_patient_ref, p_scheduled_at, p_language, v_status,
+    case when p_consent_recorded then now() end,
+    case when p_consent_recorded then v_user end,
+    coalesce(p_scenario_notes, '')
+  ) returning id into v_id;
+
+  perform private.log_event(v_id, 'consultation.created', v_user::text, 'practitioner',
+    'consultation', v_id, 'success', jsonb_build_object('to_status', v_status));
+  if p_consent_recorded then
+    perform private.log_event(v_id, 'consent.recorded', v_user::text, 'practitioner',
+      'consultation', v_id, 'success');
+  end if;
+  return jsonb_build_object('ok', true, 'consultation_id', v_id);
+end;
 $$;
 
 -- For the status screen: is anything listening? Never says which engine.
@@ -57,7 +117,7 @@ create table public.transcription_jobs (
   claimed_at timestamptz,
   heartbeat_at timestamptz,
   finished_at timestamptz,
-  engine_user_id uuid references auth.users (id),
+  engine_user_id uuid references auth.users (id) on delete set null,
   error_category text,
   failed_speaker public.speaker,
   -- Durations, counts and model names. Never text (section 19).
@@ -284,10 +344,11 @@ begin
     perform private.log_event(p_consultation_id, 'transcript.deleted', v_user::text, 'practitioner',
       'transcript', v_transcript_id, 'success');
   end loop;
+  -- The files are deleted by the browser next; confirm_audio_deleted records when they are gone.
   for v_track in
     delete from public.audio_tracks where consultation_id = p_consultation_id returning id, speaker
   loop
-    perform private.log_event(p_consultation_id, 'audio.deleted', v_user::text, 'practitioner',
+    perform private.log_event(p_consultation_id, 'audio.deletion_requested', v_user::text, 'practitioner',
       'audio_track', v_track.id, 'success', jsonb_build_object('speaker', v_track.speaker));
   end loop;
 
@@ -295,6 +356,33 @@ begin
     set status = 'consent_withdrawn', consent_withdrawn_at = now(), consent_withdrawn_by = v_user,
         updated_at = now()
     where id = p_consultation_id;
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
+-- After a withdrawal the browser deletes the files. This checks they are gone, and only
+-- then records audio.deleted; until it passes, the screen offers to try again.
+create function public.confirm_audio_deleted(p_consultation_id uuid) returns jsonb
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_user uuid := (select auth.uid());
+  v_consultation public.consultations;
+begin
+  select * into v_consultation from public.consultations
+    where id = p_consultation_id and practitioner_id = v_user for update;
+  if not found then
+    return private.refuse('NOT_FOUND');
+  end if;
+  if v_consultation.status <> 'consent_withdrawn' then
+    return private.reject_transition(p_consultation_id, 'confirm_audio_deleted', v_consultation.status);
+  end if;
+  if exists (select 1 from storage.objects
+             where bucket_id = 'audio' and name like v_user::text || '/' || p_consultation_id::text || '/%') then
+    return private.refuse('AUDIO_NOT_DELETED');
+  end if;
+  perform private.log_event(p_consultation_id, 'audio.deleted', v_user::text, 'practitioner',
+    'consultation', p_consultation_id, 'success');
   return jsonb_build_object('ok', true);
 end;
 $$;
@@ -346,11 +434,13 @@ begin
   end if;
   update public.engines set last_seen_at = now() where user_id = v_engine;
 
-  -- Work whose engine went silent is offered again, at most three times.
+  -- Work whose engine went silent is offered again, at most three times. Rows are locked
+  -- consultation first, then job, as the practitioner functions do, and never waited for.
   for v_job in
-    select * from public.transcription_jobs
-    where status = 'processing' and heartbeat_at < now() - interval '2 minutes'
-    for update skip locked
+    select j.* from public.transcription_jobs j
+      join public.consultations c on c.id = j.consultation_id
+    where j.status = 'processing' and j.heartbeat_at < now() - interval '2 minutes'
+    for update of c, j skip locked
   loop
     if v_job.attempt >= 3 then
       perform private.fail_job(v_job, 'ENGINE_STALLED', null, v_job.metrics, v_engine::text);
@@ -365,18 +455,20 @@ begin
     end if;
   end loop;
 
-  select * into v_job from public.transcription_jobs
-    where status = 'queued' order by queued_at limit 1 for update skip locked;
+  select j.* into v_job from public.transcription_jobs j
+    join public.consultations c on c.id = j.consultation_id
+    where j.status = 'queued' order by j.queued_at limit 1
+    for update of c, j skip locked;
   if not found then
     return jsonb_build_object('ok', true, 'job', null);
   end if;
 
-  select * into v_consultation from public.consultations where id = v_job.consultation_id for update;
+  select * into v_consultation from public.consultations where id = v_job.consultation_id;
   update public.transcription_jobs
     set status = 'processing', stage = 'validating', claimed_at = now(), heartbeat_at = now(),
         engine_user_id = v_engine
     where id = v_job.id returning * into v_job;
-  if v_consultation.consent_recorded_at is null then
+  if v_consultation.consent_recorded_at is null or v_consultation.consent_withdrawn_at is not null then
     perform private.fail_job(v_job, 'CONSENT_MISSING', null, '{}'::jsonb, v_engine::text);
     return jsonb_build_object('ok', true, 'job', null);
   end if;
@@ -399,9 +491,22 @@ begin
 end;
 $$;
 
--- The engine says where it is; the answer says whether to go on.
+-- Locks a job's consultation before the job itself: the order the practitioner functions
+-- use, so an engine call and a withdrawal at the same moment cannot deadlock.
+create function private.lock_job_consultation(p_job_id uuid) returns void
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  perform 1 from public.consultations
+    where id = (select consultation_id from public.transcription_jobs where id = p_job_id)
+    for update;
+end;
+$$;
+
+-- The engine says where it is; the answer says whether to go on. Every engine call names
+-- the attempt it belongs to, so a stalled attempt that wakes up cannot touch a later one.
 create function public.engine_heartbeat(
-  p_job_id uuid, p_stage public.job_stage, p_audio_seconds numeric default null
+  p_job_id uuid, p_attempt int, p_stage public.job_stage, p_audio_seconds numeric default null
 ) returns jsonb
 language plpgsql security definer set search_path = ''
 as $$
@@ -413,14 +518,20 @@ begin
     return private.refuse('NOT_AN_ENGINE');
   end if;
   update public.engines set last_seen_at = now() where user_id = v_engine;
+  perform private.lock_job_consultation(p_job_id);
   select * into v_job from public.transcription_jobs
-    where id = p_job_id and status = 'processing' and engine_user_id = v_engine for update;
+    where id = p_job_id and attempt = p_attempt and status = 'processing' and engine_user_id = v_engine
+    for update;
   if not found then
     -- Cancelled, taken back, or never this engine's: stop.
     return jsonb_build_object('ok', true, 'continue', false);
   end if;
-  -- Three times the combined length of the tracks, plus five minutes (section 12.4).
-  if now() > v_job.claimed_at + make_interval(secs => 3 * coalesce(p_audio_seconds, 14400) + 300) then
+  -- Three times the combined length of the tracks, plus five minutes (section 12.4). Until
+  -- the engine has measured the audio, the browser's estimate, else the 2 x 2 hour maximum.
+  if now() > v_job.claimed_at + make_interval(secs => 3 * least(coalesce(
+       p_audio_seconds,
+       (select sum(duration_seconds) from public.audio_tracks where consultation_id = v_job.consultation_id),
+       14400), 14400) + 300) then
     perform private.fail_job(v_job, 'TRANSCRIPTION_TIMEOUT', null, v_job.metrics, v_engine::text);
     return jsonb_build_object('ok', true, 'continue', false);
   end if;
@@ -430,7 +541,7 @@ end;
 $$;
 
 create function public.engine_fail_job(
-  p_job_id uuid, p_error_category text, p_speaker public.speaker default null,
+  p_job_id uuid, p_attempt int, p_error_category text, p_speaker public.speaker default null,
   p_metrics jsonb default '{}'::jsonb
 ) returns jsonb
 language plpgsql security definer set search_path = ''
@@ -448,8 +559,10 @@ begin
        'TRANSCRIPT_MERGE_FAILED', 'STORAGE_UNAVAILABLE']) then
     return private.refuse('VALIDATION', 'error_category');
   end if;
+  perform private.lock_job_consultation(p_job_id);
   select * into v_job from public.transcription_jobs
-    where id = p_job_id and status = 'processing' and engine_user_id = v_engine for update;
+    where id = p_job_id and attempt = p_attempt and status = 'processing' and engine_user_id = v_engine
+    for update;
   if not found then
     return private.refuse('JOB_NOT_YOURS');
   end if;
@@ -472,13 +585,15 @@ as $$
          or (jsonb_typeof(value) = 'string' and char_length(value #>> '{}') <= 40));
 $$;
 
-create function public.engine_complete_job(p_job_id uuid, p_transcript jsonb, p_metrics jsonb default '{}'::jsonb)
-returns jsonb
+create function public.engine_complete_job(
+  p_job_id uuid, p_attempt int, p_transcript jsonb, p_metrics jsonb default '{}'::jsonb
+) returns jsonb
 language plpgsql security definer set search_path = ''
 as $$
 declare
   v_engine uuid := (select auth.uid());
   v_job public.transcription_jobs;
+  v_ordering text;
   v_transcript_id uuid;
   v_segments int;
   v_track jsonb;
@@ -486,46 +601,73 @@ begin
   if not private.is_engine() then
     return private.refuse('NOT_AN_ENGINE');
   end if;
+  perform private.lock_job_consultation(p_job_id);
   select * into v_job from public.transcription_jobs
-    where id = p_job_id and status = 'processing' and engine_user_id = v_engine for update;
+    where id = p_job_id and attempt = p_attempt and status = 'processing' and engine_user_id = v_engine
+    for update;
   if not found then
     -- A late result from an attempt that was cancelled or taken back is refused.
     return private.refuse('JOB_NOT_YOURS');
   end if;
-  if p_transcript ->> 'schema_version' <> '2.0.0'
-     or (p_transcript ->> 'consultation_id')::uuid <> v_job.consultation_id
-     or jsonb_typeof(p_transcript -> 'segments') <> 'array'
-     or jsonb_typeof(p_transcript -> 'tracks') <> 'array'
-     or jsonb_array_length(p_transcript -> 'tracks') <> 2 then
+  select case when recorded_together then 'exact' else 'approximate' end into v_ordering
+    from public.consultations where id = v_job.consultation_id;
+
+  -- A transcript is checked whole and written whole. Any failure, including a constraint
+  -- on a segment, comes back as a refusal, so no error message ever carries transcript text
+  -- (section 18) and nothing is half-written.
+  begin
+    if p_transcript ->> 'schema_version' is distinct from '2.0.0'
+       or (p_transcript ->> 'consultation_id')::uuid is distinct from v_job.consultation_id
+       or jsonb_typeof(p_transcript -> 'segments') is distinct from 'array'
+       or jsonb_typeof(p_transcript -> 'tracks') is distinct from 'array'
+       or jsonb_array_length(p_transcript -> 'tracks') <> 2
+       or (p_transcript ->> 'ordering') is distinct from v_ordering
+       -- One track per speaker, each the file that was registered.
+       or (select count(distinct t ->> 'speaker') from jsonb_array_elements(p_transcript -> 'tracks') t) <> 2
+       or exists (select 1 from jsonb_array_elements(p_transcript -> 'tracks') t
+                  where not exists (select 1 from public.audio_tracks a
+                                    where a.consultation_id = v_job.consultation_id
+                                      and a.speaker::text = t ->> 'speaker'
+                                      and a.sha256 = t ->> 'audio_sha256'))
+       -- Overlap is unknown when the tracks do not share a clock (section 10.3).
+       or (v_ordering = 'approximate' and exists (
+             select 1 from jsonb_array_elements(p_transcript -> 'segments') s
+             where jsonb_typeof(s -> 'overlap') = 'boolean'))
+       -- Positions run 0 to n - 1 with no gaps or repeats.
+       or exists (select 1 from jsonb_array_elements(p_transcript -> 'segments') s
+                  having count(*) > 0 and (count(distinct (s ->> 'position')::int) <> count(*)
+                     or min((s ->> 'position')::int) <> 0 or max((s ->> 'position')::int) <> count(*) - 1))
+    then
+      return private.refuse('VALIDATION', 'transcript');
+    end if;
+
+    update public.transcripts set review_status = 'superseded'
+      where consultation_id = v_job.consultation_id and review_status <> 'superseded';
+    insert into public.transcripts (consultation_id, job_id, schema_version, ordering, low_confidence_threshold, tracks)
+      values (v_job.consultation_id, v_job.id, '2.0.0', v_ordering::public.transcript_ordering,
+              (p_transcript ->> 'low_confidence_threshold')::numeric, p_transcript -> 'tracks')
+      returning id into v_transcript_id;
+    insert into public.transcript_segments
+        (id, transcript_id, position, speaker, start_seconds, end_seconds, machine_text, confidence,
+         possibly_not_speech, overlap)
+      select s.segment_id, v_transcript_id, s.position, s.speaker, s.start_seconds, s.end_seconds,
+             s.machine_text, s.confidence, coalesce(s.possibly_not_speech, false), s.overlap
+      from jsonb_to_recordset(p_transcript -> 'segments') as s(
+        segment_id uuid, position int, speaker public.speaker, start_seconds numeric,
+        end_seconds numeric, machine_text text, confidence numeric, possibly_not_speech boolean,
+        overlap boolean);
+    get diagnostics v_segments = row_count;
+
+    -- What the engine measured replaces what the browser estimated.
+    for v_track in select * from jsonb_array_elements(p_transcript -> 'tracks') loop
+      update public.audio_tracks
+        set validation = 'valid', validation_error = null,
+            duration_seconds = (v_track ->> 'duration_seconds')::numeric
+        where consultation_id = v_job.consultation_id and speaker = (v_track ->> 'speaker')::public.speaker;
+    end loop;
+  exception when others then
     return private.refuse('VALIDATION', 'transcript');
-  end if;
-
-  update public.transcripts set review_status = 'superseded'
-    where consultation_id = v_job.consultation_id and review_status <> 'superseded';
-  insert into public.transcripts (consultation_id, job_id, schema_version, ordering, low_confidence_threshold, tracks)
-    values (v_job.consultation_id, v_job.id, '2.0.0',
-            (p_transcript ->> 'ordering')::public.transcript_ordering,
-            (p_transcript ->> 'low_confidence_threshold')::numeric,
-            p_transcript -> 'tracks')
-    returning id into v_transcript_id;
-  insert into public.transcript_segments
-      (id, transcript_id, position, speaker, start_seconds, end_seconds, machine_text, confidence,
-       possibly_not_speech, overlap)
-    select s.segment_id, v_transcript_id, s.position, s.speaker, s.start_seconds, s.end_seconds,
-           s.machine_text, s.confidence, coalesce(s.possibly_not_speech, false), s.overlap
-    from jsonb_to_recordset(p_transcript -> 'segments') as s(
-      segment_id uuid, position int, speaker public.speaker, start_seconds numeric,
-      end_seconds numeric, machine_text text, confidence numeric, possibly_not_speech boolean,
-      overlap boolean);
-  get diagnostics v_segments = row_count;
-
-  -- What the engine measured replaces what the browser estimated.
-  for v_track in select * from jsonb_array_elements(p_transcript -> 'tracks') loop
-    update public.audio_tracks
-      set validation = 'valid', validation_error = null,
-          duration_seconds = (v_track ->> 'duration_seconds')::numeric
-      where consultation_id = v_job.consultation_id and speaker = (v_track ->> 'speaker')::public.speaker;
-  end loop;
+  end;
 
   update public.transcription_jobs
     set status = 'completed', finished_at = now(), stage = 'merging', metrics = private.clean_metrics(p_metrics)
@@ -547,10 +689,11 @@ revoke all on function
   public.start_transcription(uuid),
   public.cancel_transcription(uuid),
   public.withdraw_consent(uuid),
+  public.confirm_audio_deleted(uuid),
   public.engine_claim_job(),
-  public.engine_heartbeat(uuid, public.job_stage, numeric),
-  public.engine_fail_job(uuid, text, public.speaker, jsonb),
-  public.engine_complete_job(uuid, jsonb, jsonb)
+  public.engine_heartbeat(uuid, int, public.job_stage, numeric),
+  public.engine_fail_job(uuid, int, text, public.speaker, jsonb),
+  public.engine_complete_job(uuid, int, jsonb, jsonb)
 from public, anon, authenticated, service_role;
 revoke all on all functions in schema private from public, anon, service_role;
 
@@ -560,8 +703,9 @@ grant execute on function
   public.start_transcription(uuid),
   public.cancel_transcription(uuid),
   public.withdraw_consent(uuid),
+  public.confirm_audio_deleted(uuid),
   public.engine_claim_job(),
-  public.engine_heartbeat(uuid, public.job_stage, numeric),
-  public.engine_fail_job(uuid, text, public.speaker, jsonb),
-  public.engine_complete_job(uuid, jsonb, jsonb)
+  public.engine_heartbeat(uuid, int, public.job_stage, numeric),
+  public.engine_fail_job(uuid, int, text, public.speaker, jsonb),
+  public.engine_complete_job(uuid, int, jsonb, jsonb)
 to authenticated;

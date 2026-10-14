@@ -1,8 +1,8 @@
 # eHeal — Master Build Specification
 
-**Version 2.1 · 13 October 2026 · Status: authoritative**
+**Version 2.2 · 14 October 2026 · Status: authoritative**
 
-This document says what eHeal is, how it is built, and in what order. It replaces version 1, which is kept unchanged at `docs/archive/MASTER_BUILD_SPEC-v1.md`. Appendix A lists every change from version 1 and why it was made. Version 2.1 applies the findings of an independent review of version 2.0; those changes are listed at the end of Appendix A. Progress against the roadmap is tracked in `docs/roadmap.md`.
+This document says what eHeal is, how it is built, and in what order. It replaces version 1, which is kept unchanged at `docs/archive/MASTER_BUILD_SPEC-v1.md`. Appendix A lists every change from version 1 and why it was made. Versions 2.1 and 2.2 apply the findings of two independent reviews; those changes are listed at the end of Appendix A. Progress against the roadmap is tracked in `docs/roadmap.md`.
 
 It is written for two readers: the product owner, who decides, and whoever builds the product, human or AI.
 
@@ -53,7 +53,7 @@ Version 1 required the first phase to prove this, which it could not: the first 
 
 | | Claim | Measured by | Target | Tested in |
 |---|---|---|---|---|
-| H1 | The transcript is good enough to correct quickly. | Word error rate per language on the fixture set (section 20.8): the share of words transcribed wrongly, so 10% is one word in ten. Speaker attribution. Processing time. Job success rate. | Provisional: word error rate at most 10% for English, 12% for German and 20% for Slovak on clean scripted speech. No fixture line appears under the wrong speaker; speech picked up by the other person's microphone is not measured. Processing, from the moment a job is claimed to its completion, takes no longer than the longer of the two tracks on the reference engine. At least 95% of fixture jobs succeed first time. | Phase 1 |
+| H1 | The transcript is good enough to correct quickly. | Word error rate per language on the fixture set (section 20.8): the share of words transcribed wrongly, so 10% is one word in ten. Speaker attribution. Processing time. Job success rate. | Provisional: word error rate at most 10% for English, 12% for German and 20% for Slovak on clean scripted speech. No fixture line appears under the wrong speaker; speech picked up by the other person's microphone is not measured. Processing, from the moment a job is claimed to its completion, takes no longer than the longer of the two tracks on the reference engine. At least 95% of fixture runs succeed first time. | Phase 1 |
 | H2 | The draft adds nothing the transcript does not support. | The evaluation set with labelled facts (section 13.7) | Zero occurrences, in any run, of any behaviour listed in section 20.6. Every labelled referral, escalation or urgent item is captured. Every drafted item carries evidence that code has verified. Provisional: at least 90% of the other labelled facts are captured. | Phase 2 |
 | H3 | Reviewing the draft is faster than writing notes unaided. | A timed comparison with the same practitioners on comparable scripted consultations | Provisional: the median time to review and approve is at most half the median unaided time, and under ten minutes. | Phase 2 with at least two practitioners, then the MVP |
 
@@ -61,9 +61,9 @@ Targets marked provisional are set properly after the first benchmark run (slice
 
 ## 3. Project mantra: 100% free
 
-Nothing gets charged. This holds until the owner decides to change it for a paying customer.
+Nothing gets charged, ever. The owner made this permanent for the technology on 14 October 2026: it does not end with a paying customer.
 
-1. Use only plans that cost nothing. Prefer accounts with no payment method on file, so that billing is impossible and not merely unlikely.
+1. Use only plans that cost nothing, on accounts with no payment method on file, so that billing is impossible and not merely unlikely. Render and Supabase have none.
 2. If a service asks for a card, offers trial credit that later converts to billing, or can bill for overage, stop and ask the owner.
 3. No core function may depend on one company's free plan without a named fallback. Free plans get withdrawn: Hugging Face ended free app hosting in July 2026.
 4. A paid option may be written down as a future option, with its benefit and its cost. It may not become a requirement.
@@ -111,7 +111,7 @@ The services in use, their free limits and their fallbacks are in section 7.2.
 - Every consultation is invented. Patients are identified only by a synthetic reference such as `SYN-0042`. The reference field accepts only `SYN-` and digits. Notes are free text and cannot be checked; the screen reminds you not to enter anything about a real person.
 - Every screen says so: "Development proof of concept. Invented data only."
 - Free hosted services may hold the data (section 7).
-- A recording of a real person's voice is personal data even when the words are invented. Each tester gets a short notice (what is stored, where, and how to have it deleted) and agrees in writing. Deleting on request means withdrawing consent on each of their consultations and then deleting their account. Recordings of people are never committed to the repository.
+- A recording of a real person's voice is personal data even when the words are invented. Each tester gets a short notice (what is stored, where, and how to have it deleted) and agrees in writing. Deleting on request means withdrawing consent on each of their consultations, which deletes the recordings; then the owner bans the account and replaces its email with an anonymous placeholder. The account record stays because the audit log refers to it. It holds no recording. Recordings of people are never committed to the repository.
 
 **Real-patient mode** does not exist and must not be approximated. It opens only when Gate R (section 21.5) is passed. Version 1 required all clinical content to stay on the practitioner's workstation. That remains the default intent for real-patient mode; the owner confirms or changes it at Gate R (open decision OD-1).
 
@@ -310,7 +310,7 @@ Version 1 spread these responsibilities across TypeScript, Python and Rust witho
 | Transcript and draft formats | Pydantic models in the engine | The layout is defined once, in the engine's code. JSON Schema is generated from it into `packages/schemas`, and the web app's export is tested against that schema. Hand-written copies are not allowed. |
 | Database types in the web app | Generated from the database by the Supabase command-line tool | |
 | Audit log | PostgreSQL | Append-only. Written only by database functions. |
-| Deleting audio files | The browser, through the storage service | A database function removes the track's record first; the browser then deletes the file. A storage rule allows deletion only by the file's owner. A file left behind by an interrupted step is replaced at the next upload. |
+| Deleting audio files | The browser, through the storage service | A database function removes the track's record first; the browser then deletes the file. A storage rule allows deletion only by the file's owner. A file left behind by an interrupted step is replaced at the next upload. After a withdrawal, and after `delete_audio`, there is no next upload: `confirm_audio_deleted` checks that the files are gone before `audio.deleted` is recorded, and until it passes the consultation shows "Audio not yet deleted" with a retry. |
 | Secrets | The engine host | The password of the engine's own account, in a private file. Nothing secret is in the repository or the browser. The project's secret key is a master key, kept for administration only; the engine does not have it. |
 | Clinical content | Transcript segments; later drafts, records and reports; the `audio` bucket | Everything else is non-clinical by rule. |
 
@@ -322,31 +322,35 @@ These are the only ways state changes. Names are the ones in the migrations.
 |---|---|---|---|
 | `create_consultation` | Practitioner | Creates the consultation, with or without consent | `consultation.created`, `consent.recorded` |
 | `record_consent` | Practitioner | `consent_pending` → `ready_for_audio` | `consent.recorded` |
-| `withdraw_consent` | Practitioner | Cancels jobs; removes track, transcript and segment records; → `consent_withdrawn` | `consent.withdrawn`, `transcription.cancelled`, `audio.deleted`, `transcript.deleted` |
+| `withdraw_consent` | Practitioner | Cancels jobs; removes track, transcript and segment records; → `consent_withdrawn` | `consent.withdrawn`, `transcription.cancelled`, `audio.deletion_requested`, `transcript.deleted` |
+| `confirm_audio_deleted` | Practitioner | In `consent_withdrawn` (from slice 1.4 also after `delete_audio`): checks that the consultation's files are gone from storage | `audio.deleted` |
 | `register_audio_track` | Practitioner | Records an uploaded file as one speaker's track; with the second, → `audio_imported` | `audio.imported` |
 | `remove_audio_track` | Practitioner | Removes a track's record; → `ready_for_audio` | `audio.removed` |
 | `declare_recorded_together` | Practitioner | Records whether the two files start at the same moment | `audio.synchronisation_declared` |
 | `start_transcription` | Practitioner | Queues a job; → `transcription_processing` | `transcription.queued` |
 | `cancel_transcription` | Practitioner | Cancels a queued job; → `audio_imported` | `transcription.cancelled` |
-| `engine_claim_job` | Engine | Requeues stalled jobs, then claims one queued job | `transcription.requeued`, `transcription.started` |
-| `engine_heartbeat` | Engine | Reports the stage; is told to continue or stop | — |
-| `engine_complete_job` | Engine | Stores the transcript; → `transcript_ready` | `transcription.completed` |
+| `engine_claim_job` | Engine | Requeues stalled jobs (failing one stalled three times), then claims one queued job; fails it if consent is missing or withdrawn | `transcription.requeued`, `transcription.started`, `transcription.failed` (`ENGINE_STALLED`, `CONSENT_MISSING`) |
+| `engine_heartbeat` | Engine | Reports the attempt and the stage; is told to continue or stop; fails a job past its time limit | `transcription.failed` (`TRANSCRIPTION_TIMEOUT`) |
+| `engine_complete_job` | Engine | Checks the whole transcript, then stores it; → `transcript_ready` | `transcription.completed` |
 | `engine_fail_job` | Engine | Records the classified error; → `transcription_failed` | `transcription.failed`, `audio.validation_failed` |
+| `register_engine` | Administrator | Makes an account an engine; refuses an account that has consultations | — |
+| `engine_status` | Anyone signed in | Says whether any engine asked for work in the last 60 seconds | — |
 | `open_transcript` | Practitioner | The first time: → `transcript_under_review` | `transcript.opened` |
-| `review_segment` | Practitioner | Stores a correction or a confirmation beside the machine text | `transcript.corrected`, `transcript.segment_confirmed` |
+| `review_segment` | Practitioner | Only in `transcript_under_review`: stores a correction or a confirmation beside the machine text | `transcript.corrected`, `transcript.segment_confirmed` |
 | `mark_transcript_reviewed` | Practitioner | Marks every segment and the transcript reviewed; → `transcript_reviewed` | `transcript.reviewed` |
 | `reopen_transcript` | Practitioner | → `transcript_under_review` | `transcript.reopened` |
-| `record_transcript_export` | Practitioner | Notes that the transcript was exported | `transcript.exported` |
-| `delete_audio` | Practitioner | After review: removes the track records so the files can be deleted | `audio.deleted` |
+| `record_transcript_export` | Practitioner | In `transcript_under_review` or `transcript_reviewed`: notes that the transcript was exported | `transcript.exported` |
+| `delete_audio` | Practitioner | Only in `transcript_reviewed`: removes the track records so the files can be deleted; `confirm_audio_deleted` then records the deletion | `audio.deletion_requested` |
 | `verify_audit_chain` | Practitioner, administrator | Says whether a consultation's chain is intact | — |
 | Any of them, when section 10.2 forbids the step | | Changes nothing | `state.transition_rejected` |
 
 Rules every function follows:
 
 - It runs with its owner's rights and an empty search path.
-- Nobody may execute it unless granted. Practitioner functions are granted to signed-in users. Engine functions first check that the caller is a registered engine account.
+- Nobody may execute it unless granted. Practitioner functions are granted to signed-in users and refuse engine accounts. Engine functions first check that the caller is a registered engine account, and every engine call after the claim names the attempt the claim returned.
 - Ownership is checked first. A consultation that is not yours looks the same as one that does not exist.
-- A refusal is returned as a value, `{ok: false, error_category}`, after its audit event is written. Raising an error would undo the event.
+- A refusal is returned as a value, `{ok: false, error_category}`. A refused transition writes its `state.transition_rejected` event first; other refusals write no event. Raising an error would undo the event.
+- Locks are taken in one order, the consultation before its job, so two callers cannot deadlock.
 - One writer at a time extends a consultation's audit chain.
 
 ## 9. Repository layout
@@ -412,7 +416,7 @@ Version 1 listed states and asked for "explicit transition rules" without giving
 
 Compared with version 1: `draft` is removed, because a consultation exists only once it is saved; `transcript_reviewed` and `consent_withdrawn` are added, because version 1 had no way from review to drafting and no outcome for a withdrawal.
 
-Three things are deliberately not offered in phase 1. Transcribing again once a transcript exists: a consultation created with the wrong language is replaced by a new one, so `superseded` first occurs in phase 2. Archiving. And withdrawing consent after a record is approved: what must then be kept is a Gate R question.
+Three things are deliberately not offered in phase 1. Transcribing again once a transcript exists: a consultation created with the wrong language is replaced by a new one, so `superseded` does not occur yet: it is kept for a re-transcription that no phase offers so far. Archiving. And withdrawing consent after a record is approved: what must then be kept is a Gate R question.
 
 **Transcription job**
 
@@ -500,8 +504,8 @@ An append-only log, written only by database functions.
 
 | Phase | Event types |
 |---|---|
-| 1 | `consultation.created`, `consent.recorded`, `consent.withdrawn`, `audio.imported`, `audio.removed`, `audio.synchronisation_declared`, `audio.validation_failed`, `audio.deleted`, `transcription.queued`, `transcription.started`, `transcription.completed`, `transcription.failed`, `transcription.cancelled`, `transcription.requeued`, `transcript.opened`, `transcript.corrected`, `transcript.segment_confirmed`, `transcript.reviewed`, `transcript.reopened`, `transcript.exported`, `transcript.deleted`, `state.transition_rejected` |
-| 2 | `extraction.started`, `extraction.completed`, `extraction.failed`, `draft.opened`, `draft.edited`, `record.approved`, `record.corrected`, `report.generated`, `report.approved`, `report.revoked`, `audio.deletion_requested`, `consultation.archived` |
+| 1 | `consultation.created`, `consent.recorded`, `consent.withdrawn`, `audio.imported`, `audio.removed`, `audio.synchronisation_declared`, `audio.validation_failed`, `audio.deletion_requested`, `audio.deleted`, `transcription.queued`, `transcription.started`, `transcription.completed`, `transcription.failed`, `transcription.cancelled`, `transcription.requeued`, `transcript.opened`, `transcript.corrected`, `transcript.segment_confirmed`, `transcript.reviewed`, `transcript.reopened`, `transcript.exported`, `transcript.deleted`, `state.transition_rejected` |
+| 2 | `extraction.started`, `extraction.completed`, `extraction.failed`, `draft.opened`, `draft.edited`, `record.approved`, `record.corrected`, `report.generated`, `report.approved`, `report.revoked`, `consultation.archived` |
 | Gate R, if a local vault is chosen | `vault.locked`, `vault.unlocked` |
 
 Each event contains: `event_id`, `event_type`, `timestamp_utc`, `consultation_id`, `actor_id`, `actor_role`, `resource_type`, `resource_id`, `result`, `metadata_without_clinical_content`, `previous_event_hash`, `event_hash`.
@@ -519,7 +523,7 @@ Audit events must not contain: transcript text, symptoms, diagnoses, recommendat
 | Sign-in | Email and password through Supabase Auth. Open sign-up is switched off; the owner creates accounts and sets or resets passwords. No email is sent. Passwords have at least 12 characters. |
 | Access | Explicit grants and row-level security on every table, denying by default. A practitioner can read only rows they own and can write nothing directly. Storage paths begin with the owner's user identifier and are checked the same way. |
 | State changes | Only through database functions that check ownership and the transition table. |
-| Engine credential | The engine signs in as its own account. That account can call the job functions and read the audio of the job it has claimed, and nothing else: no tables, no other audio, no accounts. Its password is kept on the engine host in a file only its user can read. |
+| Engine credential | The engine signs in as its own account. That account can call the job functions and read the audio of the job it is working on. Practitioner functions refuse it, so it owns no consultation and reads no other audio, rows or accounts. An account that has consultations cannot be made an engine. To revoke an engine, delete its row in `engines` (effective at once) and ban its account. Its password is kept on the engine host in a file only its user can read. |
 | Master key | The project's secret key can read, change and delete everything, including accounts and the audit log. It is used only by the owner for administration and is never given to the engine. |
 | Engine exposure | Outbound HTTPS only. The engine listens on no port. Local copies of audio are deleted when a job ends. Models are loaded from disk and never downloaded during a job. In phase 2 Ollama listens on the loopback address only, with its cloud features and debug logging switched off. |
 | Browser | A content security policy that allows only our own code and the Supabase project. No analytics and no third-party scripts. No clinical content in addresses or browser storage. |
@@ -529,7 +533,7 @@ Audit events must not contain: transcript text, symptoms, diagnoses, recommendat
 | Logs | Section 18. |
 | Region | The Supabase project is in the European Union. |
 
-Not covered in synthetic mode, and therefore reasons real data is forbidden: a compromised Supabase account or engine host; the project owner or anyone holding the master key; removal of the newest audit events; and real data entered against the rules.
+Not covered in synthetic mode, and therefore reasons real data is forbidden: a compromised Supabase account or engine host; the project owner or anyone holding the master key; removal of the newest audit events; a signed download link made while a job runs, which stays valid until it expires; and real data entered against the rules.
 
 ---
 
@@ -560,7 +564,7 @@ Not covered in synthetic mode, and therefore reasons real data is forbidden: a c
 ### 12.3 Model
 
 - The model is configuration and is never hard-coded. It may differ by language.
-- It is chosen by benchmark on the fixture set, on the reference engine, weighing word error rate first and processing time second. The current choice and its numbers are in the decision log.
+- It is chosen by benchmark on the fixture set, on the reference engine, weighing word error rate first and processing time second. The choice and its numbers go into the decision log after the slice 1.3 benchmark; until then the default is `small`.
 - The transcript records the model's name, revision, device and compute type.
 - Models are fetched by an explicit setup command. The engine never downloads anything during a job.
 
@@ -588,7 +592,7 @@ With two uploaded files we cannot know how they line up in time unless someone s
 - The practitioner can declare that both files were recorded together and start at the same moment. The transcript then has `ordering: exact`, and overlapping speech is marked.
 - Without that declaration the two tracks are merged as if both began at the same instant, the transcript is labelled `ordering: approximate`, overlap is not computed, and the screen says that the order of turns is a best guess. Simultaneity is never invented.
 - Recording in the browser captures one track at a time, so its order is always approximate.
-- The engine applies each track's offset before merging. Capture start times and synchronisation markers arrive with the consultation room (phase 3).
+- The engine applies each track's offset before merging. In phase 1 every offset is 0: tracks recorded together start together, and nothing is estimated otherwise. Capture start times and synchronisation markers arrive with the consultation room (phase 3).
 - Merge order is by start time, then speaker (practitioner first), then position within the track. The sort is stable and the result is deterministic.
 - When the tracks share a clock, two segments from different speakers overlap if their intersection exceeds a configurable tolerance (default 250 ms). Both are flagged. Nothing is dropped.
 - Known limit: when one speaker is audible on the other's microphone, the same words can appear on both tracks. Phase 1 flags the overlap. It does not detect or remove the duplicate.
@@ -597,17 +601,17 @@ With two uploaded files we cannot know how they line up in time unless someone s
 
 An engine is any program that:
 
-1. Signs in as an engine account and makes outbound connections only.
+1. Signs in as an engine account, with a session of its own for each connection, and makes outbound connections only. Sessions refresh themselves; if a call fails because the session lapsed (after the computer slept, for example), the engine signs in again with its password and repeats the call once.
 2. Asks for work every 10 seconds when idle, and claims one job at a time.
-3. While working, sends a heartbeat at least every 30 seconds that names its stage: `validating`, `transcribing_practitioner`, `transcribing_patient` or `merging`. The answer is continue or stop, and on stop it abandons the job.
-4. Refuses a consultation without recorded consent.
+3. While working, sends a heartbeat at least every 30 seconds that names its stage (`validating`, `transcribing_practitioner`, `transcribing_patient` or `merging`) and the attempt number the claim returned. The answer is continue or stop, and on stop it abandons the job.
+4. Works only on jobs the database hands out; the database hands out none whose consent is missing or withdrawn.
 5. Downloads the consultation's two tracks, recomputes each file's hash and fails with `AUDIO_CORRUPT` if it differs from the registered one, validates each, and transcribes each separately.
-6. Returns one merged transcript that validates against the transcript schema, or a classified error.
+6. Returns one merged transcript that validates against the transcript schema, or a classified error. A heartbeat, result or failure that names an earlier attempt is refused.
 7. Deletes its local copies of the audio when the job ends, whatever the outcome.
 8. Loads models from local disk only.
 9. Logs only what section 18 allows.
 
-Engines are interchangeable: the database functions in section 8.2 are the whole interface. The reference engine is `apps/clinical-worker` on the owner's computer.
+Engines are interchangeable: the database functions in section 8.2 are the whole interface. The engine program is `apps/clinical-worker`; it runs on the reference engine, the owner's computer (section 6.1).
 
 ### 12.8 Real-time transcription
 
@@ -778,20 +782,20 @@ Fields: synthetic patient reference (format `SYN-` followed by digits; anything 
 - Attach the practitioner's audio and the patient's audio, by file or by recording in the browser.
 - Show for each: format, duration, size and SHA-256 hash. The duration is the browser's estimate until the engine has measured it.
 - List the supported formats and the limits.
-- A tick box: "Both tracks were recorded together and start at the same moment" (section 12.6).
+- A tick box: "Both tracks were recorded together and start at the same moment" (section 12.6). It is not offered once either track was recorded in the browser.
 - Refuse unsupported types, empty files and oversized files at once, with the reason beside the track. Corrupt audio can only be found by decoding it, so it is reported beside the track when transcription starts.
 - Allow a track to be removed and replaced before processing.
 - Offer "Start transcription" only when both tracks are present.
 
 ### 14.6 Screen 4: processing status (slice 1.3)
 
-Show: validation of each track; transcription of the practitioner track; transcription of the patient track; the merge; time taken so far and in total; the failure category and a plain-language message when something fails; a retry control; a cancel control while the job is still queued. Say so plainly when no engine has asked for work for 60 seconds, because the job will wait until one does. The drafting stage is added in phase 2.
+Show: validation of each track; transcription of the practitioner track; transcription of the patient track; the merge; time taken so far and in total; the failure category and a plain-language message when something fails; a retry control; a cancel control while the job is still queued; "Withdraw consent". Say so plainly when no engine has asked for work for 60 seconds, because the job will wait until one does. The drafting stage is added in phase 2.
 
 ### 14.7 Screen 5: transcript review (slice 1.4)
 
 Show: the transcript in order; speaker labels; segment timestamps; a search box; editable segments; the original text beside any correction; review status; low-confidence and possibly-not-speech indicators; overlap indicators; a notice when ordering is approximate or language detection was uncertain; audio playback from a segment's timestamp; export of the reviewed transcript as JSON.
 
-Controls: correct a segment; confirm a segment as right; mark the whole transcript reviewed; reopen it; and, once it is reviewed, delete the audio. Search runs in the browser over the loaded transcript, so search words never reach a server log.
+Controls: correct a segment; confirm a segment as right; mark the whole transcript reviewed; reopen it; once it is reviewed, delete the audio; and withdraw consent. Search runs in the browser over the loaded transcript, so search words never reach a server log.
 
 Every correction keeps the original machine text.
 
@@ -813,7 +817,7 @@ An approved version is never silently overwritten. A correction creates a new ve
 
 ## 15. Consent
 
-- No transcription without an affirmative consent state. This is enforced in the database and again in the engine, not only on screen.
+- No transcription without an affirmative consent state. The database enforces it when the job is queued and again when an engine claims it, not only on screen.
 - In the proof of concept, consent is a synthetic confirmation: the practitioner confirms that consent is recorded for this invented consultation. The time and the actor are stored.
 - Withdrawal is offered until a record is approved. It is recorded with its time and actor. Queued and running jobs are cancelled; a working engine is told at its next heartbeat. The database removes the track, transcript and draft records, and the browser then deletes the audio files. Audit events remain. The consultation moves to `consent_withdrawn`. Version 1 named a withdrawal timestamp and nothing else.
 
@@ -907,7 +911,7 @@ At least 20 synthetic consultations, with at least ten minutes of speech in each
 
 - Each fixture is a script written for the purpose. The script gives every line a start time, and the generator renders both tracks on one timeline.
 - Audio is produced in two ways. Text-to-speech (Piper, free and local), then degraded with noise, lower volume, compression and added silence. And, where a human voice matters, team members reading scripts aloud.
-- Text-to-speech has one Slovak voice. Its one voice set with Indian-accented English carries a non-commercial licence, so those fixtures need human readers.
+- Text-to-speech has one Slovak voice. Piper's l2arctic voice (non-commercial licence) and arctic voice (licence unchecked) include Indian-accented speakers. Until the arctic licence is checked, those fixtures use human readers.
 - Recordings of people are never committed. They stay on the engine's machine; the repository holds the scripts, the hashes and the generator.
 - Every fixture is labelled synthetic and says how its audio was made. Text-to-speech results are not accuracy figures for real consultations.
 - No fixture contains real patient data.
@@ -968,7 +972,7 @@ Do not start before phase 1 is accepted.
 
 **Phase 2 exits when:**
 
-- No unsupported assessment, recommendation, medication, dosage or follow-up plan appears in any run across the evaluation set.
+- No behaviour listed in section 20.6 occurs in any run across the evaluation set, and every labelled referral, escalation or urgent item is captured.
 - No malformed output is accepted after validation, and malformed output cannot become an approved record.
 - Draft output conforms to the versioned schema, and every material item links to verified evidence.
 - The practitioner can edit every field, reject items and add missing information.
@@ -1022,7 +1026,7 @@ Not a build phase. Until every item is complete, no real patient data may enter 
 - A separate key per artifact, so that destroying a key makes its artifact unreadable. This is the practical form of secure deletion on modern storage. Document what deletion cannot guarantee: backups and exported files.
 - A keyed audit chain (HMAC-SHA-256, key outside the data store), with chain heads anchored where the same attacker cannot reach them, and the audit log encrypted at rest.
 - Multi-factor sign-in.
-- An engine credential limited to the job functions.
+- The engine account's limits reviewed and tested.
 - Automatic locking after inactivity. Supabase offers this only on paid plans; otherwise it is built into the app.
 - Backups, with a restore that has been tested.
 
@@ -1087,10 +1091,10 @@ All belong to the owner.
 | OD-3 | Which languages come first, and the final H1 targets. | Slice 1.5 |
 | OD-4 | Which drafting model, given what the engine's machine can run. | Slice 2.1 |
 | OD-5 | How the consultation room connects two people for free. | Phase 3 |
-| OD-6 | When the free rule ends. | The first paying customer |
+| OD-6 | When the free rule ends. | Closed 14 Oct: it never ends for the technology |
 | OD-7 | Whether the repository stays public. GitHub is free either way. | Any time |
 | OD-8 | Whether to keep the hash-chained audit log and the recording of refused steps in the proof of concept. The review judged them more than a proof of concept needs; they are built and tested. | Any time |
-| OD-9 | Whether the Render workspace has a payment method on file. If it has, overage could be billed. | Now |
+| OD-9 | Whether the Render workspace has a payment method on file. | Closed 14 Oct: it has none, so a limit pauses the site instead of billing |
 
 ---
 
@@ -1150,7 +1154,7 @@ The practitioner remains responsible for reviewing and approving all clinical co
 | 10 | Invalid transitions needed an audit event, but no such event type existed. | `state.transition_rejected`, and other missing event types. | 10.4 |
 | 11 | The audit `actor_id` was unverifiable, because phase 1 had no sign-in. | Sign-in exists from slice 1.1. The actor is the signed-in user or the engine. | 10.4, 11 |
 | 12 | A keyed, anchored audit chain was required with nowhere to keep the key or the anchor. The vault diagram showed the log unencrypted while the text required encryption. | Synthetic mode: an unkeyed chain with its limits stated. Gate R: keyed, anchored and encrypted. | 10.4, 21.5 |
-| 13 | The model was asked to write its own timestamps, quotation and confidence for each drafted item. | The model cites segment identifiers. Code derives timestamps and verifies quotations. Unverified items are dropped and counted. | 5.3, 13.2 |
+| 13 | The model was asked to write its own timestamps, quotation and confidence for each drafted item. | The model cites segment identifiers. Code derives timestamps and verifies quotations. Unverified items are listed separately, never merged into the draft. | 5.3, 13.2 |
 | 14 | "Tests proving" that a language model does not invent things; results across an "agreed" set with no size, labels or owner. | A defined evaluation set, measured over repeated runs, signed off by the owner. | 13.7, 20.6 |
 | 15 | No rule for transcripts longer than the model can read; silent truncation could drop an urgent referral. | Splitting with overlap, a coverage test, and an explicit failure. | 13.6 |
 | 16 | The language of drafted text was never stated. | Consultation language; quotations never translated. | 13.8 |
@@ -1158,7 +1162,7 @@ The practitioner remains responsible for reviewing and approving all clinical co
 | 18 | The language was guessed from the audio by default. | The language comes from the consultation. Detection is an explicit, flagged option. | 12.2 |
 | 19 | Confidence derivation was left open and no threshold was set. | Derivation, default threshold, and the statement that it is uncalibrated. | 12.5 |
 | 20 | No guard against invented text beyond voice-activity detection. | Five guards, added after a real failure. | 12.4 |
-| 21 | A common time base for the two tracks was required, but nothing recorded it; duplicated speech across microphones was ignored. | Track fields for capture start, synchronisation method and offset; approximate ordering labelled; the duplication limit stated. | 10.3, 12.6 |
+| 21 | A common time base for the two tracks was required, but nothing recorded it; duplicated speech across microphones was ignored. | Track fields for synchronisation method and offset; approximate ordering labelled; the duplication limit stated. | 10.3, 12.6 |
 | 22 | The default model was fixed in an example and is weak for Slovak. | The model is chosen by benchmark, per language if needed. | 12.3 |
 | 23 | No word on where models come from; the library downloads them on first use. | An explicit setup command. Nothing is downloaded during a job. | 12.3 |
 | 24 | The fixture list did not say how audio would be made. | Method, its limits, and where human readers are needed. | 20.8 |
@@ -1207,6 +1211,20 @@ The practitioner remains responsible for reviewing and approving all clinical co
 | R19 | The consequences of a static build, the supported browsers and the benchmark method were unstated. | Stated. | 7.1, 11, 20.8 |
 | R20 | Version 1 items had been dropped without saying so: the catch-all on health information, the list of what cloud services may store, safety-first ordering, "do not change the safety rules", email and SMS exclusions, PDF/A, versioned report format, and others. | Restored. | 4.2, 5.1, 16, 21.5, 23, 24 |
 | R21 | Whether the builder waits after each slice was undefined. | Batches: the builder carries on within an agreed batch and waits outside it. | 23 |
+
+Version 2.2 applies a second review, of version 2.1 and the slice 1.3 migration.
+
+| # | Problem | Change | Sections |
+|---|---|---|---|
+| S1 | Nothing tied an engine's heartbeat or result to its attempt, so a stalled attempt that woke up could deliver a result. | Every engine call names the attempt; an earlier attempt's calls are refused. | 8.2, 12.7 |
+| S2 | An engine account could call practitioner functions. | Practitioner functions refuse engine accounts; an account with consultations cannot become an engine. | 8.2, 11 |
+| S3 | `audio.deleted` was recorded before the files were deleted, and a left-behind file stayed forever. | `audio.deletion_requested`, then `confirm_audio_deleted` checks storage before `audio.deleted`. | 8.1, 8.2, 10.4 |
+| S4 | A tester's account cannot be deleted while the audit log refers to it. | The account is banned and its email replaced; it holds no recording. | 5.1 |
+| S5 | A bad transcript failed on a constraint, which could quote its text in an error. | The transcript is checked whole, and any failure is a refusal. | 8.2 |
+| S6 | Engine and practitioner functions locked rows in opposite orders. | Consultation first, then job, everywhere. | 8.2 |
+| S7 | The sessions, the time limit, and the states allowed for three slice 1.4 functions were loose. | Stated. | 8.2, 12.4, 12.7 |
+| S8 | Smaller errors: the Piper voices, the phase 2 exit, the reference engine, leftovers from version 2.0. | Corrected. | 2, 6.1, 12.6, 20.8, 21.3, A |
+| S9 | The owner made the free rule permanent and confirmed no payment method is on file. | Section 3, OD-6 and OD-9 updated. | 3, 22 |
 
 # Appendix B — Where each section of version 1 went
 

@@ -82,10 +82,11 @@ class Heartbeat(threading.Thread):
     """Tells the database where the job is, at least every `interval` seconds, and
     raises the `stopped` flag when the answer is to stop."""
 
-    def __init__(self, connection: Connection, job_id: str, interval: float) -> None:
+    def __init__(self, connection: Connection, job_id: str, attempt: int, interval: float) -> None:
         super().__init__(daemon=True)
         self.connection = connection
         self.job_id = job_id
+        self.attempt = attempt
         self.interval = interval
         self.stage = "validating"
         self.audio_seconds: float | None = None
@@ -100,6 +101,7 @@ class Heartbeat(threading.Thread):
                     "engine_heartbeat",
                     {
                         "p_job_id": self.job_id,
+                        "p_attempt": self.attempt,
                         "p_stage": self.stage,
                         "p_audio_seconds": self.audio_seconds,
                     },
@@ -167,7 +169,9 @@ class Engine:
             "attempt": job["attempt"],
         }
         started = time.monotonic()
-        heartbeat = Heartbeat(self.beats, job["job_id"], self.settings.heartbeat_seconds)
+        heartbeat = Heartbeat(
+            self.beats, job["job_id"], job["attempt"], self.settings.heartbeat_seconds
+        )
         heartbeat.start()
         self.settings.work_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         workdir = Path(tempfile.mkdtemp(dir=self.settings.work_dir))
@@ -190,10 +194,14 @@ class Engine:
                 "engine_complete_job",
                 {
                     "p_job_id": job["job_id"],
+                    "p_attempt": job["attempt"],
                     "p_transcript": transcript.model_dump(mode="json"),
                     "p_metrics": metrics,
                 },
             )
+            if answer.get("error_category") == "VALIDATION":
+                # The database found the transcript inconsistent; the job must not hang.
+                raise WorkerError(ErrorCategory.TRANSCRIPT_MERGE_FAILED)
             if answer.get("ok"):
                 log_event(
                     "job.completed",
@@ -210,9 +218,9 @@ class Engine:
         except Stopped:
             log_event("job.stopped", **ids, stage=heartbeat.stage)
         except WorkerError as error:
-            self._fail(job["job_id"], error.category, error.speaker, ids, error.__cause__)
+            self._fail(job, error.category, error.speaker, ids, error.__cause__)
         except Exception as exc:
-            self._fail(job["job_id"], ErrorCategory.TRANSCRIPTION_FAILED, None, ids, exc)
+            self._fail(job, ErrorCategory.TRANSCRIPTION_FAILED, None, ids, exc)
         finally:
             heartbeat.finish()
             shutil.rmtree(workdir, ignore_errors=True)  # no copy of the audio outlives the job
@@ -317,7 +325,7 @@ class Engine:
 
     def _fail(
         self,
-        job_id: str,
+        job: dict[str, Any],
         category: ErrorCategory,
         speaker: str | None,
         ids: dict[str, str | int],
@@ -334,7 +342,8 @@ class Engine:
             self.main.rpc(
                 "engine_fail_job",
                 {
-                    "p_job_id": job_id,
+                    "p_job_id": job["job_id"],
+                    "p_attempt": job["attempt"],
                     "p_error_category": category.value,
                     "p_speaker": speaker,
                     "p_metrics": {},

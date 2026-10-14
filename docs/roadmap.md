@@ -43,19 +43,26 @@ Done (on branch `phase-1/web-app`, not yet live):
       transcription in the consultation's language, merge, guards against invented text.
 - [x] Old engine web service, hosted demo code and Dockerfile removed.
 - [x] Engine unit tests (merge order, overlap, offsets, transcript format, settings, logging).
+- [x] Second review applied (specification version 2.2): every engine call names its attempt,
+      engine accounts refused as practitioners, transcripts checked whole before writing,
+      one lock order, audio deletion confirmed against storage.
+- [x] Database tests for the engine contract (`apps/web/tests/transcription.test.ts`): full job,
+      engine limits, cancel, two engines, stalled job taken back, late result refused, three
+      stalls, time limit, eight kinds of bad transcript, withdrawal during processing.
+- [x] Design system proposal published for the owner's review (source in `design/`):
+      https://claude.ai/artifact/VwTRNADCcZnGHPHYK6spht
 
 To do:
 
-- [ ] Engine integration tests against the local stack: a full job; corrupt, silent and
-      room-noise audio; a file changed after registration; withdrawal during processing;
-      a stalled job taken back; a late result refused; two engines; no transcript text in logs.
+- [ ] Owner reviews the design system. Then restyle the live screens to it.
+- [ ] Engine tests with real audio: corrupt, silent and room-noise files; a file changed after
+      registration; no transcript text in logs; a two-hour transcript fits one call.
 - [ ] A dialogue fixture generator: both tracks rendered on one timeline from a script.
 - [ ] Web: start, status panel with stages, cancel while queued, retry after failure,
-      withdraw consent, "no engine running" notice, read-only two-voice transcript.
-- [ ] Web tests: access rules for the new tables and functions (including the engine
-      account), and a browser test that runs a real local engine end to end.
+      withdraw consent with audio deletion confirmed, "no engine running" notice,
+      read-only two-rails transcript.
+- [ ] A browser test that runs a real local engine end to end.
 - [ ] Quick benchmark on this computer (small, medium, large-v3-turbo) to choose the default model.
 - [ ] Hosted: apply the migration, create the engine account, install the engine as a service
       on the owner's computer that starts at login.
 - [ ] Publish the web app, run the browser tests against the live site, merge to main.
-- [ ] Apply the second review of the specification (version 2.1) when it arrives.
