@@ -10,6 +10,9 @@
   --practitioner: #23407a;
   --practitioner-deep: #182e5a;
   --practitioner-tint: #e5eaf4;
+  --night: #182e5a;
+  --night-lit: #2c4a86;
+  --on-night: #ffffff;
   --on-practitioner: #ffffff;
   --patient: #1d5e47;
   --patient-tint: #e1efe8;
@@ -37,6 +40,9 @@
   --practitioner: #a9bff0;
   --practitioner-deep: #c9d6f6;
   --practitioner-tint: #1f2b47;
+  --night: #16264b;
+  --night-lit: #2a4378;
+  --on-night: #ffffff;
   --on-practitioner: #0f1218;
   --patient: #86d1b0;
   --patient-tint: #173a2e;
@@ -66,6 +72,9 @@
   --practitioner: #a9bff0;
   --practitioner-deep: #c9d6f6;
   --practitioner-tint: #1f2b47;
+  --night: #16264b;
+  --night-lit: #2a4378;
+  --on-night: #ffffff;
   --on-practitioner: #0f1218;
   --patient: #86d1b0;
   --patient-tint: #173a2e;

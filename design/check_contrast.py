@@ -22,6 +22,10 @@ PAIRS = [
     ("on-patient", "patient", 4.5),
     ("lamp-ink", "lamp-tint", 4.5),
     ("on-screen", "screen", 4.5),
+    # Night bands: white text over the band and over its pool of light; amber eyebrows and stats.
+    ("on-night", "night", 4.5),
+    ("on-night", "night-lit", 4.5),
+    ("lamp", "night", 4.5),
     *[("lamp-mark", bg, 3) for bg in ("paper", "lamp-tint")],
     *[(edge, bg, 3) for edge in ("rule-strong", "focus") for bg in ("ground", "paper", "paper-sunk")],
 ]

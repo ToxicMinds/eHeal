@@ -270,19 +270,19 @@ body {
 
 /* ---------- Depth and colour (owner, 14 Oct: "too grey and flat") ----------
    Night navy bands with a lamplight glow carry the brand; work sits on raised paper cards. */
-.wa-hero { position: relative; overflow: hidden; display: grid; gap: var(--space-6); padding: var(--space-8); border-radius: 12px; background: var(--practitioner-deep); color: #fff; }
-.wa-hero::after { content: ""; position: absolute; right: -80px; top: -120px; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--lamp) 38%, transparent) 0%, transparent 68%); pointer-events: none; }
+.wa-hero { position: relative; overflow: hidden; display: grid; gap: var(--space-6); padding: var(--space-8); border-radius: 12px; background: var(--night); color: var(--on-night); }
+.wa-hero::after { content: ""; position: absolute; right: -80px; top: -120px; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, var(--night-lit) 0%, transparent 70%); pointer-events: none; }
 .wa-hero > * { position: relative; z-index: 1; }
 .wa-hero__eyebrow { margin: 0; font: 700 13px/18px var(--font-text); letter-spacing: 0.08em; text-transform: uppercase; color: var(--lamp); }
 .wa-hero__title { margin: 0; font: 600 40px/46px var(--font-display); letter-spacing: -0.01em; }
-.wa-hero__meta { margin: 0; font-size: 15px; line-height: 22px; color: color-mix(in srgb, #fff 78%, transparent); }
+.wa-hero__meta { margin: 0; font-size: 15px; line-height: 22px; color: color-mix(in srgb, var(--on-night) 78%, transparent); }
 .wa-hero .wa-button--primary { background: var(--lamp); color: #1b1300; }
 .wa-hero .wa-button--primary:hover { background: color-mix(in srgb, var(--lamp) 85%, #fff); }
-.wa-hero .wa-button--secondary { background: transparent; border-color: color-mix(in srgb, #fff 45%, transparent); color: #fff; }
+.wa-hero .wa-button--secondary { background: transparent; border-color: color-mix(in srgb, var(--on-night) 45%, transparent); color: var(--on-night); }
 .wa-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); }
-.wa-stat { display: grid; gap: 2px; padding: var(--space-4) var(--space-6); border-radius: 10px; background: color-mix(in srgb, #fff 9%, transparent); text-decoration: none; color: inherit; }
+.wa-stat { display: grid; gap: 2px; padding: var(--space-4) var(--space-6); border-radius: 10px; background: color-mix(in srgb, var(--on-night) 9%, transparent); text-decoration: none; color: inherit; }
 .wa-stat__value { font: 600 40px/44px var(--font-display); font-variant-numeric: tabular-nums; }
-.wa-stat__label { font-size: 15px; line-height: 20px; color: color-mix(in srgb, #fff 80%, transparent); }
+.wa-stat__label { font-size: 15px; line-height: 20px; color: color-mix(in srgb, var(--on-night) 80%, transparent); }
 .wa-stat--lamp .wa-stat__value { color: var(--lamp); }
 .wa-shelf { display: grid; gap: var(--space-4); }
 .wa-shelf__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
@@ -305,10 +305,10 @@ body {
 .wa-done-list > li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-6); border-top: 1px solid var(--rule); font-size: 15px; }
 .wa-done-list > li:first-child { border-top: 0; }
 /* Form review: the answers, and the conversation beside them. */
-.wa-ring { --p: 0; display: grid; place-items: center; width: 84px; height: 84px; border-radius: 50%; background: conic-gradient(var(--lamp) calc(var(--p) * 1turn), color-mix(in srgb, #fff 16%, transparent) 0); }
-.wa-ring > span { display: grid; place-items: center; width: 68px; height: 68px; border-radius: 50%; background: var(--practitioner-deep); font: 600 18px/22px var(--font-text); text-align: center; }
-.wa-ring small { display: block; font-size: 12px; font-weight: 500; color: color-mix(in srgb, #fff 75%, transparent); }
-.wa-suggests { display: grid; gap: var(--space-2); padding: var(--space-4) var(--space-6); border-radius: 10px; background: color-mix(in srgb, var(--lamp) 16%, transparent); }
+.wa-ring { --p: 0; display: grid; place-items: center; width: 84px; height: 84px; border-radius: 50%; background: conic-gradient(var(--lamp) calc(var(--p) * 1turn), color-mix(in srgb, var(--on-night) 16%, transparent) 0); }
+.wa-ring > span { display: grid; place-items: center; width: 68px; height: 68px; border-radius: 50%; background: var(--night); font: 600 18px/22px var(--font-text); text-align: center; }
+.wa-ring small { display: block; font-size: 12px; font-weight: 500; color: color-mix(in srgb, var(--on-night) 75%, transparent); }
+.wa-suggests { display: grid; gap: var(--space-2); padding: var(--space-4) var(--space-6); border-radius: 10px; background: color-mix(in srgb, var(--on-night) 8%, transparent); }
 .wa-suggests__title { margin: 0; font: 700 13px/18px var(--font-text); letter-spacing: 0.08em; text-transform: uppercase; color: var(--lamp); }
 .wa-suggests__text { margin: 0; font: 600 20px/28px var(--font-display); }
 .wa-review { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: var(--space-6); align-items: start; }
@@ -319,13 +319,40 @@ body {
 .wa-sheet .wa-answer:not(.wa-answer--empty) { border-color: transparent; box-shadow: var(--shadow-raised); border-radius: 10px; }
 .wa-tucked { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin: 0; padding: var(--space-3) var(--space-6); border-radius: 10px; background: var(--paper-sunk); font-size: 14px; line-height: 20px; color: var(--ink-muted); }
 @media (max-width: 900px) { .wa-review { grid-template-columns: minmax(0, 1fr); } .wa-review__aside { position: static; max-height: none; } }
-/* Sign-in: what Watson does, as the patient's and practitioner's journey on the night hero. */
-.wa-hero .wa-wordmark { color: #fff; }
+/* Sign-in: the front door at night. The sign-in card is the lit page; Watson's notebook shows one
+   consultation as Watson keeps it, ending with what waits for the practitioner. */
+.wa-night { box-sizing: border-box; min-height: 100vh; min-height: 100dvh; isolation: isolate; background: radial-gradient(60rem 40rem at 78% 18%, var(--night-lit), transparent 70%), var(--night); color: var(--on-night); }
+.wa-door { box-sizing: border-box; max-width: var(--content-width); margin: 0 auto; padding: var(--space-12) var(--space-4); display: grid; gap: var(--space-8); grid-template-areas: "head" "card" "notes"; }
+@media (min-width: 900px) { .wa-door { grid-template-columns: minmax(0, 1fr) 400px; grid-template-areas: "head card" "notes card"; column-gap: var(--space-16); row-gap: var(--space-12); align-items: start; padding-top: var(--space-16); } }
+.wa-door__head { grid-area: head; display: grid; gap: var(--space-4); }
+.wa-door__head .wa-wordmark { color: var(--on-night); margin-bottom: var(--space-4); }
+.wa-door__title { margin: 0; max-width: 11em; font: 600 56px/60px var(--font-display); letter-spacing: -0.015em; text-wrap: balance; }
+.wa-door__lead { margin: 0; font-size: 19px; line-height: 28px; color: color-mix(in srgb, var(--on-night) 82%, transparent); }
+.wa-door__card { grid-area: card; color: var(--ink); box-shadow: 0 24px 64px -24px #000, 0 0 0 1px color-mix(in srgb, var(--on-night) 10%, transparent); }
+.wa-notebook { grid-area: notes; display: grid; gap: var(--space-4); margin: 0; max-width: 34rem; }
+.wa-notebook__title { margin: 0; font: 700 13px/18px var(--font-text); letter-spacing: 0.08em; text-transform: uppercase; color: var(--lamp); }
+.wa-notebook ol { display: grid; margin: 0; padding: 0; list-style: none; }
+.wa-notebook li { position: relative; display: grid; grid-template-columns: 3.5rem 20px minmax(0, 1fr); align-items: baseline; padding-bottom: var(--space-4); font-size: 16px; line-height: 24px; color: color-mix(in srgb, var(--on-night) 88%, transparent); }
+.wa-notebook li::before { content: ""; grid-column: 2; justify-self: center; width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--on-night) 55%, transparent); transform: translateY(-1px); }
+.wa-notebook li::after { content: ""; position: absolute; left: calc(3.5rem + 9.5px); top: 18px; bottom: -6px; width: 1px; background: color-mix(in srgb, var(--on-night) 22%, transparent); }
+.wa-notebook li:last-child::after { display: none; }
+.wa-notebook time { grid-column: 1; grid-row: 1; font: 500 14px/24px var(--font-mono); color: color-mix(in srgb, var(--on-night) 62%, transparent); }
+.wa-notebook li > span { grid-column: 3; }
+.wa-notebook .is-now { font-weight: 700; color: var(--lamp); }
+.wa-notebook .is-now::before { width: 11px; height: 11px; background: var(--lamp); box-shadow: 0 0 0 5px color-mix(in srgb, var(--lamp) 25%, transparent); }
+.wa-notebook .is-now time { color: var(--lamp); }
+@media (max-width: 560px) {
+  .wa-door { padding-top: var(--space-8); }
+  .wa-door__title { font-size: 40px; line-height: 44px; }
+  .wa-door__lead { font-size: 17px; line-height: 25px; }
+}
+/* Sign-in as it is live today: the journey list on the hero. Replaced by the night door once approved. */
+.wa-hero .wa-wordmark { color: var(--on-night); }
 .wa-promise { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
 .wa-promise > li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 2px var(--space-4); align-items: start; }
-.wa-promise__icon { grid-row: span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: color-mix(in srgb, var(--lamp) 18%, transparent); color: var(--lamp); }
+.wa-promise__icon { grid-row: span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: color-mix(in srgb, var(--on-night) 10%, transparent); color: var(--lamp); }
 .wa-promise__title { margin: 0; font: 600 17px/24px var(--font-text); }
-.wa-promise__text { margin: 0; font-size: 15px; line-height: 22px; color: color-mix(in srgb, #fff 78%, transparent); }
+.wa-promise__text { margin: 0; font-size: 15px; line-height: 22px; color: color-mix(in srgb, var(--on-night) 78%, transparent); }
 .wa-case__top { flex-wrap: wrap; }
 .wa-case__ref { white-space: nowrap; }
 .wa-tucked { gap: var(--space-1) var(--space-2); }
