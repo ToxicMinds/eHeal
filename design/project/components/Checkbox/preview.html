@@ -1,0 +1,27 @@
+<!-- @dsCard group="Forms" height=210 subtitle="Consent and recorded together" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Checkbox</title>
+<style>.demo { display: grid; gap: 24px; padding: 24px; max-width: 560px; }</style>
+</head>
+<body>
+<div class="demo">
+  <label class="eh-check">
+    <input type="checkbox" id="consent">
+    <span class="eh-check__text">
+      <span class="eh-check__label">Consent to transcription is recorded</span>
+      <span class="eh-hint">For this invented consultation. Without it, no audio can be attached or transcribed. You can record it later.</span>
+    </span>
+  </label>
+  <label class="eh-check">
+    <input type="checkbox" id="together" checked>
+    <span class="eh-check__text">
+      <span class="eh-check__label">Both tracks were recorded together and start at the same moment</span>
+      <span class="eh-hint">Leave this off if you are not sure. The transcript then shows the order of turns as a best guess and says so.</span>
+    </span>
+  </label>
+</div>
+</body>
+</html>

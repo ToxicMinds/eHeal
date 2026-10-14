@@ -1,0 +1,57 @@
+<!-- @dsCard group="Screens" page width=1280 height=860 subtitle="Consultation, attaching audio, desktop" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consultation: audio</title>
+</head>
+<body>
+<div>
+  <p class="eh-band" style="margin: 0"><strong>Development proof of concept. Invented data only.</strong> Never enter a real patient's details or a real consultation.</p>
+  <header class="eh-header"><div class="eh-header__inner"><a class="eh-wordmark" href="#list">eHeal</a><div class="eh-account"><span class="eh-account__email">Signed in as <strong>practitioner@example.com</strong></span><button class="eh-button eh-button--secondary eh-button--small" type="button">Sign out</button></div></div></header>
+  <main class="eh-page">
+    <a class="eh-crumb" href="#list"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Consultations</a>
+    <div class="eh-pagehead">
+      <div class="eh-pagehead__text"><h1 class="eh-title">SYN-0061</h1><p class="eh-meta">Wed 14 Oct 2026, 11:15 · Slovak · follow-up, joint stiffness</p></div>
+      <button class="eh-button eh-button--danger eh-button--small" type="button">Withdraw consent</button>
+    </div>
+    <ol class="eh-journey" aria-label="Progress">
+      <li class="eh-step eh-step--done"><span class="eh-step__name"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Consent</span><span class="eh-step__state">Recorded 14 Oct</span></li>
+      <li class="eh-step eh-step--current" aria-current="step"><span class="eh-step__name">Audio</span><span class="eh-step__state">Waiting for the patient track</span></li>
+      <li class="eh-step"><span class="eh-step__name">Transcript</span><span class="eh-step__state">Not yet</span></li>
+      <li class="eh-step"><span class="eh-step__name">Review</span><span class="eh-step__state">Not yet</span></li>
+    </ol>
+    <section class="eh-panel" aria-labelledby="audio-title">
+      <div class="eh-panel__head"><h2 class="eh-heading" id="audio-title">Audio</h2><span class="eh-hint">One track for each speaker</span></div>
+      <div class="eh-slots">
+        <section class="eh-slot" aria-label="Practitioner track">
+          <div class="eh-slot__head"><h3 class="eh-slot__voice" style="margin: 0">Practitioner</h3><span class="eh-hint">Attached 11:58</span></div>
+          <div class="eh-player">
+            <button class="eh-play" type="button" aria-label="Play practitioner track"><svg class="eh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4 20 12 7 20Z" fill="currentColor"/></svg></button>
+            <div class="eh-scrub" role="presentation"><div class="eh-scrub__fill" style="width: 0%"></div></div>
+            <span class="eh-player__time">0:00 / 12:30</span>
+          </div>
+          <ul class="eh-facts"><li>M4A</li><li>11.8 MB</li></ul>
+          <details class="eh-details"><summary>Details</summary><p class="eh-hint eh-mono" style="overflow-wrap: anywhere">SHA-256 62e24bf9995571c0d8a4e7f1c2b3a4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1</p></details>
+          <div class="eh-actions"><button class="eh-button eh-button--quiet eh-button--small" type="button">Replace</button><button class="eh-button eh-button--quiet eh-button--small" type="button">Remove</button></div>
+        </section>
+        <section class="eh-slot eh-slot--patient" aria-label="Patient track">
+          <div class="eh-slot__head"><h3 class="eh-slot__voice" style="margin: 0">Patient</h3><span class="eh-hint">Not attached</span></div>
+          <div class="eh-drop">
+            <svg class="eh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+            <span class="eh-drop__lead">Drop the patient's audio here</span>
+            <span class="eh-hint">wav, mp3, m4a, flac, ogg or webm, up to 50 MB and 2 hours</span>
+            <div class="eh-drop__actions">
+              <button class="eh-button eh-button--secondary eh-button--small" type="button">Choose file</button>
+              <button class="eh-button eh-button--secondary eh-button--small" type="button"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>Record with microphone</button>
+            </div>
+          </div>
+        </section>
+      </div>
+      <label class="eh-check"><input type="checkbox" id="together"><span class="eh-check__text"><span class="eh-check__label">Both tracks were recorded together and start at the same moment</span><span class="eh-hint">Leave this off if you are not sure. The transcript then shows the order of turns as a best guess and says so.</span></span></label>
+      <div class="eh-actions"><button class="eh-button eh-button--primary" type="button" disabled>Start transcription</button><p class="eh-hint">Attach the patient track first.</p></div>
+    </section>
+  </main>
+</div>
+</body>
+</html>
