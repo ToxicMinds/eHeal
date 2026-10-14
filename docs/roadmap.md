@@ -92,22 +92,27 @@ edge functions (`payment`, `stripe-webhook`). Left over:
 
 ## Raised by the owner on 14 October
 
-Order agreed with the owner: patient documents, then booking last. Booking is the product's
-selling point; the transcript and form are what assist the practitioner once a patient has booked.
+Order agreed with the owner: patient documents, WhatsApp, then booking last. Booking is the
+product's selling point; the transcript and form are what assist the practitioner.
 
-- [ ] **Patient documents** (approved in outline). The patient uploads documents from their link;
-      they are kept under the patient's phone number or email (patients may have no email);
-      the practitioner views them; Watson reads them for the form and the suggested diagnosis.
-      The owner accepts real documents for the test drive (14 Oct), knowing GDPR applies before
-      real use. Mocks in the design system (ScreenPhoneJoinDocuments, ScreenConsultationDocuments,
-      ScreenFormDocumentQuote) await approval; they also propose patient names instead of SYN numbers.
-- [ ] **WhatsApp**: proposal at https://claude.ai/artifact/HiKzstjnEHBTq6UiBjFVjH. Tap to send
-      (wa.me links, free) now; Meta's Cloud API later (free test number for 5 people; about 2 cents
-      per message since 1 Oct 2026, so it needs a card). Not Baileys (Synculariti's way). Awaiting
-      the owner's decisions.
+- [x] **Patient documents** (live 14 Oct). Patients are known per practitioner by phone number
+      (one international format) or email. The patient's link names them and sends PDFs or photos
+      into a private bucket; the engine reads them (PDF text, or RapidOCR's Latin model for photos
+      and scans: `clinical-worker fetch-ocr-model`) before filling forms, which quote them by page.
+      The owner accepts real documents for the test drive, knowing GDPR applies before real use.
+- [x] **WhatsApp, tap to send** (live 14 Oct): Send on WhatsApp opens the practitioner's own
+      WhatsApp with Watson's message (invitation, or reminder on the day) in the patient's language.
+- [x] **WhatsApp, Watson's own number** (live 14 Oct): Meta's official Cloud API, test number
+      +1 555-662-3667 (5 verified recipients, no payment method: never add one until there are
+      paying customers). Edge function `whatsapp` checks Meta's signature; a patient links by
+      sending "Watson <code>" from their link; photos and PDFs in the chat become documents.
+      Credentials: ~/.config/watson/meta.env and function secrets. Proposal:
+      https://claude.ai/artifact/HiKzstjnEHBTq6UiBjFVjH
+- [ ] WhatsApp still to do: reminders Watson sends by itself (needs an approved message template
+      and a schedule), the patient's plan after approval, review due, voice notes.
+- [ ] Documents that arrive after the form was filled: offer to fill it in again.
 - [ ] **Booking**: patients find a practitioner and book a time. Last.
-- [ ] **Sign-in**: the owner found the hero not gelling with its background; proposal
-      ScreenSignInNight in the design system awaits approval.
+- [ ] **Sign-in**: proposal ScreenSignInNight in the design system awaits the owner's answer.
 
 ## First measurements (slice 1.7, started 14 October)
 
