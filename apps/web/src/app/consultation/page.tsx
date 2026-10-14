@@ -119,7 +119,7 @@ function Consultation({ userId }: { userId: string }) {
       </p>
       <div className="mt-3"><StatusRail status={consultation.status} /></div>
       {consultation.scenario_notes && (
-        <p className="mt-4 max-w-2xl"><span className="font-semibold">Invented scenario:</span> {consultation.scenario_notes}</p>
+        <p className="mt-4 max-w-2xl"><span className="font-semibold">Notes:</span> {consultation.scenario_notes}</p>
       )}
       {problem && (
         <Alert variant="destructive" className="mt-4"><AlertDescription>Problem: {problem}</AlertDescription></Alert>
@@ -134,8 +134,7 @@ function Consultation({ userId }: { userId: string }) {
         ) : (
           <>
             <p className="mt-2 max-w-2xl">
-              No audio can be attached or transcribed until consent to transcription is recorded for
-              this invented consultation.
+              No audio can be attached or transcribed until consent to transcription is recorded.
             </p>
             <Button className="mt-3" disabled={busy} onClick={recordConsent}>Record consent</Button>
           </>

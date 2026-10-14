@@ -7,15 +7,15 @@ test("create a consultation, record consent, attach and remove audio", async ({ 
   const reference = `SYN-${Math.floor(1000 + Math.random() * 9000)}`;
   await signIn(page, account);
 
-  // A real-looking name is refused before anything is sent.
+  // A name is refused before anything is sent: only the reference format is accepted.
   await page.getByRole("link", { name: "New consultation" }).click();
-  await page.getByLabel("Synthetic patient reference").fill("Maria Novak");
+  await page.getByLabel("Patient reference").fill("Maria Novak");
   await page.getByLabel("Language spoken").selectOption("en");
   await page.getByRole("button", { name: "Create consultation" }).click();
-  await expect(page.getByText("Real names and identifiers are not accepted.")).toBeVisible();
+  await expect(page.getByText("Use SYN- and up to eight digits, for example SYN-0042.")).toBeVisible();
 
-  await page.getByLabel("Synthetic patient reference").fill(reference);
-  await page.getByLabel("Notes about the invented scenario").fill("sleep complaint, patient mentions a supplement");
+  await page.getByLabel("Patient reference").fill(reference);
+  await page.getByLabel("Notes").fill("sleep complaint, patient mentions a supplement");
   await page.getByRole("button", { name: "Create consultation" }).click();
 
   // Without consent, nothing can be attached.
