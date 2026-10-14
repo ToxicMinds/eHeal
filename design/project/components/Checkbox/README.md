@@ -6,4 +6,4 @@ A statement the practitioner confirms, with a sentence that says what it changes
 - The description says what happens either way: "Without it, no audio can be attached or transcribed."
 - Use it for facts, never for actions; an action is a Button.
 
-The consumer provides: a `<label class="eh-check">` holding the `<input type="checkbox">`, an `eh-check__label`, and an optional `eh-hint`.
+The consumer provides: a `<label class="wa-check">` holding the `<input type="checkbox">`, an `wa-check__label`, and an optional `wa-hint`.

@@ -28,7 +28,7 @@ export default function NewConsultationPage() {
 
 function Problem({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
-  return <p id={id} className="eh-error"><CircleAlert aria-hidden className="eh-icon" />{message}</p>;
+  return <p id={id} className="wa-error"><CircleAlert aria-hidden className="wa-icon" />{message}</p>;
 }
 
 function NewConsultation() {
@@ -66,32 +66,32 @@ function NewConsultation() {
 
   return (
     <>
-      <Link href="/consultations/" className="eh-crumb"><ChevronLeft aria-hidden className="eh-icon eh-icon--sm" />Consultations</Link>
-      <h1 className="eh-title">New consultation</h1>
-      <div className="eh-split">
-        <form onSubmit={handleSubmit(create)} noValidate className="eh-panel" aria-label="Consultation details">
-          <div className="eh-form">
-            <div className="eh-field">
-              <label className="eh-label" htmlFor="ref">Patient reference</label>
-              <p className="eh-hint" id="ref-hint">Digits only.</p>
-              <div className="eh-affixed" style={{ maxWidth: 280 }}>
-                <span className="eh-affix" aria-hidden>SYN-</span>
-                <input id="ref" className="eh-input" inputMode="numeric" autoComplete="off" spellCheck={false}
+      <Link href="/consultations/" className="wa-crumb"><ChevronLeft aria-hidden className="wa-icon wa-icon--sm" />Consultations</Link>
+      <h1 className="wa-title">New consultation</h1>
+      <div className="wa-split">
+        <form onSubmit={handleSubmit(create)} noValidate className="wa-panel" aria-label="Consultation details">
+          <div className="wa-form">
+            <div className="wa-field">
+              <label className="wa-label" htmlFor="ref">Patient reference</label>
+              <p className="wa-hint" id="ref-hint">Digits only.</p>
+              <div className="wa-affixed" style={{ maxWidth: 280 }}>
+                <span className="wa-affix" aria-hidden>SYN-</span>
+                <input id="ref" className="wa-input" inputMode="numeric" autoComplete="off" spellCheck={false}
                   aria-invalid={Boolean(errors.reference)} aria-describedby="ref-hint ref-error" {...register("reference")} />
               </div>
               <Problem id="ref-error" message={errors.reference?.message} />
             </div>
 
-            <div className="eh-fields-row">
-              <div className="eh-field">
-                <label className="eh-label" htmlFor="when">Date and time</label>
-                <input id="when" type="datetime-local" className="eh-input" aria-invalid={Boolean(errors.scheduled_at)}
+            <div className="wa-fields-row">
+              <div className="wa-field">
+                <label className="wa-label" htmlFor="when">Date and time</label>
+                <input id="when" type="datetime-local" className="wa-input" aria-invalid={Boolean(errors.scheduled_at)}
                   aria-describedby="when-error" {...register("scheduled_at")} />
                 <Problem id="when-error" message={errors.scheduled_at?.message} />
               </div>
-              <div className="eh-field">
-                <label className="eh-label" htmlFor="language">Language spoken</label>
-                <div className="eh-select">
+              <div className="wa-field">
+                <label className="wa-label" htmlFor="language">Language spoken</label>
+                <div className="wa-select">
                   <select id="language" defaultValue="" aria-invalid={Boolean(errors.language)}
                     aria-describedby="language-hint language-error" {...register("language")}>
                     <option value="" disabled>Choose…</option>
@@ -103,37 +103,37 @@ function NewConsultation() {
                 <Problem id="language-error" message={errors.language?.message} />
               </div>
             </div>
-            <p className="eh-hint" id="language-hint" style={{ marginTop: -12 }}>
+            <p className="wa-hint" id="language-hint" style={{ marginTop: -12 }}>
               The transcript is made in this language. &ldquo;Mixed or unsure&rdquo; lets the engine guess, which is less reliable.
             </p>
 
-            <div className="eh-field">
-              <label className="eh-label" htmlFor="notes">Notes</label>
-              <p className="eh-hint" id="notes-hint">For example &ldquo;sleep complaint, patient mentions a supplement&rdquo;.</p>
-              <textarea id="notes" className="eh-textarea" aria-invalid={Boolean(errors.scenario_notes)}
+            <div className="wa-field">
+              <label className="wa-label" htmlFor="notes">Notes</label>
+              <p className="wa-hint" id="notes-hint">For example &ldquo;sleep complaint, patient mentions a supplement&rdquo;.</p>
+              <textarea id="notes" className="wa-textarea" aria-invalid={Boolean(errors.scenario_notes)}
                 aria-describedby="notes-hint notes-error" {...register("scenario_notes")} />
               <Problem id="notes-error" message={errors.scenario_notes?.message} />
             </div>
 
-            <label className="eh-check">
+            <label className="wa-check">
               <input type="checkbox" {...register("consent_recorded")} />
-              <span className="eh-check__text">
-                <span className="eh-check__label">Consent to transcription is recorded</span>
-                <span className="eh-hint">Without it, no audio can be attached or transcribed. You can record it later.</span>
+              <span className="wa-check__text">
+                <span className="wa-check__label">Consent to transcription is recorded</span>
+                <span className="wa-hint">Without it, no audio can be attached or transcribed. You can record it later.</span>
               </span>
             </label>
 
             {failure && <Notice tone="failed" title="The consultation was not created">{failure}</Notice>}
-            <div className="eh-actions">
-              <button type="submit" className="eh-button eh-button--primary" disabled={isSubmitting} aria-busy={isSubmitting || undefined}>
+            <div className="wa-actions">
+              <button type="submit" className="wa-button wa-button--primary" disabled={isSubmitting} aria-busy={isSubmitting || undefined}>
                 {isSubmitting ? "Creating…" : "Create consultation"}
               </button>
-              <Link href="/consultations/" className="eh-button eh-button--secondary">Cancel</Link>
+              <Link href="/consultations/" className="wa-button wa-button--secondary">Cancel</Link>
             </div>
           </div>
         </form>
-        <aside className="eh-aside" aria-labelledby="next-title">
-          <h2 className="eh-heading" id="next-title" style={{ color: "var(--ink)" }}>What happens next</h2>
+        <aside className="wa-aside" aria-labelledby="next-title">
+          <h2 className="wa-heading" id="next-title" style={{ color: "var(--ink)" }}>What happens next</h2>
           <ol>
             <li>Attach the two audio tracks: yours and the patient&apos;s.</li>
             <li>Start transcription. The engine writes each track out and puts the turns in order.</li>

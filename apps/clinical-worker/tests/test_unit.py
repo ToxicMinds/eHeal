@@ -171,13 +171,13 @@ class TestTranscriptSchema:
 class TestSettings:
     def test_environment_wins_over_the_file(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         file = tmp_path / "engine.env"
-        file.write_text("EHEAL_MODEL=medium\nEHEAL_ENGINE_EMAIL=engine@example.test\n")
-        settings = load_settings({"EHEAL_ENV_FILE": str(file), "EHEAL_MODEL": "tiny"})
+        file.write_text("WATSON_MODEL=medium\nWATSON_ENGINE_EMAIL=engine@example.test\n")
+        settings = load_settings({"WATSON_ENV_FILE": str(file), "WATSON_MODEL": "tiny"})
         assert (settings.model, settings.engine_email) == ("tiny", "engine@example.test")
 
     def test_password_never_appears_in_its_representation(self) -> None:
         settings = load_settings(
-            {"EHEAL_ENV_FILE": "/nonexistent", "EHEAL_ENGINE_PASSWORD": "s3cret-value"}
+            {"WATSON_ENV_FILE": "/nonexistent", "WATSON_ENGINE_PASSWORD": "s3cret-value"}
         )
         assert "s3cret-value" not in repr(settings)
 

@@ -1,4 +1,4 @@
-"""Engine settings, validated from EHEAL_* environment variables and an optional file."""
+"""Engine settings, validated from WATSON_* environment variables and an optional file."""
 
 import os
 from collections.abc import Mapping
@@ -8,14 +8,14 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 AUDIO_FORMATS = frozenset({"wav", "mp3", "m4a", "mp4", "flac", "ogg", "webm"})
 DETECTABLE_LANGUAGES = ("en", "de", "sk")  # "mixed or unsure" chooses among these only
-DEFAULT_ENV_FILE = Path.home() / ".config" / "eheal" / "engine.env"
+DEFAULT_ENV_FILE = Path.home() / ".config" / "watson" / "engine.env"
 
 
 class Settings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     # Outside the repository and outside cloud-synced folders.
-    home: Path = Path.home() / ".local" / "share" / "eheal"
+    home: Path = Path.home() / ".local" / "share" / "watson"
     model: str = "small"
     device: str = "cpu"
     compute_type: str = "int8"
@@ -52,17 +52,17 @@ def read_env_file(path: Path) -> dict[str, str]:
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
-    """The environment wins over the file named by EHEAL_ENV_FILE.
+    """The environment wins over the file named by WATSON_ENV_FILE.
 
-    That file defaults to ~/.config/eheal/engine.env."""
+    That file defaults to ~/.config/watson/engine.env."""
     environment = dict(os.environ if env is None else env)
-    file = Path(environment.get("EHEAL_ENV_FILE", DEFAULT_ENV_FILE))
+    file = Path(environment.get("WATSON_ENV_FILE", DEFAULT_ENV_FILE))
     merged = {**read_env_file(file), **environment}
-    prefix = "EHEAL_"
+    prefix = "WATSON_"
     return Settings.model_validate(
         {
             k[len(prefix) :].lower(): v
             for k, v in merged.items()
-            if k.startswith(prefix) and k != "EHEAL_ENV_FILE"
+            if k.startswith(prefix) and k != "WATSON_ENV_FILE"
         }
     )

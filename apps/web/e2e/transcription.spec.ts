@@ -36,9 +36,9 @@ test("start transcription, watch it run on a real engine, and read the transcrip
   execFileSync("uv", ["run", "--project", ENGINE, "python", "-c",
     "from clinical_worker.config import load_settings; from clinical_worker.engine import Engine; Engine(load_settings()).run_once()"], {
     env: {
-      ...process.env, EHEAL_ENV_FILE: "/nonexistent", EHEAL_MODEL: "tiny",
-      EHEAL_SUPABASE_URL: stack.url, EHEAL_SUPABASE_PUBLISHABLE_KEY: stack.publishableKey,
-      EHEAL_ENGINE_EMAIL: engine.email, EHEAL_ENGINE_PASSWORD: PASSWORD,
+      ...process.env, WATSON_ENV_FILE: "/nonexistent", WATSON_MODEL: "tiny",
+      WATSON_SUPABASE_URL: stack.url, WATSON_SUPABASE_PUBLISHABLE_KEY: stack.publishableKey,
+      WATSON_ENGINE_EMAIL: engine.email, WATSON_ENGINE_PASSWORD: PASSWORD,
     },
     stdio: "ignore",
     timeout: 120_000,
@@ -47,9 +47,9 @@ test("start transcription, watch it run on a real engine, and read the transcrip
   // The page notices on its own and shows the two-voice transcript.
   await expect(page.getByRole("heading", { name: "Transcript" })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Ready to review")).toBeVisible();
-  const turns = page.locator(".eh-turn");
+  const turns = page.locator(".wa-turn");
   await expect(turns.filter({ hasText: "Practitioner" }).first()).toBeVisible();
   await expect(turns.filter({ hasText: "Patient" }).first()).toBeVisible();
-  await expect(page.locator(".eh-turns")).toContainText(/sleep/i);
+  await expect(page.locator(".wa-turns")).toContainText(/sleep/i);
   expect(problems).toEqual([]);
 });

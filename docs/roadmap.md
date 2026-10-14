@@ -32,14 +32,14 @@ Last updated: 14 October 2026 (order changed by [decision 0005](decision-log/000
 | Piece | Where | Plan |
 |---|---|---|
 | Web app | Render static site | Free |
-| Sign-in, database, audio files | Supabase project `eheal`, Frankfurt | Free |
+| Sign-in, database, audio files | Supabase project `watson` (ref `mconctpleszerqhgaarj`), Frankfurt | Free |
 | Transcription engine | The owner's computer | Free |
 
 ## Slice 1.3 — done 14 October
 
-Live at https://eheal-app.onrender.com, rebuilt on the design system
+Live at https://watson.onrender.com, rebuilt on the design system
 (https://claude.ai/artifact/VwTRNADCcZnGHPHYK6spht). The engine runs on the owner's
-computer as a user service (`apps/clinical-worker/eheal-engine.service`). Measured live:
+computer as a user service (`apps/clinical-worker/watson-engine.service`). Measured live:
 two 7.5-second tracks, start to transcript on screen in 16 seconds with the `small` model.
 
 Left over, picked up when the work needs them:

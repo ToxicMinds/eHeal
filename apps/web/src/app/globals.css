@@ -1,4 +1,4 @@
-/* Tailwind for layout; every colour, face and component comes from the eHeal design system
+/* Tailwind for layout; every colour, face and component comes from the Watson design system
    (design/project). tokens.css is generated from its tokens.json by design/build_tokens.py. */
 @import "tailwindcss";
 @import "./tokens.css";

@@ -30,7 +30,7 @@ export default function ConsultationPage() {
     <RequireSession>
       {(user) => (
         <AppShell user={user}>
-          <Suspense fallback={<p className="eh-meta" role="status">Loading the consultation…</p>}>
+          <Suspense fallback={<p className="wa-meta" role="status">Loading the consultation…</p>}>
             <ConsultationView userId={user.id} />
           </Suspense>
         </AppShell>
@@ -40,7 +40,7 @@ export default function ConsultationPage() {
 }
 
 const back = (
-  <Link href="/consultations/" className="eh-crumb"><ChevronLeft aria-hidden className="eh-icon eh-icon--sm" />Consultations</Link>
+  <Link href="/consultations/" className="wa-crumb"><ChevronLeft aria-hidden className="wa-icon wa-icon--sm" />Consultations</Link>
 );
 
 /** What each of the four steps says under its bar. */
@@ -92,12 +92,12 @@ function ConsultationView({ userId }: { userId: string }) {
   }, [id, fetchAll]);
 
   if (!UUID.test(id) || loaded === "missing") {
-    return <>{back}<p className="eh-text">This consultation does not exist, or it is not yours.</p></>;
+    return <>{back}<p className="wa-text">This consultation does not exist, or it is not yours.</p></>;
   }
   if (loaded === "failed") {
     return <>{back}<Notice tone="failed" title="The consultation could not be loaded">Check your connection and reload the page.</Notice></>;
   }
-  if (loaded === null) return <p className="eh-meta" role="status">Loading the consultation…</p>;
+  if (loaded === null) return <p className="wa-meta" role="status">Loading the consultation…</p>;
 
   const { consultation, tracks, audioLeft } = loaded;
   const status = consultation.status;
@@ -138,24 +138,24 @@ function ConsultationView({ userId }: { userId: string }) {
   return (
     <>
       {back}
-      <div className="eh-pagehead">
-        <div className="eh-pagehead__text">
-          <h1 className="eh-title">{consultation.synthetic_patient_ref}</h1>
-          <p className="eh-meta">
+      <div className="wa-pagehead">
+        <div className="wa-pagehead__text">
+          <h1 className="wa-title">{consultation.synthetic_patient_ref}</h1>
+          <p className="wa-meta">
             {dateTime(consultation.scheduled_at)} · {language}
             {consultation.scenario_notes && ` · ${consultation.scenario_notes}`}
           </p>
         </div>
         {canWithdraw && !confirming && (
-          <button type="button" className="eh-button eh-button--danger eh-button--small" onClick={() => setConfirming(true)}>
+          <button type="button" className="wa-button wa-button--danger wa-button--small" onClick={() => setConfirming(true)}>
             Withdraw consent
           </button>
         )}
       </div>
       {confirming && (
         <Notice tone="attention" title="Withdraw consent?" actions={<>
-          <button type="button" className="eh-button eh-button--danger" disabled={busy} onClick={withdraw}>Withdraw consent</button>
-          <button type="button" className="eh-button eh-button--secondary" disabled={busy} onClick={() => setConfirming(false)}>Keep consent</button>
+          <button type="button" className="wa-button wa-button--danger" disabled={busy} onClick={withdraw}>Withdraw consent</button>
+          <button type="button" className="wa-button wa-button--secondary" disabled={busy} onClick={() => setConfirming(false)}>Keep consent</button>
         </>}>
           Any transcription stops, and both audio tracks and the transcript are deleted. This cannot be undone.
         </Notice>
@@ -165,23 +165,23 @@ function ConsultationView({ userId }: { userId: string }) {
       {problem && <Notice tone="failed" title="That did not work">{problem}</Notice>}
 
       {["consent_pending", "ready_for_audio"].includes(status) && tracks.length === 0 && (
-        <section className="eh-panel" aria-labelledby="call-title">
-          <h2 className="eh-heading" id="call-title">Consultation call</h2>
-          <p className="eh-text">Talk to the patient by video. Both voices are recorded and transcribed when you end the call.</p>
-          <div className="eh-actions">
-            <Link href={`/room/?id=${consultation.id}`} className="eh-button eh-button--primary">
-              <Video aria-hidden className="eh-icon" />Start video call
+        <section className="wa-panel" aria-labelledby="call-title">
+          <h2 className="wa-heading" id="call-title">Consultation call</h2>
+          <p className="wa-text">Talk to the patient by video. Both voices are recorded and transcribed when you end the call.</p>
+          <div className="wa-actions">
+            <Link href={`/room/?id=${consultation.id}`} className="wa-button wa-button--primary">
+              <Video aria-hidden className="wa-icon" />Start video call
             </Link>
           </div>
         </section>
       )}
 
       {status === "consent_pending" && (
-        <section className="eh-panel" aria-labelledby="consent-title">
-          <h2 className="eh-heading" id="consent-title">Consent</h2>
-          <p className="eh-text">Consent to transcription is not recorded yet. Without it, no audio can be attached or transcribed.</p>
-          <div className="eh-actions">
-            <button type="button" className="eh-button eh-button--primary" disabled={busy} onClick={() => perform("record_consent")}>Record consent</button>
+        <section className="wa-panel" aria-labelledby="consent-title">
+          <h2 className="wa-heading" id="consent-title">Consent</h2>
+          <p className="wa-text">Consent to transcription is not recorded yet. Without it, no audio can be attached or transcribed.</p>
+          <div className="wa-actions">
+            <button type="button" className="wa-button wa-button--primary" disabled={busy} onClick={() => perform("record_consent")}>Record consent</button>
           </div>
         </section>
       )}
@@ -189,7 +189,7 @@ function ConsultationView({ userId }: { userId: string }) {
       {status === "consent_withdrawn" && (
         audioLeft ? (
           <Notice tone="attention" title="Audio not yet deleted" actions={
-            <button type="button" className="eh-button eh-button--primary" disabled={busy} onClick={() => run(deleteAudio)}>Delete audio now</button>
+            <button type="button" className="wa-button wa-button--primary" disabled={busy} onClick={() => run(deleteAudio)}>Delete audio now</button>
           }>
             Consent was withdrawn, but the audio files are still stored. Delete them now.
           </Notice>
@@ -205,33 +205,33 @@ function ConsultationView({ userId }: { userId: string }) {
       {HAS_TRANSCRIPT.includes(status) && <TranscriptView consultationId={consultation.id} language={language} />}
 
       {AUDIO_CAN_CHANGE.includes(status) && (
-        <section className="eh-panel" aria-labelledby="audio-title">
-          <div className="eh-panel__head">
-            <h2 className="eh-heading" id="audio-title">Audio</h2>
-            <span className="eh-hint">One track for each speaker</span>
+        <section className="wa-panel" aria-labelledby="audio-title">
+          <div className="wa-panel__head">
+            <h2 className="wa-heading" id="audio-title">Audio</h2>
+            <span className="wa-hint">One track for each speaker</span>
           </div>
-          <div className="eh-slots">
+          <div className="wa-slots">
             {SPEAKERS.map((speaker) => (
               <AudioSlot key={speaker} speaker={speaker} track={tracks.find((track) => track.speaker === speaker)}
                 consultationId={consultation.id} userId={userId} editable={editable} onChanged={load} />
             ))}
           </div>
-          <label className="eh-check">
+          <label className="wa-check">
             <input type="checkbox" checked={consultation.recorded_together} disabled={!editable || busy}
               onChange={(event) => declare(event.target.checked)} />
-            <span className="eh-check__text">
-              <span className="eh-check__label">Both tracks were recorded together and start at the same moment</span>
-              <span className="eh-hint">Leave this off if you are not sure. The transcript then shows the order of turns as a best guess and says so.</span>
+            <span className="wa-check__text">
+              <span className="wa-check__label">Both tracks were recorded together and start at the same moment</span>
+              <span className="wa-hint">Leave this off if you are not sure. The transcript then shows the order of turns as a best guess and says so.</span>
             </span>
           </label>
           {status !== "transcription_failed" && (
-            <div className="eh-actions">
-              <button type="button" className="eh-button eh-button--primary" disabled={!both || busy}
+            <div className="wa-actions">
+              <button type="button" className="wa-button wa-button--primary" disabled={!both || busy}
                 aria-busy={busy || undefined} onClick={() => perform("start_transcription")}>
                 Start transcription
               </button>
               {!both && (
-                <p className="eh-hint">
+                <p className="wa-hint">
                   {tracks.length === 0 ? "Attach both tracks first." : `Attach the ${tracks[0].speaker === "patient" ? "practitioner" : "patient"} track first.`}
                 </p>
               )}
@@ -241,14 +241,14 @@ function ConsultationView({ userId }: { userId: string }) {
       )}
 
       {(status === "transcription_processing" || HAS_TRANSCRIPT.includes(status)) && tracks.length > 0 && (
-        <aside className="eh-aside" aria-labelledby="audio-summary">
-          <h2 className="eh-heading" id="audio-summary">Audio</h2>
-          <ul className="eh-facts" style={{ display: "grid", gap: 4 }}>
+        <aside className="wa-aside" aria-labelledby="audio-summary">
+          <h2 className="wa-heading" id="audio-summary">Audio</h2>
+          <ul className="wa-facts" style={{ display: "grid", gap: 4 }}>
             {SPEAKERS.map((speaker) => {
               const track = tracks.find((candidate) => candidate.speaker === speaker);
               return track && (
                 <li key={speaker}>
-                  <strong className={speaker === "patient" ? "eh-voice--patient" : "eh-voice--practitioner"}>
+                  <strong className={speaker === "patient" ? "wa-voice--patient" : "wa-voice--practitioner"}>
                     {speaker === "patient" ? "Patient" : "Practitioner"}
                   </strong>
                   {track.duration_seconds !== null && ` · ${clock(track.duration_seconds)}`} · {track.format.toUpperCase()} · {humanSize(track.size_bytes)}

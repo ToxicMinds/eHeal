@@ -96,7 +96,7 @@ export function JobPanel({ consultationId, status, onChanged }: {
     onChanged();
   }
 
-  if (job === undefined) return <p className="eh-meta" role="status">Loading the transcription…</p>;
+  if (job === undefined) return <p className="wa-meta" role="status">Loading the transcription…</p>;
 
   if (status === "transcription_failed" && job) {
     const speaker = job.failed_speaker === "practitioner" ? "practitioner" : job.failed_speaker === "patient" ? "patient" : null;
@@ -104,13 +104,13 @@ export function JobPanel({ consultationId, status, onChanged }: {
     return (
       <>
         <Notice tone="failed" title={title} actions={
-          <button type="button" className="eh-button eh-button--primary" disabled={busy} onClick={() => act("start_transcription")}>
-            <RotateCcw aria-hidden className="eh-icon" />Try again
+          <button type="button" className="wa-button wa-button--primary" disabled={busy} onClick={() => act("start_transcription")}>
+            <RotateCcw aria-hidden className="wa-icon" />Try again
           </button>
         }>
           {text}
         </Notice>
-        {problem && <p className="eh-error" role="alert">{problem}</p>}
+        {problem && <p className="wa-error" role="alert">{problem}</p>}
       </>
     );
   }
@@ -121,27 +121,27 @@ export function JobPanel({ consultationId, status, onChanged }: {
   const lastReport = engine?.last_seen_at ? Math.max(0, Math.round((now - Date.parse(engine.last_seen_at)) / 1000)) : null;
 
   return (
-    <section className="eh-panel" aria-labelledby="job-title">
-      <div className="eh-job__head">
-        <h2 className="eh-heading" id="job-title">Transcribing</h2>
-        <span className="eh-job__clock">{clock((now - Date.parse(job.queued_at)) / 1000)} so far</span>
+    <section className="wa-panel" aria-labelledby="job-title">
+      <div className="wa-job__head">
+        <h2 className="wa-heading" id="job-title">Transcribing</h2>
+        <span className="wa-job__clock">{clock((now - Date.parse(job.queued_at)) / 1000)} so far</span>
       </div>
-      <div className="eh-bar" role="presentation" />
-      <ol className="eh-stages">
+      <div className="wa-bar" role="presentation" />
+      <ol className="wa-stages">
         {STAGES.map(([stage, label], index) => (
-          <li key={stage} className={index < current ? "eh-stage eh-stage--done" : index === current ? "eh-stage eh-stage--current" : "eh-stage"}
+          <li key={stage} className={index < current ? "wa-stage wa-stage--done" : index === current ? "wa-stage wa-stage--current" : "wa-stage"}
             aria-current={index === current ? "step" : undefined}>
-            {index < current ? <Check aria-hidden className="eh-icon" />
-              : index === current ? <LoaderCircle aria-hidden className="eh-icon eh-spin" />
-              : <span className="eh-stage__dot" aria-hidden />}
+            {index < current ? <Check aria-hidden className="wa-icon" />
+              : index === current ? <LoaderCircle aria-hidden className="wa-icon wa-spin" />
+              : <span className="wa-stage__dot" aria-hidden />}
             <span>{label}</span>
-            <span className="eh-stage__time">{index === 0 && current > 0 ? clock(queuedFor / 1000) : ""}</span>
+            <span className="wa-stage__time">{index === 0 && current > 0 ? clock(queuedFor / 1000) : ""}</span>
           </li>
         ))}
       </ol>
       {engine?.online ? (
-        <p className="eh-engine">
-          <Laptop aria-hidden className="eh-icon eh-icon--sm" />
+        <p className="wa-engine">
+          <Laptop aria-hidden className="wa-icon wa-icon--sm" />
           Engine online{lastReport === null ? "" : ` · last report ${lastReport} s ago`}
         </p>
       ) : (
@@ -149,15 +149,15 @@ export function JobPanel({ consultationId, status, onChanged }: {
           Your consultation is in line and starts as soon as the engine is back. Nothing is lost while you wait.
         </Notice>
       )}
-      <p className="eh-hint">You can leave this page. The transcript appears here when it is ready.</p>
+      <p className="wa-hint">You can leave this page. The transcript appears here when it is ready.</p>
       {job.status === "queued" && (
-        <div className="eh-actions">
-          <button type="button" className="eh-button eh-button--secondary" disabled={busy} onClick={() => act("cancel_transcription")}>
+        <div className="wa-actions">
+          <button type="button" className="wa-button wa-button--secondary" disabled={busy} onClick={() => act("cancel_transcription")}>
             Cancel transcription
           </button>
         </div>
       )}
-      {problem && <p className="eh-error" role="alert">{problem}</p>}
+      {problem && <p className="wa-error" role="alert">{problem}</p>}
     </section>
   );
 }

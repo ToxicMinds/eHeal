@@ -1,9 +1,13 @@
-eHeal helps Ayurveda and integrative-care practitioners turn a consultation's two audio tracks into a transcript they check and correct. Every screen serves a practitioner between consultations who needs three answers fast: what needs me, what is the machine unsure of, and what happens next.
+Watson helps Ayurveda and integrative-care practitioners turn a consultation's two audio tracks into a transcript they check and correct. Every screen serves a practitioner between consultations who needs three answers fast: what needs me, what is the machine unsure of, and what happens next.
+
+## The name
+
+Sherlock Holmes solved the cases; Dr John Watson, a doctor, sat in on every one. He listened, wrote everything down and turned it into the record. Sherlock was a doctor's idea too: Arthur Conan Doyle, himself a physician, modelled him on his teacher Joseph Bell, an Edinburgh surgeon who could read a patient's illness from one conversation. Here the practitioner is Sherlock and the app is their Watson: it sits in on the consultation, keeps every word and drafts the notes. Like Watson's, its guesses are suggestions; the practitioner decides. The palette is Baker Street at night: ink navy for the name and the practitioner, bottle green for the patient, lamplight for what needs a second look, London fog for everything else, and oxblood for what failed.
 
 ## Principles
 
-1. **Two voices, never blended.** The practitioner's voice is `practitioner` (indigo), the patient's is `patient` (green). A voice keeps its colour on every screen: its track, its rail, its label. Nothing else uses green, so green never means "success".
-2. **Show what the machine does not know.** A word the engine is unsure of gets the turmeric mark (`turmeric-tint` wash, `turmeric-mark` underline). Nothing is smoothed over, guessed or filled in.
+1. **Two voices, never blended.** The practitioner's voice is `practitioner` (ink navy, the colour of the name), the patient's is `patient` (bottle green). A voice keeps its colour on every screen: its track, its rail, its label. Nothing else uses green, so green never means "success".
+2. **Show what the machine does not know.** A word the engine is unsure of gets the lamp mark (`lamp-tint` wash, `lamp-mark` underline). Nothing is smoothed over, guessed or filled in.
 3. **One next step.** Each consultation screen leads with the one thing to do now, as a primary button. A screen has at most one primary button.
 4. **Paper on a desk.** Documents and forms sit on `paper` panels with a `rule` border and `shadow-paper`, on a `ground` page. No other shadows, gradients or decorative fills.
 5. **Plain words, no internals.** Hashes, IDs, job states and error codes stay off the main view. When the record needs one (the file's SHA-256, a failure category), it sits under a "Details" disclosure.
@@ -22,14 +26,14 @@ eHeal helps Ayurveda and integrative-care practitioners turn a consultation's tw
 
 ## Visual foundations
 
-**Colour.** Neutrals are indigo dips: `ground`, `paper`, `paper-sunk`, `rule`, `rule-strong`, `ink`, `ink-muted`. Meaning comes from four hues, each with one job:
+**Colour.** Neutrals are London fog: `ground`, `paper`, `paper-sunk`, `rule`, `rule-strong`, `ink`, `ink-muted`. Meaning comes from four hues, each with one job:
 
 | Token | Job |
 | --- | --- |
-| `practitioner` | The practitioner's voice; primary buttons, links, the current step |
-| `patient` | The patient's voice |
-| `turmeric-mark`, `turmeric-tint`, `turmeric-ink` | Check this: uncertain words, steps waiting on you to check |
-| `madder`, `madder-tint` | Failed or destructive: errors, failed steps, danger buttons |
+| `practitioner` | Ink navy. The name and its mark; the practitioner's voice; primary buttons, links, the current step |
+| `patient` | Bottle green. The patient's voice |
+| `lamp-mark`, `lamp-tint`, `lamp-ink` | Lamplight. Check this: uncertain words, steps waiting on you to check |
+| `oxblood`, `oxblood-tint` | Oxblood. Failed or destructive: errors, failed steps, danger buttons |
 
 A finished step is `ink` with a check icon. Status is never colour alone: every chip, step and notice carries a word, and most carry an icon. Text on a practitioner or patient fill is `on-practitioner` or `on-patient`, never literal white. Every text pair meets 4.5:1 and every edge, mark and focus ring 3:1, in both themes (`design/check_contrast.py` in the repository checks this).
 
@@ -45,7 +49,7 @@ A finished step is `ink` with a check icon. Status is never colour alone: every 
 
 ## Iconography
 
-Icons are Lucide (the `lucide-react` package in the app), drawn at 20px or 16px with a 1.75 stroke in `currentColor`. An icon always sits beside a word; it never replaces one. No emoji, no illustrations.
+Icons are Lucide (the `lucide-react` package in the app), drawn at 20px or 16px with a 1.75 stroke in `currentColor`. An icon always sits beside a word; it never replaces one. No emoji, no illustrations. The one drawn mark is Watson's pen nib, mid-stroke, before the name (`wordmark`); it is also the browser icon.
 
 ## Signature: two rails
 
@@ -53,4 +57,4 @@ A transcript reads as one column of turns. Down its left edge run two thin rails
 
 ## Using this system in code
 
-Components are plain CSS classes in `components/bundle.css` (prefix `eh-`), built on the tokens. Markup for each component is in its preview. The web app (`apps/web`) loads the same tokens and stylesheet, so a change here is a change there.
+Components are plain CSS classes in `components/bundle.css` (prefix `wa-`), built on the tokens. Markup for each component is in its preview. The web app (`apps/web`) loads the same tokens and stylesheet, so a change here is a change there.

@@ -41,7 +41,7 @@ export function RequireSession({ children }: { children: (user: User) => ReactNo
 
   if (session.status !== "signed-in") {
     return (
-      <p role="status" className="eh-page eh-meta">
+      <p role="status" className="wa-page wa-meta">
         Checking who is signed in…
       </p>
     );

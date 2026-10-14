@@ -57,4 +57,4 @@ def css(font_dir: str | None = None) -> str:
 
 
 if __name__ == "__main__":
-    sys.stdout.write("/* eHeal — generated from design/project/tokens.json by design/build_tokens.py */\n" + css())
+    sys.stdout.write("/* Watson — generated from design/project/tokens.json by design/build_tokens.py */\n" + css())

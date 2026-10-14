@@ -1,6 +1,6 @@
 # web
 
-The eHeal web app: a static Next.js build. See the [root README](../../README.md).
+The Watson web app: a static Next.js build. See the [root README](../../README.md).
 
     node scripts/use-local-stack.mjs   # point the app at the local Supabase stack
     pnpm dev                           # http://localhost:3000

@@ -34,7 +34,7 @@ export function TranscriptView({ consultationId, language }: { consultationId: s
     };
   }, [consultationId]);
 
-  if (loaded === null) return <p className="eh-meta" role="status">Loading the transcript…</p>;
+  if (loaded === null) return <p className="wa-meta" role="status">Loading the transcript…</p>;
   if (loaded === "failed") {
     return <Notice tone="failed" title="The transcript could not be loaded">Check your connection and reload the page.</Notice>;
   }
@@ -48,10 +48,10 @@ export function TranscriptView({ consultationId, language }: { consultationId: s
   const approximate = transcript.ordering === "approximate";
 
   return (
-    <section className="eh-panel eh-transcript" aria-labelledby="transcript-title">
-      <div className="eh-panel__head">
-        <h2 className="eh-heading" id="transcript-title">Transcript</h2>
-        <ul className="eh-facts">
+    <section className="wa-panel wa-transcript" aria-labelledby="transcript-title">
+      <div className="wa-panel__head">
+        <h2 className="wa-heading" id="transcript-title">Transcript</h2>
+        <ul className="wa-facts">
           <li>{segments.length} {segments.length === 1 ? "turn" : "turns"}</li>
           {toCheck > 0 && <li>{toCheck} to check</li>}
           {overlaps > 0 && <li>{overlaps} {overlaps === 1 ? "overlap" : "overlaps"}</li>}
@@ -64,31 +64,31 @@ export function TranscriptView({ consultationId, language }: { consultationId: s
         </Notice>
       ) : (
         <>
-          <ul className="eh-legend">
-            <li><span className="eh-swatch eh-swatch--patient" aria-hidden />Patient</li>
-            <li><span className="eh-swatch eh-swatch--practitioner" aria-hidden />Practitioner</li>
-            <li><span className="eh-tag eh-tag--attention">Unsure</span>Check it against the audio</li>
+          <ul className="wa-legend">
+            <li><span className="wa-swatch wa-swatch--patient" aria-hidden />Patient</li>
+            <li><span className="wa-swatch wa-swatch--practitioner" aria-hidden />Practitioner</li>
+            <li><span className="wa-tag wa-tag--attention">Unsure</span>Check it against the audio</li>
           </ul>
           {approximate && (
             <Notice title="The order of turns is a best guess">
               The two tracks were not recorded together, so overlaps cannot be shown.
             </Notice>
           )}
-          <ol className={approximate ? "eh-turns eh-turns--approximate" : "eh-turns"}>
+          <ol className={approximate ? "wa-turns wa-turns--approximate" : "wa-turns"}>
             {segments.map((segment) => (
               <li key={segment.id} className={[
-                "eh-turn", `eh-turn--${segment.speaker}`,
-                segment.overlap ? "eh-turn--overlap" : "", segment.possibly_not_speech ? "eh-turn--unsure" : "",
+                "wa-turn", `wa-turn--${segment.speaker}`,
+                segment.overlap ? "wa-turn--overlap" : "", segment.possibly_not_speech ? "wa-turn--unsure" : "",
               ].join(" ").trim()}>
-                <div className="eh-turn__body">
-                  <p className="eh-turn__head">
-                    <span className="eh-turn__who">{segment.speaker === "patient" ? "Patient" : "Practitioner"}</span>
-                    <span className="eh-turn__time">{stamp(segment.start_seconds)}</span>
-                    {segment.overlap && <span className="eh-tag">Overlaps</span>}
-                    {segment.possibly_not_speech && <span className="eh-tag eh-tag--attention">May not be speech</span>}
-                    {unsure(segment) && <span className="eh-tag eh-tag--attention">Unsure</span>}
+                <div className="wa-turn__body">
+                  <p className="wa-turn__head">
+                    <span className="wa-turn__who">{segment.speaker === "patient" ? "Patient" : "Practitioner"}</span>
+                    <span className="wa-turn__time">{stamp(segment.start_seconds)}</span>
+                    {segment.overlap && <span className="wa-tag">Overlaps</span>}
+                    {segment.possibly_not_speech && <span className="wa-tag wa-tag--attention">May not be speech</span>}
+                    {unsure(segment) && <span className="wa-tag wa-tag--attention">Unsure</span>}
                   </p>
-                  <p className="eh-turn__text">{segment.machine_text}</p>
+                  <p className="wa-turn__text">{segment.machine_text}</p>
                 </div>
               </li>
             ))}

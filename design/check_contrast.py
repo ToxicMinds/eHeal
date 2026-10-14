@@ -12,17 +12,17 @@ TOKENS = json.loads((Path(__file__).parent / "project" / "tokens.json").read_tex
 # (foreground, background, minimum ratio): 4.5 for text, 3 for marks, edges and focus.
 PAIRS = [
     *[(fg, bg, 4.5) for fg in ("ink", "ink-muted") for bg in ("ground", "paper", "paper-sunk")],
-    *[("ink", bg, 4.5) for bg in ("practitioner-tint", "patient-tint", "madder-tint")],
-    *[(voice, bg, 4.5) for voice in ("practitioner", "patient", "madder") for bg in ("ground", "paper")],
+    *[("ink", bg, 4.5) for bg in ("practitioner-tint", "patient-tint", "oxblood-tint")],
+    *[(voice, bg, 4.5) for voice in ("practitioner", "patient", "oxblood") for bg in ("ground", "paper")],
     ("practitioner", "practitioner-tint", 4.5),
     ("patient", "patient-tint", 4.5),
-    ("madder", "madder-tint", 4.5),
+    ("oxblood", "oxblood-tint", 4.5),
     ("on-practitioner", "practitioner", 4.5),
     ("on-practitioner", "practitioner-deep", 4.5),
     ("on-patient", "patient", 4.5),
-    ("turmeric-ink", "turmeric-tint", 4.5),
+    ("lamp-ink", "lamp-tint", 4.5),
     ("on-screen", "screen", 4.5),
-    *[("turmeric-mark", bg, 3) for bg in ("paper", "turmeric-tint")],
+    *[("lamp-mark", bg, 3) for bg in ("paper", "lamp-tint")],
     *[(edge, bg, 3) for edge in ("rule-strong", "focus") for bg in ("ground", "paper", "paper-sunk")],
 ]
 

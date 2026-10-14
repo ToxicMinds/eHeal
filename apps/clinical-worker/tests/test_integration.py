@@ -1,7 +1,7 @@
 """The real engine against the local Supabase stack (MASTER_BUILD_SPEC.md sections 12.7, 18, 20).
 
 Run `supabase start` first. These tests are skipped when the stack is not running or the tiny
-model has not been fetched (`python -m clinical_worker fetch-model` with EHEAL_MODEL=tiny)."""
+model has not been fetched (`python -m clinical_worker fetch-model` with WATSON_MODEL=tiny)."""
 
 import hashlib
 import io
@@ -22,7 +22,7 @@ from clinical_worker.config import Settings
 from clinical_worker.engine import Engine
 
 REPO = Path(__file__).resolve().parents[3]
-HOME = Path.home() / ".local" / "share" / "eheal"
+HOME = Path.home() / ".local" / "share" / "watson"
 SPEECH = (REPO / "packages/test-fixtures/audio/en-patient-sleep.wav").read_bytes()
 PASSWORD = "correct-horse-battery-1"
 
@@ -85,7 +85,7 @@ def _admin() -> Client:
 
 def _account(label: str) -> tuple[str, str, Client]:
     assert STACK is not None
-    email = f"{label}-{uuid.uuid4().hex[:8]}@eheal.test"
+    email = f"{label}-{uuid.uuid4().hex[:8]}@watson.test"
     created = _admin().auth.admin.create_user(
         {"email": email, "password": PASSWORD, "email_confirm": True}
     )
@@ -120,7 +120,7 @@ def cara() -> tuple[str, str, Client]:
 def empty_queue() -> None:
     """One queue serves every test; start each from an empty one."""
     subprocess.run(
-        ["docker", "exec", "-i", "supabase_db_eHeal", "psql", "-U", "postgres", "-q"],
+        ["docker", "exec", "-i", "supabase_db_watson", "psql", "-U", "postgres", "-q"],
         input="update public.transcription_jobs set status = 'cancelled', finished_at = now()"
         " where status in ('queued', 'processing');",
         text=True,

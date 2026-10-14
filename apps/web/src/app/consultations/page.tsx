@@ -32,54 +32,54 @@ function ConsultationList() {
   const needYou = rows?.filter((row) => summarise(row.status).group === "Needs you").length ?? 0;
   return (
     <>
-      <div className="eh-pagehead">
-        <div className="eh-pagehead__text">
-          <h1 className="eh-title">Consultations</h1>
-          {needYou > 0 && <p className="eh-meta">{needYou} {needYou === 1 ? "needs" : "need"} you</p>}
+      <div className="wa-pagehead">
+        <div className="wa-pagehead__text">
+          <h1 className="wa-title">Consultations</h1>
+          {needYou > 0 && <p className="wa-meta">{needYou} {needYou === 1 ? "needs" : "need"} you</p>}
         </div>
-        <Link href="/consultations/new/" className="eh-button eh-button--primary">
-          <Plus aria-hidden className="eh-icon" />New consultation
+        <Link href="/consultations/new/" className="wa-button wa-button--primary">
+          <Plus aria-hidden className="wa-icon" />New consultation
         </Link>
       </div>
       {failed ? (
         <Notice tone="failed" title="Your consultations could not be loaded">Check your connection and reload the page.</Notice>
       ) : rows === null ? (
-        <ul className="eh-list" aria-busy="true" aria-label="Your consultations">
-          <li className="eh-hidden">Loading your consultations</li>
+        <ul className="wa-list" aria-busy="true" aria-label="Your consultations">
+          <li className="wa-hidden">Loading your consultations</li>
           {[96, 180, 140].map((width) => (
-            <li key={width} className="eh-row" aria-hidden>
-              <span className="eh-row__main" style={{ gap: 8 }}>
-                <span className="eh-skeleton" style={{ width: 96 }} /><span className="eh-skeleton" style={{ width: width + 80 }} />
+            <li key={width} className="wa-row" aria-hidden>
+              <span className="wa-row__main" style={{ gap: 8 }}>
+                <span className="wa-skeleton" style={{ width: 96 }} /><span className="wa-skeleton" style={{ width: width + 80 }} />
               </span>
             </li>
           ))}
         </ul>
       ) : rows.length === 0 ? (
-        <div className="eh-list">
-          <div className="eh-empty">
-            <h2 className="eh-heading">No consultations yet</h2>
-            <p className="eh-text">Create one to attach its two audio tracks and get a transcript.</p>
-            <Link href="/consultations/new/" className="eh-button eh-button--primary">
-              <Plus aria-hidden className="eh-icon" />New consultation
+        <div className="wa-list">
+          <div className="wa-empty">
+            <h2 className="wa-heading">No consultations yet</h2>
+            <p className="wa-text">Create one to attach its two audio tracks and get a transcript.</p>
+            <Link href="/consultations/new/" className="wa-button wa-button--primary">
+              <Plus aria-hidden className="wa-icon" />New consultation
             </Link>
           </div>
         </div>
       ) : (
-        <ul className="eh-list" aria-label="Your consultations">
+        <ul className="wa-list" aria-label="Your consultations">
           {GROUPS.map((group) => {
             const members = rows.filter((row) => summarise(row.status).group === group);
             return members.length === 0 ? null : [
-              <li key={group} className="eh-list__group"><span>{group}</span><span>{members.length}</span></li>,
+              <li key={group} className="wa-list__group"><span>{group}</span><span>{members.length}</span></li>,
               ...members.map((row) => (
                 <li key={row.id}>
-                  <Link href={`/consultation/?id=${row.id}`} className="eh-row">
-                    <span className="eh-row__main">
-                      <span className="eh-row__ref">{row.synthetic_patient_ref}</span>
-                      <span className="eh-row__meta">{dateTime(row.scheduled_at)} · {LANGUAGE_LABEL[row.language]}</span>
-                      {row.scenario_notes && <span className="eh-row__note">{row.scenario_notes}</span>}
+                  <Link href={`/consultation/?id=${row.id}`} className="wa-row">
+                    <span className="wa-row__main">
+                      <span className="wa-row__ref">{row.synthetic_patient_ref}</span>
+                      <span className="wa-row__meta">{dateTime(row.scheduled_at)} · {LANGUAGE_LABEL[row.language]}</span>
+                      {row.scenario_notes && <span className="wa-row__note">{row.scenario_notes}</span>}
                     </span>
                     <StatusChip status={row.status} />
-                    <ChevronRight aria-hidden className="eh-icon" />
+                    <ChevronRight aria-hidden className="wa-icon" />
                   </Link>
                 </li>
               )),

@@ -4,8 +4,8 @@
 # until then this script is how a deploy is triggered.
 #
 # The site was created once with:
-#   render services create --name eheal-app --type static_site \
-#     --repo https://github.com/ToxicMinds/eHeal --branch main \
+#   render services create --name watson --type static_site \
+#     --repo https://github.com/ToxicMinds/watson --branch main \
 #     --build-command "npx --yes pnpm@11.5.2 install --frozen-lockfile && npx --yes pnpm@11.5.2 --filter web build" \
 #     --publish-directory apps/web/out \
 #     --env-var NODE_VERSION=24.11.1 \
@@ -15,7 +15,7 @@
 # frame-ancestors 'none'; X-Frame-Options: DENY; X-Content-Type-Options: nosniff;
 # Referrer-Policy: no-referrer.
 set -euo pipefail
-service=${EHEAL_RENDER_SERVICE:-srv-db79jlivcj2c73cpibsg}
+service=${WATSON_RENDER_SERVICE:-srv-db79jlivcj2c73cpibsg}
 render deploys create "$service" --confirm -o json >/dev/null
 for _ in $(seq 1 90); do
   status=$(render deploys list "$service" -o json --confirm | python3 -c "import json,sys; d=json.load(sys.stdin)[0]; print(d.get('deploy', d).get('status'))")

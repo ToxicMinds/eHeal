@@ -22,7 +22,7 @@ export default function RoomPage() {
     <RequireSession>
       {(user) => (
         <AppShell user={user}>
-          <Suspense fallback={<p className="eh-meta" role="status">Loading the call…</p>}>
+          <Suspense fallback={<p className="wa-meta" role="status">Loading the call…</p>}>
             <Room userId={user.id} />
           </Suspense>
         </AppShell>
@@ -89,15 +89,15 @@ function Room({ userId }: { userId: string }) {
   }, []);
 
   const back = (
-    <Link href={`/consultation/?id=${id}`} className="eh-crumb"><ChevronLeft aria-hidden className="eh-icon eh-icon--sm" />Consultation</Link>
+    <Link href={`/consultation/?id=${id}`} className="wa-crumb"><ChevronLeft aria-hidden className="wa-icon wa-icon--sm" />Consultation</Link>
   );
-  if (loaded === null) return <p className="eh-meta" role="status">Loading the call…</p>;
-  if (loaded === "missing") return <>{back}<p className="eh-text">This consultation does not exist, or it is not yours.</p></>;
+  if (loaded === null) return <p className="wa-meta" role="status">Loading the call…</p>;
+  if (loaded === "missing") return <>{back}<p className="wa-text">This consultation does not exist, or it is not yours.</p></>;
   const { consultation } = loaded;
   if (!state && !step && (loaded.tracks > 0 || !CAN_CALL.includes(consultation.status))) {
     return (
       <>{back}
-        <h1 className="eh-title">{consultation.synthetic_patient_ref}</h1>
+        <h1 className="wa-title">{consultation.synthetic_patient_ref}</h1>
         <Notice title="This consultation already has audio">A call can be recorded only before any audio is attached.</Notice>
       </>
     );
@@ -194,58 +194,58 @@ function Room({ userId }: { userId: string }) {
   return (
     <>
       {back}
-      <div className="eh-pagehead">
-        <div className="eh-pagehead__text">
-          <h1 className="eh-title">{consultation.synthetic_patient_ref}</h1>
-          <p className="eh-meta">Video call. Both voices are recorded and transcribed when you end the call.</p>
+      <div className="wa-pagehead">
+        <div className="wa-pagehead__text">
+          <h1 className="wa-title">{consultation.synthetic_patient_ref}</h1>
+          <p className="wa-meta">Video call. Both voices are recorded and transcribed when you end the call.</p>
         </div>
       </div>
-      <div className="eh-call">
+      <div className="wa-call">
         {link && live && (
-          <div className="eh-field">
-            <label className="eh-label" htmlFor="invite">Send this link to the patient</label>
-            <div className="eh-invite">
-              <input id="invite" className="eh-input" readOnly value={link} onFocus={(event) => event.target.select()} />
-              <button type="button" className="eh-button eh-button--secondary" onClick={() => copy(link)}>
-                <Copy aria-hidden className="eh-icon" />{copied ? "Copied" : "Copy link"}
+          <div className="wa-field">
+            <label className="wa-label" htmlFor="invite">Send this link to the patient</label>
+            <div className="wa-invite">
+              <input id="invite" className="wa-input" readOnly value={link} onFocus={(event) => event.target.select()} />
+              <button type="button" className="wa-button wa-button--secondary" onClick={() => copy(link)}>
+                <Copy aria-hidden className="wa-icon" />{copied ? "Copied" : "Copy link"}
               </button>
             </div>
           </div>
         )}
-        <div className="eh-screen">
+        <div className="wa-screen">
           <video ref={remoteVideo} autoPlay playsInline aria-label="The patient" />
           {state !== "connected" && note && (
-            <div className="eh-screen__note">
-              <p className="eh-heading" style={{ color: "inherit" }}>{note[0]}</p>
-              {note[1] && <p className="eh-text">{note[1]}</p>}
+            <div className="wa-screen__note">
+              <p className="wa-heading" style={{ color: "inherit" }}>{note[0]}</p>
+              {note[1] && <p className="wa-text">{note[1]}</p>}
             </div>
           )}
-          {recording && live && <span className="eh-live" role="status">Recording {clock(elapsed)}</span>}
-          <div className="eh-screen__self"><video ref={localVideo} autoPlay playsInline muted aria-label="You" /></div>
+          {recording && live && <span className="wa-live" role="status">Recording {clock(elapsed)}</span>}
+          <div className="wa-screen__self"><video ref={localVideo} autoPlay playsInline muted aria-label="You" /></div>
         </div>
-        <div className="eh-call__bar">
+        <div className="wa-call__bar">
           {state === null && !step ? (
-            <button type="button" className="eh-button eh-button--primary" onClick={start}>
-              <Video aria-hidden className="eh-icon" />Start video call
+            <button type="button" className="wa-button wa-button--primary" onClick={start}>
+              <Video aria-hidden className="wa-icon" />Start video call
             </button>
           ) : live && !step ? (
             <>
-              <button type="button" className="eh-button eh-button--secondary" aria-pressed={muted} onClick={() => toggle("audio")}>
-                {muted ? <MicOff aria-hidden className="eh-icon" /> : <Mic aria-hidden className="eh-icon" />}{muted ? "Unmute" : "Mute"}
+              <button type="button" className="wa-button wa-button--secondary" aria-pressed={muted} onClick={() => toggle("audio")}>
+                {muted ? <MicOff aria-hidden className="wa-icon" /> : <Mic aria-hidden className="wa-icon" />}{muted ? "Unmute" : "Mute"}
               </button>
-              <button type="button" className="eh-button eh-button--secondary" aria-pressed={cameraOff} onClick={() => toggle("video")}>
-                {cameraOff ? <VideoOff aria-hidden className="eh-icon" /> : <Video aria-hidden className="eh-icon" />}{cameraOff ? "Turn camera on" : "Turn camera off"}
+              <button type="button" className="wa-button wa-button--secondary" aria-pressed={cameraOff} onClick={() => toggle("video")}>
+                {cameraOff ? <VideoOff aria-hidden className="wa-icon" /> : <Video aria-hidden className="wa-icon" />}{cameraOff ? "Turn camera on" : "Turn camera off"}
               </button>
-              <button type="button" className="eh-button eh-button--danger" onClick={end}>
-                <PhoneOff aria-hidden className="eh-icon" />End call
+              <button type="button" className="wa-button wa-button--danger" onClick={end}>
+                <PhoneOff aria-hidden className="wa-icon" />End call
               </button>
             </>
           ) : null}
         </div>
-        {step && <p className="eh-meta" role="status" style={{ textAlign: "center" }}>{step}</p>}
+        {step && <p className="wa-meta" role="status" style={{ textAlign: "center" }}>{step}</p>}
         {problem && (
           <Notice tone="failed" title="That did not work" actions={unsaved && (
-            <button type="button" className="eh-button eh-button--primary" onClick={() => save(unsaved)}>Try saving again</button>
+            <button type="button" className="wa-button wa-button--primary" onClick={() => save(unsaved)}>Try saving again</button>
           )}>
             {problem}
           </Notice>
