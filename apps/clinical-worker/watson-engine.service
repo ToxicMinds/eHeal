@@ -1,6 +1,7 @@
 # The transcription engine as a systemd user service: starts at login, restarts after a crash.
 # Install (from the repository root):
-#   uv tool install --force --python 3.12 ./apps/clinical-worker
+#   uv tool install --force --python 3.12 --reinstall-package clinical-worker ./apps/clinical-worker
+#   (--reinstall-package: uv otherwise reuses its cached build and ignores source changes)
 #   cp apps/clinical-worker/watson-engine.service ~/.config/systemd/user/
 #   systemctl --user daemon-reload && systemctl --user enable --now watson-engine
 # Settings come from ~/.config/watson/engine.env. Logs: journalctl --user -u watson-engine
