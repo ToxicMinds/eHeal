@@ -11,10 +11,10 @@
   },
   "groups": [],
   "lastChange": {
-    "at": "2026-10-14T17:08:00Z",
+    "at": "2026-10-14T17:14:16Z",
     "by": "Nikhil Shanbhag",
     "via": "Claude Code",
-    "note": "Night bands get their own tokens (night, night-lit, on-night) so they stay navy in dark mode; glows are lighter navy, never amber. Proposal for review: sign-in at night with Watson's notebook (ScreenSignInNight, ScreenPhoneSignInNight)."
+    "note": "Proposal for review: patient documents. The patient sends documents from their link (ScreenPhoneJoinDocuments), the practitioner sees them by patient name with what Watson could read (ScreenConsultationDocuments), and answers quote documents by page (ScreenFormDocumentQuote)."
   },
   "layout": "files",
   "libraries": [],
