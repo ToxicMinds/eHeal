@@ -814,6 +814,7 @@ export type Database = {
         Args: { p_document_id: string; p_token: string }
         Returns: Json
       }
+      read_document_again: { Args: { p_document_id: string }; Returns: Json }
       record_consent: { Args: { p_consultation_id: string }; Returns: Json }
       record_payment: {
         Args: {

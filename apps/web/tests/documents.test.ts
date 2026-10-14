@@ -61,6 +61,19 @@ async function claim(documentId: string) {
   throw new Error("document was never offered to the engine");
 }
 
+type FormJob = { job_id: string; attempt: number; consultation_id: string; documents: { document_id: string; pages: string[] }[] };
+
+/** Claims form jobs until it gets this consultation's; others left by earlier runs are failed. */
+async function claimForm(consultationId: string): Promise<FormJob> {
+  for (let i = 0; i < 50; i++) {
+    const job = (await call(engine.client, "engine_claim_form_job")).job as FormJob | null;
+    if (!job) break;
+    if (job.consultation_id === consultationId) return job;
+    await call(engine.client, "engine_fail_form_job", { p_job_id: job.job_id, p_attempt: job.attempt, p_error_category: "FORM_FAILED" });
+  }
+  throw new Error("form job was never offered to the engine");
+}
+
 describe("a patient", () => {
   it("is known by phone number, in one format, so the same number is the same patient next time", async () => {
     const [first, second] = [await consultation(eva), await consultation(eva)];
@@ -215,19 +228,14 @@ describe("the engine", () => {
             select gen_random_uuid(), t.id, 0, 'patient', 1, 4, 'I feel tired all the time.' from t returning 1)
       insert into public.form_jobs (consultation_id, transcript_id) select '${id}', id from t;
       update public.consultations set status = 'extraction_processing' where id = '${id}';`);
-    let job: { job_id: string; attempt: number; consultation_id: string; documents: { document_id: string; pages: string[] }[] } | null = null;
-    for (let i = 0; i < 50 && job?.consultation_id !== id; i++) {
-      job = (await call(engine.client, "engine_claim_form_job")).job as typeof job;
-      if (!job) break;
-      if (job.consultation_id !== id) await call(engine.client, "engine_fail_form_job", { p_job_id: job.job_id, p_attempt: job.attempt, p_error_category: "FORM_FAILED" });
-    }
-    expect(job!.documents).toEqual([expect.objectContaining({ document_id: own.id, pages: ["Ferritin 9 µg/L, low"] })]);
+    const job = await claimForm(id);
+    expect(job.documents).toEqual([expect.objectContaining({ document_id: own.id, pages: ["Ferritin 9 µg/L, low"] })]);
 
     const keys = (JSON.parse(TEMPLATE).sections as { fields: { key: string }[] }[]).flatMap((s) => s.fields.map((f) => f.key));
     const answers = (quote: object) => keys.map((key) => key === "present_conditions"
       ? { key, text: "Low iron stores.", evidence: [0], documents: [quote] }
       : { key, text: null, evidence: [] });
-    const complete = (quote: object) => call(engine.client, "engine_complete_form_job", { p_job_id: job!.job_id, p_attempt: job!.attempt, p_answers: answers(quote) });
+    const complete = (quote: object) => call(engine.client, "engine_complete_form_job", { p_job_id: job.job_id, p_attempt: job.attempt, p_answers: answers(quote) });
     expect(await complete({ document_id: stranger.id, page: 1, text: "Someone else's results" })).toEqual({ ok: false, error_category: "VALIDATION", field: "answers" });
     expect(await complete({ document_id: own.id, page: 2, text: "Ferritin 9" })).toEqual({ ok: false, error_category: "VALIDATION", field: "answers" });
     expect(await complete({ document_id: own.id, page: 1, text: "Ferritin 9 µg/L, low" })).toMatchObject({ ok: true });

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { AudioSlot } from "@/components/audio-slot";
+import { DocumentsPanel } from "@/components/documents-panel";
 import { FormPanel } from "@/components/form-panel";
 import { JobPanel } from "@/components/job-panel";
 import { euros, PatientPanel } from "@/components/patient-panel";
@@ -20,7 +21,8 @@ import { supabase } from "@/lib/supabase";
 
 type Consultation = Tables<"consultations">;
 type Track = Tables<"audio_tracks">;
-type Loaded = { consultation: Consultation; tracks: Track[]; audioLeft: boolean };
+type Patient = Pick<Tables<"patients">, "id" | "name" | "phone" | "email">;
+type Loaded = { consultation: Consultation; tracks: Track[]; audioLeft: boolean; patient: Patient | null };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SPEAKERS = ["practitioner", "patient"] as const;
 const FORM_STATUSES = ["transcript_ready", "transcript_reviewed", "extraction_processing", "extraction_failed",
@@ -81,7 +83,10 @@ function ConsultationView({ userId }: { userId: string }) {
     // After a withdrawal, files that could not be deleted are offered for deletion again.
     const files = consultation.data.status === "consent_withdrawn"
       ? (await supabase.storage.from("audio").list(`${userId}/${id}`)).data ?? [] : [];
-    return { consultation: consultation.data, tracks: tracks.data, audioLeft: files.length > 0 };
+    const patient = consultation.data.patient_id
+      ? (await supabase.from("patients").select("id, name, phone, email").eq("id", consultation.data.patient_id).maybeSingle()).data
+      : null;
+    return { consultation: consultation.data, tracks: tracks.data, audioLeft: files.length > 0, patient };
   }, [id, userId]);
   const load = useCallback(() => {
     fetchAll().then(setLoaded);
@@ -104,7 +109,7 @@ function ConsultationView({ userId }: { userId: string }) {
   }
   if (loaded === null) return <p className="wa-meta" role="status">Loading the consultation…</p>;
 
-  const { consultation, tracks, audioLeft } = loaded;
+  const { consultation, tracks, audioLeft, patient } = loaded;
   const status = consultation.status;
   const editable = consultation.consent_recorded_at !== null && AUDIO_CAN_CHANGE.includes(status);
   const both = tracks.length === 2;
@@ -145,9 +150,10 @@ function ConsultationView({ userId }: { userId: string }) {
       {back}
       <div className="wa-pagehead">
         <div className="wa-pagehead__text">
-          <h1 className="wa-title">{consultation.synthetic_patient_ref}</h1>
+          <h1 className="wa-title">{patient?.name ?? consultation.synthetic_patient_ref}</h1>
           <p className="wa-meta">
             {dateTime(consultation.scheduled_at)} · {language}
+            {patient && ` · ${patient.phone ?? patient.email}`}
             {consultation.fee_cents !== null && ` · Fee ${euros(consultation.fee_cents)}`}
             {consultation.scenario_notes && ` · ${consultation.scenario_notes}`}
           </p>
@@ -211,6 +217,8 @@ function ConsultationView({ userId }: { userId: string }) {
       {FORM_STATUSES.includes(status) && <FormPanel consultationId={consultation.id} status={status} onChanged={load} />}
 
       {status !== "consent_withdrawn" && <PatientPanel consultation={consultation} />}
+
+      {status !== "consent_withdrawn" && <DocumentsPanel consultationId={consultation.id} patient={patient} onChanged={load} />}
 
       {HAS_TRANSCRIPT.includes(status) && <TranscriptView consultationId={consultation.id} language={language} />}
 

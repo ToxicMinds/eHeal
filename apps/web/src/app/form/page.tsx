@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronLeft, Pencil, X } from "lucide-react";
+import { Check, ChevronLeft, FileText, Pencil, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
@@ -8,6 +8,7 @@ import { AppShell } from "@/components/app-shell";
 import { Notice } from "@/components/status";
 import { call, explain } from "@/lib/api";
 import { clock } from "@/lib/audio";
+import { openDocument } from "@/lib/documents";
 import type { Tables } from "@/lib/database.types";
 import { RequireSession } from "@/lib/session";
 import { dateTime } from "@/lib/status";
@@ -17,12 +18,17 @@ type Answer = Tables<"form_answers">;
 type Segment = Pick<Tables<"transcript_segments">, "position" | "speaker" | "start_seconds" | "machine_text" | "reviewed_text">;
 type Field = { key: string; label: string; mode?: "extract" | "suggest" };
 type Template = { title: string; sections: { title: string; fields: Field[] }[] };
+type DocumentQuote = { document_id: string; page: number; text: string };
 type Loaded = {
   consultation: Tables<"consultations">;
+  patientName: string | null;
   form: Tables<"forms">;
   answers: Answer[];
   segments: Map<number, Segment>;
+  // The patient's documents the answers quote: name and where to open it.
+  documents: Map<string, { file_name: string; storage_path: string }>;
 };
+const documentQuotes = (answer: Answer) => (answer.document_quotes ?? []) as unknown as DocumentQuote[];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function FormPage() {
@@ -52,11 +58,22 @@ async function fetchForm(id: string): Promise<Loaded | "missing" | "failed"> {
       .eq("transcript_id", form.data.transcript_id).order("position"),
   ]);
   if (answers.error || segments.error) return "failed";
+  const quoted = [...new Set(answers.data.flatMap((answer) => documentQuotes(answer).map((quote) => quote.document_id)))];
+  const [patient, documents] = await Promise.all([
+    consultation.data.patient_id
+      ? supabase.from("patients").select("name").eq("id", consultation.data.patient_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    quoted.length > 0
+      ? supabase.from("patient_documents").select("id, file_name, storage_path").in("id", quoted)
+      : Promise.resolve({ data: [] }),
+  ]);
   return {
     consultation: consultation.data,
+    patientName: patient.data?.name ?? null,
     form: form.data,
     answers: answers.data,
     segments: new Map(segments.data.map((segment) => [segment.position, segment])),
+    documents: new Map((documents.data ?? []).map((document) => [document.id, document])),
   };
 }
 
@@ -103,7 +120,7 @@ function FormView() {
   if (loaded === "failed") return <>{back}<Notice tone="failed" title="The form could not be loaded">Check your connection and reload the page.</Notice></>;
   if (loaded === null) return <p className="wa-meta" role="status">Loading the form…</p>;
 
-  const { consultation, form, answers, segments } = loaded;
+  const { consultation, patientName, form, answers, segments, documents } = loaded;
   const template = form.template as unknown as Template;
   const fields = new Map(template.sections.flatMap((section) => section.fields).map((field) => [field.key, field]));
   const byKey = new Map(answers.map((answer) => [answer.field_key, answer]));
@@ -180,8 +197,8 @@ function FormView() {
         {field?.mode === "suggest" && !empty && answer.review === "unreviewed" && (
           <p className="wa-hint">Watson&apos;s reading of the conversation, not a diagnosis. Accept it only if it is your assessment.</p>
         )}
-        {quotes.length > 0 && (
-          <ul className="wa-quotes" aria-label="From the conversation">
+        {(quotes.length > 0 || documentQuotes(answer).length > 0) && (
+          <ul className="wa-quotes" aria-label="Where this comes from">
             {quotes.map((segment) => (
               <li key={segment.position} className={`wa-quote wa-quote--${segment.speaker}`}>
                 <div>
@@ -190,6 +207,22 @@ function FormView() {
                 </div>
               </li>
             ))}
+            {documentQuotes(answer).map((quote, index) => {
+              const document = documents.get(quote.document_id);
+              return (
+                <li key={`d${index}`} className="wa-quote wa-quote--document">
+                  <div>
+                    <span className="wa-quote__who" style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                      <FileText aria-hidden className="wa-icon wa-icon--sm" />
+                      {document ? (
+                        <button type="button" className="wa-link" onClick={() => void openDocument(document.storage_path)}>{document.file_name}</button>
+                      ) : "A removed document"} · page {quote.page}
+                    </span>
+                    <p className="wa-quote__text">{quote.text}</p>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
         {!approved && editing !== answer.field_key && (
@@ -220,9 +253,10 @@ function FormView() {
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 24 }}>
           <div style={{ display: "grid", gap: 6 }}>
             <p className="wa-hero__eyebrow">{template.title}</p>
-            <h1 className="wa-hero__title" id="form-title">{consultation.synthetic_patient_ref}</h1>
+            <h1 className="wa-hero__title" id="form-title">{patientName ?? consultation.synthetic_patient_ref}</h1>
             <p className="wa-hero__meta">
-              Filled in by Watson from the call of {dateTime(consultation.scheduled_at)} · {answered} of {answers.length} answered
+              Filled in by Watson from the call of {dateTime(consultation.scheduled_at)}
+              {documents.size > 0 && ` and ${documents.size === 1 ? "one document" : `${documents.size} documents`}`} · {answered} of {answers.length} answered
               {answers.length > answered && ` · ${answers.length - answered} not discussed`}
             </p>
           </div>
