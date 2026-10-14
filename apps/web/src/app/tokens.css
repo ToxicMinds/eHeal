@@ -20,6 +20,8 @@
   --turmeric-ink: #5c4100;
   --madder: #a61e2a;
   --madder-tint: #fbe9ea;
+  --screen: #0b0d17;
+  --on-screen: #ffffff;
   --focus: var(--practitioner);
   --shadow-paper: 0 1px 2px rgba(23, 26, 43, 0.08);
 }
@@ -44,6 +46,8 @@
   --turmeric-ink: #f6d77c;
   --madder: #f28b92;
   --madder-tint: #3e1519;
+  --screen: #05060b;
+  --on-screen: #ffffff;
   --focus: var(--practitioner);
   --shadow-paper: 0 1px 2px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
@@ -70,6 +74,8 @@
   --turmeric-ink: #f6d77c;
   --madder: #f28b92;
   --madder-tint: #3e1519;
+  --screen: #05060b;
+  --on-screen: #ffffff;
   --focus: var(--practitioner);
   --shadow-paper: 0 1px 2px rgba(0, 0, 0, 0.5);
     color-scheme: dark;

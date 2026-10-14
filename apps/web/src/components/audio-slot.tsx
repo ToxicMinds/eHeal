@@ -3,14 +3,11 @@
 import { Mic, Pause, Play, Square, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { call, explain } from "@/lib/api";
-import {
-  clock, durationOf, formatOfFile, formatOfRecording, humanSize, MAX_BYTES, MAX_SECONDS,
-  mimeOf, sha256Hex, type AudioFormat,
-} from "@/lib/audio";
-import type { Database, Tables } from "@/lib/database.types";
+import { clock, formatOfFile, formatOfRecording, humanSize, MAX_BYTES, type AudioFormat } from "@/lib/audio";
+import type { Tables } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
+import { attachAudio, type Speaker } from "@/lib/tracks";
 
-type Speaker = Database["public"]["Enums"]["speaker"];
 type Take = { blob: Blob; format: AudioFormat; seconds: number; url: string };
 const NAME: Record<Speaker, string> = { practitioner: "Practitioner", patient: "Patient" };
 const HHMM = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -36,31 +33,11 @@ export function AudioSlot({ speaker, track, consultationId, userId, editable, on
 
   async function attach(blob: Blob, format: AudioFormat, knownSeconds: number | null) {
     setProblem(null);
-    setBusy("Reading the audio…");
-    const [sha256, seconds] = await Promise.all([sha256Hex(blob), knownSeconds ?? durationOf(blob)]);
-    if (seconds !== null && seconds > MAX_SECONDS) {
-      setBusy(null);
-      return setProblem(explain("AUDIO_DURATION_INVALID"));
-    }
-    setBusy(`Uploading ${humanSize(blob.size)}…`);
-    // Clear anything an interrupted earlier attempt left at this path, then store the file.
-    await supabase.storage.from("audio").remove([path]);
-    const upload = await supabase.storage.from("audio").upload(path, blob, { contentType: mimeOf(format) });
-    if (upload.error) {
-      setBusy(null);
-      return setProblem(explain("STORAGE_UNAVAILABLE"));
-    }
-    setBusy("Checking…");
-    const outcome = await call("register_audio_track", {
-      p_consultation_id: consultationId,
-      p_speaker: speaker,
-      p_format: format,
-      p_size_bytes: blob.size,
-      p_sha256: sha256,
-      p_duration_seconds: seconds === null ? undefined : Math.round(seconds * 100) / 100,
+    const failure = await attachAudio({
+      consultationId, userId, speaker, blob, format, seconds: knownSeconds, onStep: setBusy,
     });
     setBusy(null);
-    if (!outcome.ok) return setProblem(explain(outcome.error_category));
+    if (failure) return setProblem(failure);
     discardTake();
     onChanged();
   }

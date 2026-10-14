@@ -41,7 +41,7 @@ function NewConsultation() {
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { reference: "", scheduled_at: "", consent_recorded: false, scenario_notes: "" },
+    defaultValues: { reference: "", scheduled_at: "", consent_recorded: true, scenario_notes: "" },
   });
 
   useEffect(() => {
