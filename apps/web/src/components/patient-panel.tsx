@@ -1,15 +1,19 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { inviteLink } from "@/lib/call";
 import type { Tables } from "@/lib/database.types";
 import { dateTime } from "@/lib/status";
+import { patientMessage, whatsappLink } from "@/lib/whatsapp";
 
 export const euros = (cents: number) => `€${(cents / 100).toFixed(2)}`;
 
-/** The patient's link, and whether they have paid. */
-export function PatientPanel({ consultation }: { consultation: Tables<"consultations"> }) {
+/** The patient's link, a way to send it on WhatsApp, and whether they have paid. */
+export function PatientPanel({ consultation, patient }: {
+  consultation: Tables<"consultations">;
+  patient: { name: string; phone: string | null } | null;
+}) {
   const [copied, setCopied] = useState(false);
   const link = inviteLink(consultation.invite_token);
   const fee = consultation.fee_cents;
@@ -39,6 +43,15 @@ export function PatientPanel({ consultation }: { consultation: Tables<"consultat
         <label className="wa-label" htmlFor="patient-link">Link for the patient</label>
         <div className="wa-invite">
           <input id="patient-link" className="wa-input" readOnly value={link} onFocus={(event) => event.target.select()} />
+          {patient?.phone && (
+            <a className="wa-button wa-button--primary" target="_blank" rel="noopener noreferrer"
+              href={whatsappLink(patient.phone, patientMessage({
+                name: patient.name, scheduledAt: consultation.scheduled_at, language: consultation.language,
+                link, mustPay: fee !== null && !consultation.paid_at,
+              }))}>
+              <MessageCircle aria-hidden className="wa-icon" />Send on WhatsApp
+            </a>
+          )}
           <button type="button" className="wa-button wa-button--secondary" onClick={copy}>
             <Copy aria-hidden className="wa-icon" />{copied ? "Copied" : "Copy link"}
           </button>
@@ -46,6 +59,8 @@ export function PatientPanel({ consultation }: { consultation: Tables<"consultat
         <p className="wa-hint">
           {fee === null ? "The patient opens the link and waits for you to start the call."
             : `The patient pays ${euros(fee)} when they open the link, then waits for you to start the call.`}
+          {patient?.phone ? " Send on WhatsApp opens your WhatsApp with a message ready, in the patient\u2019s language."
+            : " Add the patient\u2019s phone number under Documents to send the link on WhatsApp."}
         </p>
       </div>
     </section>
