@@ -108,8 +108,8 @@ The services in use, their free limits and their fallbacks are in section 7.2.
 
 **Synthetic mode** is the only mode that exists today.
 
-- Every consultation is invented. Patients are identified only by a synthetic reference such as `SYN-0042`. The reference field accepts only `SYN-` and digits. Notes are free text and cannot be checked; the screen reminds you not to enter anything about a real person.
-- Every screen says so: "Development proof of concept. Invented data only."
+- Every consultation is invented. Patients are identified only by a synthetic reference such as `SYN-0042`. The reference field accepts only `SYN-` and digits. Notes are free text and cannot be checked.
+- The app carries no banner or reminder about this: everyone with an account knows the data is invented (owner's decision, 14 October 2026).
 - Free hosted services may hold the data (section 7).
 - A recording of a real person's voice is personal data even when the words are invented. Each tester gets a short notice (what is stored, where, and how to have it deleted) and agrees in writing. Deleting on request means withdrawing consent on each of their consultations, which deletes the recordings; then the owner bans the account and replaces its email with an anonymous placeholder. The account record stays because the audit log refers to it. It holds no recording. Recordings of people are never committed to the repository.
 
@@ -759,7 +759,6 @@ Draft text is written in the consultation's language; for a "mixed or unsure" co
 
 ### 14.1 On every screen
 
-- The statement "Development proof of concept. Invented data only."
 - Who is signed in, and a way to sign out.
 - Keyboard access to every control, visible focus, sufficient contrast, labelled fields, errors shown by more than colour, and no unnecessary motion.
 
@@ -769,11 +768,11 @@ Email and password. No sign-up link. A clear message for wrong credentials that 
 
 ### 14.3 Screen 1: consultation list (slice 1.1)
 
-Show for each of the practitioner's own consultations: synthetic patient reference, consultation date, language, and one status line covering consent, audio, transcription and review. Approval state is added in phase 2. Show nothing sensitive that the list does not need. A reference opens its consultation, which shows the step it has reached.
+Show for each of the practitioner's own consultations: patient reference, consultation date, language, and one status line covering consent, audio, transcription and review. Approval state is added in phase 2. Show nothing sensitive that the list does not need. A reference opens its consultation, which shows the step it has reached.
 
 ### 14.4 Screen 2: create consultation (slice 1.2)
 
-Fields: synthetic patient reference (format `SYN-` followed by digits; anything else is refused), date and time, language (section 12.2), consent recorded, notes about the invented scenario. The practitioner is the signed-in user. The screen reminds the practitioner that notes must not describe a real person.
+Fields: patient reference (format `SYN-` followed by digits; anything else is refused), date and time, language (section 12.2), consent recorded, notes. The practitioner is the signed-in user.
 
 ### 14.5 Screen 3: audio (slice 1.2)
 
@@ -955,8 +954,7 @@ Repository. A transcription engine for a single track. Transcript schema 1.0.0. 
 11. The benchmark meets the agreed H1 targets, or the misses are reported and the affected languages are labelled experimental.
 12. The browser end-to-end test passes against the deployed app.
 13. Everything runs on free plans.
-14. Every screen states that this is a development proof of concept with invented data.
-15. All automated tests pass, and setup and operation are documented.
+14. All automated tests pass, and setup and operation are documented.
 
 ### 21.3 Phase 2 — Structured draft, approval and report
 
@@ -1225,6 +1223,7 @@ Version 2.2 applies a second review, of version 2.1 and the slice 1.3 migration.
 | S7 | The sessions, the time limit, and the states allowed for three slice 1.4 functions were loose. | Stated. | 8.2, 12.4, 12.7 |
 | S8 | Smaller errors: the Piper voices, the phase 2 exit, the reference engine, leftovers from version 2.0. | Corrected. | 2, 6.1, 12.6, 20.8, 21.3, A |
 | S9 | The owner made the free rule permanent and confirmed no payment method is on file. | Section 3, OD-6 and OD-9 updated. | 3, 22 |
+| S10 | The owner found the on-screen reminders that data is invented unnecessary. | The banner and reminders are removed from the app. The `SYN-` format still refuses names. | 5.1, 14, 21.2 |
 
 # Appendix B — Where each section of version 1 went
 

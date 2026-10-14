@@ -20,7 +20,6 @@ body {
 .eh-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 /* ---------- Page frame ---------- */
-.eh-band { padding: var(--space-2) var(--space-4); background: var(--turmeric-tint); color: var(--turmeric-ink); font-size: 14px; line-height: 20px; text-align: center; }
 .eh-header { background: var(--paper); border-bottom: 1px solid var(--rule); }
 .eh-header__inner { box-sizing: border-box; max-width: var(--content-width); min-height: 64px; margin: 0 auto; padding: 0 var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .eh-wordmark { font: 600 28px/32px var(--font-display); letter-spacing: -0.01em; color: var(--practitioner); text-decoration: none; }

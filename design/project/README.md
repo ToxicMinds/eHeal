@@ -18,7 +18,7 @@ eHeal helps Ayurveda and integrative-care practitioners turn a consultation's tw
 - **Empty states invite the next action.** "No consultations yet. Create one to attach audio and get a transcript."
 - **Dates and times.** European order and a 24-hour clock: "Tue 13 Oct 2026, 09:30". Durations "0:07" or "1:02:15". Transcript times "0:13.4".
 - **Languages by name.** "English", "German", "Slovak", "Mixed or unsure".
-- **Invented data.** Every reference is `SYN-` plus digits. Copy near any field that could hold a person says so: "Never a real name or identifier."
+- **References.** A patient reference is `SYN-` plus digits; the format itself refuses a name. No banners or reminders that the data is for testing: the people using the app know.
 
 ## Visual foundations
 
@@ -28,7 +28,7 @@ eHeal helps Ayurveda and integrative-care practitioners turn a consultation's tw
 | --- | --- |
 | `practitioner` | The practitioner's voice; primary buttons, links, the current step |
 | `patient` | The patient's voice |
-| `turmeric-mark`, `turmeric-tint`, `turmeric-ink` | Check this: uncertain words, steps waiting on you to check, the proof-of-concept band |
+| `turmeric-mark`, `turmeric-tint`, `turmeric-ink` | Check this: uncertain words, steps waiting on you to check |
 | `madder`, `madder-tint` | Failed or destructive: errors, failed steps, danger buttons |
 
 A finished step is `ink` with a check icon. Status is never colour alone: every chip, step and notice carries a word, and most carry an icon. Text on a practitioner or patient fill is `on-practitioner` or `on-patient`, never literal white. Every text pair meets 4.5:1 and every edge, mark and focus ring 3:1, in both themes (`design/check_contrast.py` in the repository checks this).
@@ -41,7 +41,7 @@ A finished step is `ink` with a check icon. Status is never colour alone: every 
 
 **Focus and motion.** Keyboard focus is a 3px solid `focus` ring, 2px outside the element, on everything interactive. Motion only shows that work is happening (the transcription bar, a recording pulse, a button's spinner) and stops under `prefers-reduced-motion`.
 
-**Layout.** Header: wordmark left, the signed-in email and "Sign out" right, under the proof-of-concept band. A consultation page reads top to bottom: back link, reference as the title with date and language, the journey (Consent, Audio, Transcript, Review), then the panel for the current step. Phones get the same order in one column.
+**Layout.** Header: wordmark left, the signed-in email and "Sign out" right. A consultation page reads top to bottom: back link, reference as the title with date and language, the journey (Consent, Audio, Transcript, Review), then the panel for the current step. Phones get the same order in one column.
 
 ## Iconography
 

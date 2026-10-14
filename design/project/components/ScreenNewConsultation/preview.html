@@ -7,7 +7,6 @@
 </head>
 <body>
 <div>
-  <p class="eh-band" style="margin: 0"><strong>Development proof of concept. Invented data only.</strong> Never enter a real patient's details or a real consultation.</p>
   <header class="eh-header"><div class="eh-header__inner"><a class="eh-wordmark" href="#list">eHeal</a><div class="eh-account"><span class="eh-account__email">Signed in as <strong>practitioner@example.com</strong></span><button class="eh-button eh-button--secondary eh-button--small" type="button">Sign out</button></div></div></header>
   <main class="eh-page">
     <a class="eh-crumb" href="#list"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Consultations</a>
@@ -16,8 +15,8 @@
       <section class="eh-panel" aria-label="Consultation details">
         <div class="eh-form">
           <div class="eh-field">
-            <label class="eh-label" for="ref">Invented patient reference</label>
-            <p class="eh-hint" id="ref-hint">Digits only. Never a real name or identifier.</p>
+            <label class="eh-label" for="ref">Patient reference</label>
+            <p class="eh-hint" id="ref-hint">Digits only.</p>
             <div class="eh-affixed" style="max-width: 280px"><span class="eh-affix" aria-hidden="true">SYN-</span><input class="eh-input" id="ref" inputmode="numeric" value="0061" aria-describedby="ref-hint"></div>
           </div>
           <div class="eh-fields-row">
@@ -26,11 +25,11 @@
           </div>
           <p class="eh-hint" style="margin-top: -12px">The transcript is made in this language. "Mixed or unsure" lets the engine guess, which is less reliable.</p>
           <div class="eh-field">
-            <label class="eh-label" for="notes">Notes about the invented scenario</label>
-            <p class="eh-hint" id="notes-hint">For example "sleep complaint, patient mentions a supplement". Nothing about a real person.</p>
+            <label class="eh-label" for="notes">Notes</label>
+            <p class="eh-hint" id="notes-hint">For example "sleep complaint, patient mentions a supplement".</p>
             <textarea class="eh-textarea" id="notes" aria-describedby="notes-hint">follow-up, joint stiffness</textarea>
           </div>
-          <label class="eh-check"><input type="checkbox" id="consent" checked><span class="eh-check__text"><span class="eh-check__label">Consent to transcription is recorded</span><span class="eh-hint">For this invented consultation. Without it, no audio can be attached or transcribed. You can record it later.</span></span></label>
+          <label class="eh-check"><input type="checkbox" id="consent" checked><span class="eh-check__text"><span class="eh-check__label">Consent to transcription is recorded</span><span class="eh-hint">Without it, no audio can be attached or transcribed. You can record it later.</span></span></label>
           <div class="eh-actions"><button class="eh-button eh-button--primary" type="button">Create consultation</button><a class="eh-button eh-button--secondary" href="#list">Cancel</a></div>
         </div>
       </section>
