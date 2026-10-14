@@ -13,6 +13,9 @@ dependencies = [
     "pydantic>=2.14.1",
     "supabase>=2.32,<3",
     "llama-cpp-python>=0.3.36",  # fills in forms with a local model (decision 0005)
+    "pypdfium2>=5.14",  # reads the text of PDFs the patient sends, and renders scanned pages
+    "rapidocr>=3.10",  # reads photos and scans, with a Latin model that keeps diacritics
+    "pillow>=11",
 ]
 
 [project.scripts]

@@ -1,6 +1,6 @@
 """`clinical-worker engine` runs the engine.
 
-`fetch-model`, `fetch-form-model` and `export-schema` are setup commands."""
+`fetch-model`, `fetch-form-model`, `fetch-ocr-model` and `export-schema` are setup commands."""
 
 import json
 import logging
@@ -44,6 +44,14 @@ def _fetch_form_model(settings: Settings) -> None:
     print(f"form model ready: {settings.form_model_path}")
 
 
+def _fetch_ocr_model(settings: Settings) -> None:
+    # The OCR models that read photos and scans, fetched once; the engine reads them from disk only.
+    from .documents import Reader
+
+    Reader(settings.ocr_model_dir).load()
+    print(f"OCR models ready: {settings.ocr_model_dir}")
+
+
 def _run_engine(settings: Settings) -> None:
     from .engine import Engine
 
@@ -71,13 +79,18 @@ def main() -> None:
         _fetch_model(settings)
     elif command == "fetch-form-model":
         _fetch_form_model(settings)
+    elif command == "fetch-ocr-model":
+        _fetch_ocr_model(settings)
     elif command == "export-schema":
         SCHEMA_DIR.mkdir(parents=True, exist_ok=True)
         for old in SCHEMA_DIR.glob("transcript-*.schema.json"):
             old.unlink()
         (SCHEMA_DIR / f"transcript-{SCHEMA_VERSION}.schema.json").write_text(schema_json())
     else:
-        sys.exit("usage: clinical-worker [engine|fetch-model|fetch-form-model|export-schema]")
+        sys.exit(
+            "usage: clinical-worker "
+            "[engine|fetch-model|fetch-form-model|fetch-ocr-model|export-schema]"
+        )
 
 
 if __name__ == "__main__":

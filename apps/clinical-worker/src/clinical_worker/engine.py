@@ -1,7 +1,8 @@
 """Pulls jobs from the database and processes them (MASTER_BUILD_SPEC.md section 12.7).
 
 The engine signs in as its own account, which can call the engine functions and read the
-audio of the job it has claimed, and nothing else. It listens on no port."""
+audio of the job it has claimed and the document it is reading, and nothing else. It listens
+on no port."""
 
 import hashlib
 import shutil
@@ -16,8 +17,9 @@ from supabase import Client, ClientOptions, create_client
 
 from .audio import audio_duration_seconds
 from .config import AUDIO_FORMATS, Settings
+from .documents import Reader
 from .errors import ErrorCategory, Stopped, WorkerError
-from .form import Cancelled, Line, LlamaModel, Template, fill
+from .form import Cancelled, Line, LlamaModel, Template, document_lines, fill
 from .log import log_event
 from .merge import merge
 from .schema import Speaker, Track, Transcript, TranscriptionModel
@@ -58,10 +60,10 @@ class Connection:
                 self.client = self._sign_in()
         raise AssertionError("unreachable")
 
-    def download(self, path: str) -> bytes:
+    def download(self, path: str, bucket: str = "audio") -> bytes:
         for attempt in (1, 2):
             try:
-                return self.client.storage.from_("audio").download(path)
+                return self.client.storage.from_(bucket).download(path)
             except Exception as exc:
                 if attempt == 2 or not _session_lapsed(exc):
                     raise
@@ -139,6 +141,7 @@ class Engine:
             settings
         )  # a second session, so a long download never delays a heartbeat
         self.form_model: LlamaModel | None = None  # loaded at the first form job
+        self.reader = Reader(settings.ocr_model_dir)  # OCR models load at the first scan
 
     def run_forever(self) -> None:
         log_event(
@@ -164,7 +167,14 @@ class Engine:
         if answer.get("job"):
             self.process(answer["job"])
             return True
-        # Transcripts first: a doctor waits for those. Forms come after.
+        # Transcripts first: a doctor waits for those. Then the patient's documents, so a form
+        # filled next can use them. Forms come last.
+        answer = self.main.rpc("engine_claim_document", {})
+        if not answer.get("ok"):
+            raise RuntimeError(str(answer.get("error_category")))
+        if answer.get("document"):
+            self.process_document(answer["document"])
+            return True
         answer = self.main.rpc("engine_claim_form_job", {})
         if not answer.get("ok"):
             raise RuntimeError(str(answer.get("error_category")))
@@ -172,6 +182,67 @@ class Engine:
             self.process_form(answer["job"])
             return True
         return False
+
+    def process_document(self, document: dict[str, Any]) -> None:
+        ids: dict[str, str | int] = {
+            "document_id": document["document_id"],
+            "attempt": document["attempt"],
+        }
+        started = time.monotonic()
+        log_event("document.claimed", **ids)
+        try:
+            data = self.main.download(document["storage_path"], "documents")
+            pages = self.reader.read(data, document["media_type"])
+            answer = self.main.rpc(
+                "engine_complete_document",
+                {
+                    "p_document_id": document["document_id"],
+                    "p_attempt": document["attempt"],
+                    "p_pages": pages or [""],
+                },
+            )
+            if not answer.get("ok"):
+                log_event(
+                    "document.result_refused",
+                    **ids,
+                    error_category=str(answer.get("error_category")),
+                )
+                return
+            log_event(
+                "document.read" if answer.get("readable") else "document.unreadable",
+                **ids,
+                pages=len(pages),
+                duration_seconds=round(time.monotonic() - started, 2),
+            )
+        except WorkerError as error:
+            self._fail_document(document, error.category, ids, error.__cause__)
+        except Exception as exc:
+            self._fail_document(document, ErrorCategory.DOCUMENT_FAILED, ids, exc)
+
+    def _fail_document(
+        self,
+        document: dict[str, Any],
+        category: ErrorCategory,
+        ids: dict[str, str | int],
+        cause: BaseException | None,
+    ) -> None:
+        log_event(
+            "document.failed",
+            **ids,
+            error_category=category.value,
+            exception_type=type(cause).__name__ if cause else None,
+        )
+        try:
+            self.main.rpc(
+                "engine_fail_document",
+                {
+                    "p_document_id": document["document_id"],
+                    "p_attempt": document["attempt"],
+                    "p_error_category": category.value,
+                },
+            )
+        except Exception as exc:
+            log_event("document.failure_not_reported", **ids, exception_type=type(exc).__name__)
 
     def _load_form_model(self) -> LlamaModel:
         if self.form_model is None:
@@ -204,9 +275,15 @@ class Engine:
         try:
             template = Template.model_validate(job["template"])
             lines = [Line(int(x["position"]), x["speaker"], str(x["text"])) for x in job["lines"]]
+            documents = document_lines(job.get("documents") or [])
             model = self._load_form_model()
             answers = fill(
-                model, template, lines, job.get("language") or "", heartbeat.stopped.is_set
+                model,
+                template,
+                lines,
+                job.get("language") or "",
+                heartbeat.stopped.is_set,
+                documents,
             )
             answered = sum(1 for a in answers if a.text is not None)
             metrics = {
@@ -222,7 +299,16 @@ class Engine:
                     "p_job_id": job["job_id"],
                     "p_attempt": job["attempt"],
                     "p_answers": [
-                        {"key": a.key, "text": a.text, "evidence": a.evidence} for a in answers
+                        {
+                            "key": a.key,
+                            "text": a.text,
+                            "evidence": a.evidence,
+                            "documents": [
+                                {"document_id": q.document_id, "page": q.page, "text": q.text}
+                                for q in a.quotes
+                            ],
+                        }
+                        for a in answers
                     ],
                     "p_metrics": metrics,
                 },
