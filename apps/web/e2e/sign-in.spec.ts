@@ -19,8 +19,8 @@ test("a wrong password is refused with a clear message", async ({ page, account 
 test("empty fields are explained before anything is sent", async ({ page }) => {
   await page.goto("/sign-in/");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByText("Problem: Enter your email address.")).toBeVisible();
-  await expect(page.getByText("Problem: Enter your password.")).toBeVisible();
+  await expect(page.getByText("Enter your email address.")).toBeVisible();
+  await expect(page.getByText("Enter your password.")).toBeVisible();
 });
 
 test("a practitioner signs in, sees their consultations, and signs out", async ({ page, account, problems }) => {
@@ -32,9 +32,9 @@ test("a practitioner signs in, sees their consultations, and signs out", async (
   await expect(page.getByRole("heading", { name: "Consultations" })).toBeVisible();
   await expect(page.getByText(`Signed in as ${account.email}`)).toBeVisible();
   if (account.references.length > 0) {
-    await expect(page.getByRole("row", { name: /SYN-0043/ })).toContainText("Slovak");
-    await expect(page.getByRole("row", { name: /SYN-0043/ })).toContainText("Waiting for consent");
-    await expect(page.getByRole("row", { name: /SYN-0042/ })).toContainText("Waiting for audio");
+    await expect(page.getByRole("link", { name: /SYN-0043/ })).toContainText("Slovak");
+    await expect(page.getByRole("link", { name: /SYN-0043/ })).toContainText("Waiting for consent");
+    await expect(page.getByRole("link", { name: /SYN-0042/ })).toContainText("Waiting for audio");
   }
 
   // The session survives a reload, and ends on sign-out.

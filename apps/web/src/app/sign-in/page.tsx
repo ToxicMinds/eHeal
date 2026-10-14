@@ -1,15 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CircleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Wordmark } from "@/components/app-shell";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Notice } from "@/components/status";
 import { useSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 
@@ -46,121 +43,63 @@ export default function SignIn() {
   }
 
   return (
-    <main className="mx-auto grid max-w-5xl gap-10 px-4 py-10 md:grid-cols-[1.15fr_1fr] md:py-16">
-      <section aria-labelledby="what-it-does">
-        <Wordmark className="text-5xl" />
-        <h1 id="what-it-does" className="mt-6 max-w-md text-2xl leading-snug font-semibold">
+    <main className="eh-signin">
+      <section className="eh-thesis" aria-labelledby="what-it-does">
+        <span className="eh-wordmark">eHeal</span>
+        <h1 id="what-it-does" className="eh-thesis__lead">
           Turn a consultation&apos;s two audio tracks into a transcript you can check and correct.
         </h1>
-        <p className="mt-3 max-w-md text-muted-foreground">
-          Each speaker keeps their own voice. Every uncertain word is marked. Nothing is filled in.
+        <p className="eh-text eh-meta">
+          Each voice keeps its own track. Every word the machine is unsure of is marked for you. Nothing is filled in.
         </p>
-        <SampleTranscript />
+        <figure className="eh-sample" aria-label="Example" style={{ margin: 0 }}>
+          <ol className="eh-turns">
+            <SampleTurn speaker="patient" at="0:04.2">I have not been sleeping properly for around three weeks.</SampleTurn>
+            <SampleTurn speaker="practitioner" at="0:11.0">And when you do wake, what time is it usually?</SampleTurn>
+            <SampleTurn speaker="patient" at="0:14.6">
+              About four in the morning. I take <mark className="eh-unsure">ashwagandha</mark> at night.
+            </SampleTurn>
+          </ol>
+        </figure>
       </section>
 
-      <section aria-labelledby="sign-in" className="self-start rounded-xl border bg-card p-6 shadow-sm">
-        <h2 id="sign-in" className="text-xl font-semibold">
-          Sign in
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Accounts are created by the project owner. There is no public sign-up.
-        </p>
-        <form onSubmit={handleSubmit(signIn)} noValidate className="mt-5 grid gap-4">
-          <div className="grid gap-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="username"
-              aria-invalid={Boolean(errors.email)}
-              aria-describedby={errors.email ? "email-error" : undefined}
-              {...register("email")}
-            />
-            {errors.email && (
-              <p id="email-error" className="text-sm font-semibold text-madder">
-                Problem: {errors.email.message}
-              </p>
-            )}
+      <section className="eh-panel" aria-labelledby="sign-in">
+        <h2 id="sign-in" className="eh-heading">Sign in</h2>
+        <p className="eh-hint">Accounts are made by the project owner. There is no public sign-up.</p>
+        <form onSubmit={handleSubmit(signIn)} noValidate className="eh-form" style={{ gap: 16 }}>
+          <div className="eh-field">
+            <label className="eh-label" htmlFor="email">Email</label>
+            <input id="email" type="email" autoComplete="username" className="eh-input"
+              aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "email-error" : undefined}
+              {...register("email")} />
+            {errors.email && <p id="email-error" className="eh-error"><CircleAlert aria-hidden className="eh-icon" />{errors.email.message}</p>}
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={errors.password ? "password-error" : undefined}
-              {...register("password")}
-            />
-            {errors.password && (
-              <p id="password-error" className="text-sm font-semibold text-madder">
-                Problem: {errors.password.message}
-              </p>
-            )}
+          <div className="eh-field">
+            <label className="eh-label" htmlFor="password">Password</label>
+            <input id="password" type="password" autoComplete="current-password" className="eh-input"
+              aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "password-error" : undefined}
+              {...register("password")} />
+            {errors.password && <p id="password-error" className="eh-error"><CircleAlert aria-hidden className="eh-icon" />{errors.password.message}</p>}
           </div>
-          {failure && (
-            <Alert variant="destructive">
-              <AlertDescription>Problem: {failure}</AlertDescription>
-            </Alert>
-          )}
-          <Button type="submit" disabled={isSubmitting}>
+          {failure && <Notice tone="failed" title="Not signed in">{failure}</Notice>}
+          <button type="submit" className="eh-button eh-button--primary" disabled={isSubmitting} aria-busy={isSubmitting || undefined}>
             {isSubmitting ? "Signing in…" : "Sign in"}
-          </Button>
+          </button>
         </form>
       </section>
     </main>
   );
 }
 
-const SAMPLE = [
-  { at: "0:02.5", speaker: "Patient", text: "I have not been sleeping properly for around three weeks." },
-  { at: "0:09.1", speaker: "Practitioner", text: "And when you do wake, what time is it usually?" },
-] as const;
-
-/** An example exchange that shows what review looks like: two voices and one honest doubt. */
-function SampleTranscript() {
+function SampleTurn({ speaker, at, children }: { speaker: "patient" | "practitioner"; at: string; children: ReactNode }) {
   return (
-    <figure className="mt-8 max-w-md">
-      <figcaption className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-        Example
-      </figcaption>
-      <ol className="mt-3 grid gap-3">
-        {SAMPLE.map((line) => (
-          <SampleLine key={line.at} at={line.at} speaker={line.speaker}>
-            {line.text}
-          </SampleLine>
-        ))}
-        <SampleLine at="0:13.4" speaker="Patient">
-          About four in the morning. I take{" "}
-          <mark className="rounded-sm bg-turmeric-tint px-0.5 text-turmeric-ink underline decoration-turmeric decoration-2 underline-offset-4">
-            ashwagandha
-          </mark>{" "}
-          at night.
-          <span className="mt-1 block text-sm text-turmeric-ink">
-            Low confidence. Check this word against the audio.
-          </span>
-        </SampleLine>
-      </ol>
-    </figure>
-  );
-}
-
-function SampleLine({
-  at,
-  speaker,
-  children,
-}: {
-  at: string;
-  speaker: "Patient" | "Practitioner";
-  children: React.ReactNode;
-}) {
-  const voice = speaker === "Patient" ? "border-patient text-patient" : "border-practitioner text-practitioner";
-  return (
-    <li className={`grid grid-cols-[3.5rem_1fr] gap-x-3 border-l-4 pl-3 ${voice.split(" ")[0]}`}>
-      <span className="pt-0.5 font-mono text-sm text-muted-foreground">{at}</span>
-      <div>
-        <span className={`text-sm font-semibold ${voice.split(" ")[1]}`}>{speaker}</span>
-        <p className="text-foreground">{children}</p>
+    <li className={`eh-turn eh-turn--${speaker}`}>
+      <div className="eh-turn__body">
+        <p className="eh-turn__head">
+          <span className="eh-turn__who">{speaker === "patient" ? "Patient" : "Practitioner"}</span>
+          <span className="eh-turn__time">{at}</span>
+        </p>
+        <p className="eh-turn__text">{children}</p>
       </div>
     </li>
   );
