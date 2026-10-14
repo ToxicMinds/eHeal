@@ -419,3 +419,6 @@ verify_jwt = false
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.whatsapp]
+verify_jwt = false

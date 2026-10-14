@@ -7,6 +7,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { AudioSlot } from "@/components/audio-slot";
 import { DocumentsPanel } from "@/components/documents-panel";
+import { WhatsAppPanel } from "@/components/whatsapp-panel";
 import { FormPanel } from "@/components/form-panel";
 import { JobPanel } from "@/components/job-panel";
 import { euros, PatientPanel } from "@/components/patient-panel";
@@ -216,9 +217,11 @@ function ConsultationView({ userId }: { userId: string }) {
 
       {FORM_STATUSES.includes(status) && <FormPanel consultationId={consultation.id} status={status} onChanged={load} />}
 
-      {status !== "consent_withdrawn" && <PatientPanel consultation={consultation} />}
+      {status !== "consent_withdrawn" && <PatientPanel consultation={consultation} patient={patient} />}
 
       {status !== "consent_withdrawn" && <DocumentsPanel consultationId={consultation.id} patient={patient} onChanged={load} />}
+
+      <WhatsAppPanel consultationId={consultation.id} />
 
       {HAS_TRANSCRIPT.includes(status) && <TranscriptView consultationId={consultation.id} language={language} />}
 

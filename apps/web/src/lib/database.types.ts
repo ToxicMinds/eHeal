@@ -165,6 +165,7 @@ export type Database = {
           stripe_checkout_session_id: string | null
           synthetic_patient_ref: string
           updated_at: string
+          whatsapp_code: string
         }
         Insert: {
           consent_recorded_at?: string | null
@@ -187,6 +188,7 @@ export type Database = {
           stripe_checkout_session_id?: string | null
           synthetic_patient_ref: string
           updated_at?: string
+          whatsapp_code?: string
         }
         Update: {
           consent_recorded_at?: string | null
@@ -209,6 +211,7 @@ export type Database = {
           stripe_checkout_session_id?: string | null
           synthetic_patient_ref?: string
           updated_at?: string
+          whatsapp_code?: string
         }
         Relationships: [
           {
@@ -692,6 +695,85 @@ export type Database = {
           },
         ]
       }
+      whatsapp_contacts: {
+        Row: {
+          consultation_id: string
+          last_inbound_at: string | null
+          linked_at: string
+          phone: string
+          profile_name: string | null
+        }
+        Insert: {
+          consultation_id: string
+          last_inbound_at?: string | null
+          linked_at?: string
+          phone: string
+          profile_name?: string | null
+        }
+        Update: {
+          consultation_id?: string
+          last_inbound_at?: string | null
+          linked_at?: string
+          phone?: string
+          profile_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_contacts_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_messages: {
+        Row: {
+          body: string | null
+          consultation_id: string | null
+          created_at: string
+          direction: string
+          error: string | null
+          id: string
+          kind: string
+          phone: string
+          status: string
+          wa_message_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          consultation_id?: string | null
+          created_at?: string
+          direction: string
+          error?: string | null
+          id?: string
+          kind: string
+          phone: string
+          status: string
+          wa_message_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          consultation_id?: string | null
+          created_at?: string
+          direction?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          phone?: string
+          status?: string
+          wa_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -869,6 +951,43 @@ export type Database = {
       verify_audit_chain: {
         Args: { p_consultation_id: string }
         Returns: boolean
+      }
+      whatsapp_add_document: {
+        Args: {
+          p_file_name: string
+          p_media_type: string
+          p_phone: string
+          p_size_bytes: number
+        }
+        Returns: Json
+      }
+      whatsapp_confirm_document: {
+        Args: { p_document_id: string }
+        Returns: Json
+      }
+      whatsapp_receive: {
+        Args: {
+          p_body: string
+          p_kind: string
+          p_phone: string
+          p_profile_name: string
+          p_wa_message_id: string
+        }
+        Returns: Json
+      }
+      whatsapp_sent: {
+        Args: {
+          p_body: string
+          p_consultation_id: string
+          p_error?: string
+          p_phone: string
+          p_wa_message_id: string
+        }
+        Returns: Json
+      }
+      whatsapp_status: {
+        Args: { p_error?: string; p_status: string; p_wa_message_id: string }
+        Returns: Json
       }
       withdraw_consent: { Args: { p_consultation_id: string }; Returns: Json }
     }

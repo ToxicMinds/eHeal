@@ -1,22 +1,24 @@
 "use client";
 
-import { Camera, Check, FileText, ImageIcon, Lock, Plus } from "lucide-react";
+import { Camera, Check, FileText, ImageIcon, Lock, MessageCircle, Plus } from "lucide-react";
 import { useRef, useState, type ChangeEvent } from "react";
 import { Notice } from "@/components/status";
 import { call, explain, FIELD_MESSAGE } from "@/lib/api";
 import { DOCUMENT_ACCEPT, fileSize, sendDocument } from "@/lib/documents";
 import { supabase } from "@/lib/supabase";
+import { WATSON_WHATSAPP, whatsappLink } from "@/lib/whatsapp";
 
 export type SentDocument = { id: string; file_name: string; media_type: string; size_bytes: number; created_at: string };
 type Props = {
   token: string;
+  whatsappCode: string;
   patient: { name: string; contact: string } | null;
   documents: SentDocument[];
   onChanged: () => void;
 };
 
 /** On the patient's link: who they are, and the documents they send their practitioner. */
-export function PatientDocuments({ token, patient, documents, onChanged }: Props) {
+export function PatientDocuments({ token, whatsappCode, patient, documents, onChanged }: Props) {
   const [name, setName] = useState(patient?.name ?? "");
   const [contact, setContact] = useState(patient?.contact ?? "");
   const [saved, setSaved] = useState(patient ? `${patient.name}\n${patient.contact}` : "");
@@ -139,6 +141,13 @@ export function PatientDocuments({ token, patient, documents, onChanged }: Props
         <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label="Photo to send" onChange={send} />
       </div>
       {problem && <Notice tone="failed" title="Not sent">{problem}</Notice>}
+      <div className="wa-whatsapp">
+        <p className="wa-text" style={{ margin: 0 }}>On your phone? Send them on WhatsApp instead. Watson answers there with your link.</p>
+        <a className="wa-button wa-button--secondary" target="_blank" rel="noopener noreferrer"
+          href={whatsappLink(WATSON_WHATSAPP, `Watson ${whatsappCode}`)}>
+          <MessageCircle aria-hidden className="wa-icon" />Message Watson on WhatsApp
+        </a>
+      </div>
       <p className="wa-hint" style={{ display: "flex", gap: 6, alignItems: "center" }}>
         <Lock aria-hidden className="wa-icon wa-icon--sm" />PDF or photo, up to 10 MB each. Only your practitioner can open them.
       </p>

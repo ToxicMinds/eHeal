@@ -12,7 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 type Details = {
   scheduled_at: string; fee_cents: number | null; paid: boolean; paid_at: string | null;
-  patient: { name: string; contact: string } | null; documents: SentDocument[];
+  patient: { name: string; contact: string } | null; documents: SentDocument[]; whatsapp_code: string;
 };
 const PAYMENT = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/payment`;
 
@@ -203,7 +203,7 @@ function Join() {
         {problem && <Notice tone="failed" title="Could not join">{problem}</Notice>}
       </div>
       </>)}
-      <PatientDocuments token={token} patient={details.patient} documents={details.documents}
+      <PatientDocuments token={token} whatsappCode={details.whatsapp_code} patient={details.patient} documents={details.documents}
         onChanged={() => fetchDetails().then(setDetails)} />
     </>
   );

@@ -376,3 +376,11 @@ body {
 /* A button that reads as a link, inside running text such as a quote's source. */
 .wa-link { padding: 0; border: 0; background: none; font: inherit; color: var(--practitioner); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .wa-case__name { font: 600 20px/26px var(--font-text); overflow-wrap: anywhere; }
+/* The way to the same thing on WhatsApp, set apart from the page's own buttons. */
+.wa-whatsapp { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-4); border-radius: var(--radius-paper); background: var(--patient-tint); }
+/* A WhatsApp conversation: the patient on the left, Watson on the right. */
+.wa-chat { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.wa-chat__message { display: grid; gap: 2px; max-width: min(34rem, 85%); padding: var(--space-2) var(--space-3); border-radius: 10px; background: var(--patient-tint); }
+.wa-chat__message--out { justify-self: end; background: var(--practitioner-tint); }
+.wa-chat__who { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.wa-chat__text { margin: 0; font-size: 15px; line-height: 22px; white-space: pre-line; overflow-wrap: anywhere; }
