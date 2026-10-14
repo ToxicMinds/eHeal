@@ -1,0 +1,41 @@
+<!-- @dsCard group="Forms" height=470 subtitle="Reference with prefix, error, date and language, notes" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Field</title>
+<style>.demo { padding: 24px; max-width: 620px; }</style>
+</head>
+<body>
+<div class="demo eh-form">
+  <div class="eh-fields-row">
+    <div class="eh-field">
+      <label class="eh-label" for="ref">Patient reference</label>
+      <p class="eh-hint" id="ref-hint">Digits only.</p>
+      <div class="eh-affixed"><span class="eh-affix" aria-hidden="true">SYN-</span><input class="eh-input" id="ref" inputmode="numeric" value="0042" aria-describedby="ref-hint"></div>
+    </div>
+    <div class="eh-field">
+      <label class="eh-label" for="ref-bad">Patient reference</label>
+      <p class="eh-hint" id="ref-bad-hint">Digits only.</p>
+      <div class="eh-affixed"><span class="eh-affix" aria-hidden="true">SYN-</span><input class="eh-input" id="ref-bad" value="Anna" aria-invalid="true" aria-describedby="ref-bad-hint ref-bad-error"></div>
+      <p class="eh-error" id="ref-bad-error"><svg class="eh-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>Use digits only, for example 0042.</p>
+    </div>
+  </div>
+  <div class="eh-fields-row">
+    <div class="eh-field">
+      <label class="eh-label" for="when">Date and time</label>
+      <input class="eh-input" id="when" type="datetime-local" value="2026-10-14T09:30">
+    </div>
+    <div class="eh-field">
+      <label class="eh-label" for="lang">Language spoken</label>
+      <div class="eh-select"><select id="lang"><option>English</option><option>German</option><option>Slovak</option><option>Mixed or unsure</option></select></div>
+    </div>
+  </div>
+  <div class="eh-field">
+    <label class="eh-label" for="notes">Notes</label>
+    <p class="eh-hint" id="notes-hint">For example "sleep complaint, patient mentions a supplement".</p>
+    <textarea class="eh-textarea" id="notes" aria-describedby="notes-hint"></textarea>
+  </div>
+</div>
+</body>
+</html>

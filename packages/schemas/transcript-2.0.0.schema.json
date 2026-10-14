@@ -1,0 +1,309 @@
+{
+  "$defs": {
+    "Segment": {
+      "additionalProperties": false,
+      "properties": {
+        "segment_id": {
+          "format": "uuid",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "position": {
+          "minimum": 0,
+          "title": "Position",
+          "type": "integer"
+        },
+        "speaker": {
+          "enum": [
+            "practitioner",
+            "patient"
+          ],
+          "title": "Speaker",
+          "type": "string"
+        },
+        "start_seconds": {
+          "minimum": 0,
+          "title": "Start Seconds",
+          "type": "number"
+        },
+        "end_seconds": {
+          "minimum": 0,
+          "title": "End Seconds",
+          "type": "number"
+        },
+        "machine_text": {
+          "title": "Machine Text",
+          "type": "string"
+        },
+        "reviewed_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewed Text"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "possibly_not_speech": {
+          "default": false,
+          "title": "Possibly Not Speech",
+          "type": "boolean"
+        },
+        "review_status": {
+          "default": "unreviewed",
+          "enum": [
+            "unreviewed",
+            "reviewed"
+          ],
+          "title": "Review Status",
+          "type": "string"
+        },
+        "overlap": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Overlap"
+        }
+      },
+      "required": [
+        "segment_id",
+        "position",
+        "speaker",
+        "start_seconds",
+        "end_seconds",
+        "machine_text"
+      ],
+      "title": "Segment",
+      "type": "object"
+    },
+    "Track": {
+      "additionalProperties": false,
+      "properties": {
+        "speaker": {
+          "enum": [
+            "practitioner",
+            "patient"
+          ],
+          "title": "Speaker",
+          "type": "string"
+        },
+        "audio_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Audio Sha256",
+          "type": "string"
+        },
+        "duration_seconds": {
+          "minimum": 0,
+          "title": "Duration Seconds",
+          "type": "number"
+        },
+        "offset_seconds": {
+          "default": 0.0,
+          "title": "Offset Seconds",
+          "type": "number"
+        },
+        "sync_method": {
+          "enum": [
+            "none",
+            "shared_clock",
+            "marker"
+          ],
+          "title": "Sync Method",
+          "type": "string"
+        },
+        "language": {
+          "title": "Language",
+          "type": "string"
+        },
+        "language_probability": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Language Probability"
+        },
+        "transcription_model": {
+          "$ref": "#/$defs/TranscriptionModel"
+        }
+      },
+      "required": [
+        "speaker",
+        "audio_sha256",
+        "duration_seconds",
+        "sync_method",
+        "language",
+        "transcription_model"
+      ],
+      "title": "Track",
+      "type": "object"
+    },
+    "TranscriptionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "const": "faster-whisper",
+          "default": "faster-whisper",
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "device": {
+          "title": "Device",
+          "type": "string"
+        },
+        "compute_type": {
+          "title": "Compute Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model",
+        "device",
+        "compute_type"
+      ],
+      "title": "TranscriptionModel",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0",
+      "default": "2.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "consultation_id": {
+      "format": "uuid",
+      "title": "Consultation Id",
+      "type": "string"
+    },
+    "created_at_utc": {
+      "format": "date-time",
+      "title": "Created At Utc",
+      "type": "string"
+    },
+    "ordering": {
+      "enum": [
+        "exact",
+        "approximate"
+      ],
+      "title": "Ordering",
+      "type": "string"
+    },
+    "low_confidence_threshold": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Low Confidence Threshold",
+      "type": "number"
+    },
+    "review_status": {
+      "default": "unreviewed",
+      "enum": [
+        "unreviewed",
+        "under_review",
+        "reviewed",
+        "superseded"
+      ],
+      "title": "Review Status",
+      "type": "string"
+    },
+    "reviewed_at_utc": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reviewed At Utc"
+    },
+    "reviewed_by": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reviewed By"
+    },
+    "tracks": {
+      "items": {
+        "$ref": "#/$defs/Track"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Tracks",
+      "type": "array"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/Segment"
+      },
+      "title": "Segments",
+      "type": "array"
+    }
+  },
+  "required": [
+    "consultation_id",
+    "created_at_utc",
+    "ordering",
+    "low_confidence_threshold",
+    "tracks",
+    "segments"
+  ],
+  "title": "Transcript",
+  "type": "object"
+}

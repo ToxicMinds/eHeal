@@ -20,7 +20,7 @@ describe("summarise", () => {
   });
 
   it("marks a failed transcription on the transcript stage", () => {
-    expect(summarise("transcription_failed")).toEqual({
+    expect(summarise("transcription_failed")).toMatchObject({
       label: "Transcription failed",
       stages: ["done", "done", "failed", "pending"],
     });

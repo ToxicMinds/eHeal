@@ -1,0 +1,48 @@
+<!-- @dsCard group="Screens" page width=1280 height=1180 subtitle="Consultation, transcript ready, desktop" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consultation: transcript</title>
+</head>
+<body>
+<div>
+  <header class="eh-header"><div class="eh-header__inner"><a class="eh-wordmark" href="#list">eHeal</a><div class="eh-account"><span class="eh-account__email">Signed in as <strong>practitioner@example.com</strong></span><button class="eh-button eh-button--secondary eh-button--small" type="button">Sign out</button></div></div></header>
+  <main class="eh-page">
+    <a class="eh-crumb" href="#list"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Consultations</a>
+    <div class="eh-pagehead">
+      <div class="eh-pagehead__text"><h1 class="eh-title">SYN-0042</h1><p class="eh-meta">Tue 13 Oct 2026, 09:30 · English · sleep complaint, patient mentions a supplement</p></div>
+      <button class="eh-button eh-button--danger eh-button--small" type="button">Withdraw consent</button>
+    </div>
+    <ol class="eh-journey" aria-label="Progress">
+      <li class="eh-step eh-step--done"><span class="eh-step__name"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Consent</span><span class="eh-step__state">Recorded 13 Oct</span></li>
+      <li class="eh-step eh-step--done"><span class="eh-step__name"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Audio</span><span class="eh-step__state">Both tracks attached</span></li>
+      <li class="eh-step eh-step--done"><span class="eh-step__name"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Transcript</span><span class="eh-step__state">Done in 1:52</span></li>
+      <li class="eh-step eh-step--attention" aria-current="step"><span class="eh-step__name">Review</span><span class="eh-step__state">Ready to review</span></li>
+    </ol>
+    <section class="eh-panel eh-transcript" aria-labelledby="t-title">
+      <div class="eh-panel__head">
+        <div style="display: grid; gap: 4px"><h2 class="eh-heading" id="t-title">Transcript</h2><ul class="eh-facts"><li>9 turns</li><li>2 words to check</li><li>1 overlap</li><li>English</li></ul></div>
+        <button class="eh-button eh-button--primary" type="button">Review transcript</button>
+      </div>
+      <ul class="eh-legend">
+        <li><span class="eh-swatch eh-swatch--patient" aria-hidden="true"></span>Patient</li>
+        <li><span class="eh-swatch eh-swatch--practitioner" aria-hidden="true"></span>Practitioner</li>
+        <li><mark class="eh-unsure">word</mark>Unsure: check it against the audio</li>
+      </ul>
+      <ol class="eh-turns">
+        <li class="eh-turn eh-turn--practitioner"><div class="eh-turn__body"><p class="eh-turn__head" style="margin: 0"><span class="eh-turn__who">Practitioner</span><span class="eh-turn__time">0:00.8</span></p><p class="eh-turn__text">Good morning. How have you been since we last spoke?</p></div></li>
+        <li class="eh-turn eh-turn--patient"><div class="eh-turn__body"><p class="eh-turn__head" style="margin: 0"><span class="eh-turn__who">Patient</span><span class="eh-turn__time">0:04.2</span></p><p class="eh-turn__text">Not great, honestly. I have not been sleeping properly for around three weeks.</p></div></li>
+        <li class="eh-turn eh-turn--practitioner"><div class="eh-turn__body"><p class="eh-turn__head" style="margin: 0"><span class="eh-turn__who">Practitioner</span><span class="eh-turn__time">0:11.0</span></p><p class="eh-turn__text">And when you do wake, what time is it usually?</p></div></li>
+        <li class="eh-turn eh-turn--patient"><div class="eh-turn__body"><p class="eh-turn__head" style="margin: 0"><span class="eh-turn__who">Patient</span><span class="eh-turn__time">0:14.6</span></p><p class="eh-turn__text">About four in the morning. Then I lie awake until six.</p></div></li>
+        <li class="eh-turn eh-turn--patient"><div class="eh-turn__body"><p class="eh-turn__head" style="margin: 0"><span class="eh-turn__who">Patient</span><span class="eh-turn__time">0:20.3</span></p><p class="eh-turn__text">A friend told me to take <mark class="eh-unsure">ashwagandha</mark> at night, so I started that.</p></div></li>
+        <li class="eh-turn eh-turn--practitioner eh-turn--overlap"><div class="eh-turn__body"><p class="eh-turn__head" style="margin: 0"><span class="eh-turn__who">Practitioner</span><span class="eh-turn__time">0:26.9</span><span class="eh-tag">Overlaps</span></p><p class="eh-turn__text">How much are you taking, and since when?</p></div></li>
+        <li class="eh-turn eh-turn--patient eh-turn--overlap"><div class="eh-turn__body"><p class="eh-turn__head" style="margin: 0"><span class="eh-turn__who">Patient</span><span class="eh-turn__time">0:27.4</span><span class="eh-tag">Overlaps</span></p><p class="eh-turn__text">One capsule. Since about <mark class="eh-unsure">ten</mark> days.</p></div></li>
+        <li class="eh-turn eh-turn--patient eh-turn--unsure"><div class="eh-turn__body"><p class="eh-turn__head" style="margin: 0"><span class="eh-turn__who">Patient</span><span class="eh-turn__time">0:31.0</span><span class="eh-tag eh-tag--attention">May not be speech</span></p><p class="eh-turn__text">Mm-hmm.</p></div></li>
+        <li class="eh-turn eh-turn--practitioner"><div class="eh-turn__body"><p class="eh-turn__head" style="margin: 0"><span class="eh-turn__who">Practitioner</span><span class="eh-turn__time">0:33.5</span></p><p class="eh-turn__text">Thank you. Let's look at your evening routine next.</p></div></li>
+      </ol>
+    </section>
+  </main>
+</div>
+</body>
+</html>

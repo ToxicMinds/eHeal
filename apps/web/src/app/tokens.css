@@ -1,0 +1,105 @@
+/* eHeal — generated from design/project/tokens.json by design/build_tokens.py */
+:root, [data-theme="light"] {
+  --ground: #f2f4f8;
+  --paper: #ffffff;
+  --paper-sunk: #e9ecf3;
+  --rule: #d5d9e4;
+  --rule-strong: #7a8399;
+  --ink: #171a2b;
+  --ink-muted: #4b5166;
+  --practitioner: #2b3a8c;
+  --practitioner-deep: #1f2b6b;
+  --practitioner-tint: #e8ebf8;
+  --on-practitioner: #ffffff;
+  --patient: #1a6b57;
+  --patient-tint: #e2f1ec;
+  --on-patient: #ffffff;
+  --turmeric: #e3a008;
+  --turmeric-mark: #a87200;
+  --turmeric-tint: #fcefc7;
+  --turmeric-ink: #5c4100;
+  --madder: #a61e2a;
+  --madder-tint: #fbe9ea;
+  --focus: var(--practitioner);
+  --shadow-paper: 0 1px 2px rgba(23, 26, 43, 0.08);
+}
+[data-theme="dark"] {
+  --ground: #0e111d;
+  --paper: #161a2a;
+  --paper-sunk: #1d2234;
+  --rule: #2c3249;
+  --rule-strong: #6b7490;
+  --ink: #e6e9f4;
+  --ink-muted: #a3aac0;
+  --practitioner: #a5b1f5;
+  --practitioner-deep: #c5cdfa;
+  --practitioner-tint: #232a52;
+  --on-practitioner: #0e111d;
+  --patient: #74d3b6;
+  --patient-tint: #163a31;
+  --on-patient: #0e111d;
+  --turmeric: #f0b429;
+  --turmeric-mark: #f0b429;
+  --turmeric-tint: #3b300e;
+  --turmeric-ink: #f6d77c;
+  --madder: #f28b92;
+  --madder-tint: #3e1519;
+  --focus: var(--practitioner);
+  --shadow-paper: 0 1px 2px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  --ground: #0e111d;
+  --paper: #161a2a;
+  --paper-sunk: #1d2234;
+  --rule: #2c3249;
+  --rule-strong: #6b7490;
+  --ink: #e6e9f4;
+  --ink-muted: #a3aac0;
+  --practitioner: #a5b1f5;
+  --practitioner-deep: #c5cdfa;
+  --practitioner-tint: #232a52;
+  --on-practitioner: #0e111d;
+  --patient: #74d3b6;
+  --patient-tint: #163a31;
+  --on-patient: #0e111d;
+  --turmeric: #f0b429;
+  --turmeric-mark: #f0b429;
+  --turmeric-tint: #3b300e;
+  --turmeric-ink: #f6d77c;
+  --madder: #f28b92;
+  --madder-tint: #3e1519;
+  --focus: var(--practitioner);
+  --shadow-paper: 0 1px 2px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-paper: 4px;
+  --radius-control: 6px;
+  --radius-pill: 999px;
+  --control-height: 44px;
+  --content-width: 1040px;
+  --measure: 68ch;
+  --font-display: "Eczar Variable", Georgia, serif;
+  --font-text: "Atkinson Hyperlegible Next Variable", system-ui, sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono Variable", ui-monospace, monospace;
+}
+.wordmark { font-family: var(--font-display); font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em; }
+.title { font-family: var(--font-display); font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -0.01em; }
+.thesis { font-family: var(--font-display); font-size: 26px; line-height: 34px; font-weight: 500; }
+.heading { font-family: var(--font-text); font-size: 19px; line-height: 26px; font-weight: 700; }
+.transcript { font-family: var(--font-text); font-size: 17px; line-height: 28px; font-weight: 400; }
+.body { font-family: var(--font-text); font-size: 16px; line-height: 24px; font-weight: 400; }
+.label { font-family: var(--font-text); font-size: 15px; line-height: 20px; font-weight: 600; }
+.small { font-family: var(--font-text); font-size: 14px; line-height: 20px; font-weight: 400; }
+.mono { font-family: var(--font-mono); font-size: 14px; line-height: 20px; font-weight: 500; }

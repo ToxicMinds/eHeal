@@ -1,0 +1,46 @@
+<!-- @dsCard group="Screens" page width=1280 height=820 subtitle="Consultation, transcribing, desktop" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Consultation: transcribing</title>
+</head>
+<body>
+<div>
+  <header class="eh-header"><div class="eh-header__inner"><a class="eh-wordmark" href="#list">eHeal</a><div class="eh-account"><span class="eh-account__email">Signed in as <strong>practitioner@example.com</strong></span><button class="eh-button eh-button--secondary eh-button--small" type="button">Sign out</button></div></div></header>
+  <main class="eh-page">
+    <a class="eh-crumb" href="#list"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Consultations</a>
+    <div class="eh-pagehead">
+      <div class="eh-pagehead__text"><h1 class="eh-title">SYN-0039</h1><p class="eh-meta">Fri 9 Oct 2026, 10:00 · English · follow-up, evening routine</p></div>
+      <button class="eh-button eh-button--danger eh-button--small" type="button">Withdraw consent</button>
+    </div>
+    <ol class="eh-journey" aria-label="Progress">
+      <li class="eh-step eh-step--done"><span class="eh-step__name"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Consent</span><span class="eh-step__state">Recorded 9 Oct</span></li>
+      <li class="eh-step eh-step--done"><span class="eh-step__name"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Audio</span><span class="eh-step__state">Both tracks attached</span></li>
+      <li class="eh-step eh-step--current" aria-current="step"><span class="eh-step__name">Transcript</span><span class="eh-step__state">Transcribing</span></li>
+      <li class="eh-step"><span class="eh-step__name">Review</span><span class="eh-step__state">Not yet</span></li>
+    </ol>
+    <div class="eh-split">
+      <section class="eh-panel" aria-labelledby="job-title">
+        <div class="eh-job__head"><h2 class="eh-heading" id="job-title">Transcribing</h2><span class="eh-job__clock">1:42 so far</span></div>
+        <div class="eh-bar" role="presentation"></div>
+        <ol class="eh-stages">
+          <li class="eh-stage eh-stage--done"><svg class="eh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Waiting for the engine</span><span class="eh-stage__time">0:03</span></li>
+          <li class="eh-stage eh-stage--done"><svg class="eh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Checking the audio</span><span class="eh-stage__time">0:05</span></li>
+          <li class="eh-stage eh-stage--done"><svg class="eh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Transcribing the practitioner track</span><span class="eh-stage__time">0:58</span></li>
+          <li class="eh-stage eh-stage--current" aria-current="step"><svg class="eh-icon eh-spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg><span>Transcribing the patient track</span><span class="eh-stage__time">0:36</span></li>
+          <li class="eh-stage"><span class="eh-stage__dot" aria-hidden="true"></span><span>Putting the turns in order</span><span class="eh-stage__time"></span></li>
+        </ol>
+        <p class="eh-engine"><svg class="eh-icon eh-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>Engine online · last report 12 s ago</p>
+        <p class="eh-hint">You can leave this page. The transcript appears here when it is ready.</p>
+      </section>
+      <aside class="eh-aside" aria-labelledby="audio-summary">
+        <h2 class="eh-heading" id="audio-summary" style="color: var(--ink)">Audio</h2>
+        <ul class="eh-facts" style="display: grid; gap: 4px"><li><strong style="color: var(--practitioner)">Practitioner</strong> · 12:30 · M4A · 11.8 MB</li><li><strong style="color: var(--patient)">Patient</strong> · 12:31 · M4A · 11.6 MB</li><li>Recorded together</li></ul>
+        <p class="eh-hint">Audio cannot be changed while it is being transcribed.</p>
+      </aside>
+    </div>
+  </main>
+</div>
+</body>
+</html>

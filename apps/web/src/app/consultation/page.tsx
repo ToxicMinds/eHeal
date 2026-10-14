@@ -1,31 +1,37 @@
 "use client";
 
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { StatusRail } from "@/components/status-rail";
-import { TrackCard } from "@/components/track-card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { AudioSlot } from "@/components/audio-slot";
+import { JobPanel } from "@/components/job-panel";
+import { Journey, Notice } from "@/components/status";
+import { TranscriptView } from "@/components/transcript-view";
 import { call, explain } from "@/lib/api";
+import { clock, humanSize } from "@/lib/audio";
 import type { Tables } from "@/lib/database.types";
 import { RequireSession } from "@/lib/session";
-import { LANGUAGE_LABEL } from "@/lib/status";
+import { dateTime, dayMonth, LANGUAGE_LABEL, summarise } from "@/lib/status";
 import { supabase } from "@/lib/supabase";
 
-type Loaded = { consultation: Tables<"consultations">; tracks: Tables<"audio_tracks">[] };
+type Consultation = Tables<"consultations">;
+type Track = Tables<"audio_tracks">;
+type Loaded = { consultation: Consultation; tracks: Track[]; audioLeft: boolean };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const WHEN = new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeStyle: "short" });
+const SPEAKERS = ["practitioner", "patient"] as const;
 const AUDIO_CAN_CHANGE = ["ready_for_audio", "audio_imported", "transcription_failed"];
+const HAS_TRANSCRIPT = ["transcript_ready", "transcript_under_review", "transcript_reviewed", "extraction_processing",
+  "extraction_failed", "draft_ready", "under_review", "approved", "corrected", "archived"];
 
 export default function ConsultationPage() {
   return (
     <RequireSession>
       {(user) => (
         <AppShell user={user}>
-          <Suspense fallback={<p role="status" className="text-muted-foreground">Loading the consultation…</p>}>
-            <Consultation userId={user.id} />
+          <Suspense fallback={<p className="eh-meta" role="status">Loading the consultation…</p>}>
+            <ConsultationView userId={user.id} />
           </Suspense>
         </AppShell>
       )}
@@ -33,11 +39,32 @@ export default function ConsultationPage() {
   );
 }
 
-function Consultation({ userId }: { userId: string }) {
+const back = (
+  <Link href="/consultations/" className="eh-crumb"><ChevronLeft aria-hidden className="eh-icon eh-icon--sm" />Consultations</Link>
+);
+
+/** What each of the four steps says under its bar. */
+function stepLines({ consultation, tracks }: Loaded): string[] {
+  const { stages } = summarise(consultation.status);
+  const missing = SPEAKERS.filter((speaker) => !tracks.some((track) => track.speaker === speaker));
+  return [
+    consultation.consent_withdrawn_at ? `Withdrawn ${dayMonth(consultation.consent_withdrawn_at)}`
+      : consultation.consent_recorded_at ? `Recorded ${dayMonth(consultation.consent_recorded_at)}` : "Not recorded yet",
+    stages[1] === "done" ? "Both tracks attached" : stages[1] === "current"
+      ? missing.length === 2 ? "Waiting for both tracks" : `Waiting for the ${missing[0]} track` : "Not yet",
+    { current: consultation.status === "transcription_processing" ? "Transcribing" : "Ready to start", failed: "Failed", done: "Done" }[
+      stages[2] as "current" | "failed" | "done"] ?? "Not yet",
+    stages[3] === "attention" ? consultation.status === "transcript_ready" ? "Ready to review" : "In progress"
+      : stages[3] === "done" ? "Reviewed" : "Not yet",
+  ];
+}
+
+function ConsultationView({ userId }: { userId: string }) {
   const id = useSearchParams().get("id") ?? "";
   const [loaded, setLoaded] = useState<Loaded | "missing" | "failed" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   const fetchAll = useCallback(async (): Promise<Loaded | "missing" | "failed"> => {
     const [consultation, tracks] = await Promise.all([
@@ -45,129 +72,181 @@ function Consultation({ userId }: { userId: string }) {
       supabase.from("audio_tracks").select("*").eq("consultation_id", id),
     ]);
     if (consultation.error || tracks.error) return "failed";
-    return consultation.data ? { consultation: consultation.data, tracks: tracks.data } : "missing";
-  }, [id]);
-  const load = useCallback(() => fetchAll().then(setLoaded), [fetchAll]);
+    if (!consultation.data) return "missing";
+    // After a withdrawal, files that could not be deleted are offered for deletion again.
+    const files = consultation.data.status === "consent_withdrawn"
+      ? (await supabase.storage.from("audio").list(`${userId}/${id}`)).data ?? [] : [];
+    return { consultation: consultation.data, tracks: tracks.data, audioLeft: files.length > 0 };
+  }, [id, userId]);
+  const load = useCallback(() => {
+    fetchAll().then(setLoaded);
+  }, [fetchAll]);
 
   useEffect(() => {
     if (!UUID.test(id)) return;
     let current = true;
-    fetchAll().then((result) => {
-      if (current) setLoaded(result);
-    });
+    fetchAll().then((result) => current && setLoaded(result));
     return () => {
       current = false;
     };
   }, [id, fetchAll]);
 
-  const back = (
-    <p className="text-sm">
-      <Link href="/consultations/" className="underline underline-offset-4">Consultations</Link>
-    </p>
-  );
-
   if (!UUID.test(id) || loaded === "missing") {
-    return <>{back}<p className="mt-4">This consultation does not exist, or it is not yours.</p></>;
+    return <>{back}<p className="eh-text">This consultation does not exist, or it is not yours.</p></>;
   }
   if (loaded === "failed") {
-    return (
-      <>{back}
-        <Alert variant="destructive" className="mt-4">
-          <AlertDescription>Problem: the consultation could not be loaded. Check your connection and reload the page.</AlertDescription>
-        </Alert>
-      </>
-    );
+    return <>{back}<Notice tone="failed" title="The consultation could not be loaded">Check your connection and reload the page.</Notice></>;
   }
-  if (loaded === null) {
-    return <p role="status" className="text-muted-foreground">Loading the consultation…</p>;
-  }
+  if (loaded === null) return <p className="eh-meta" role="status">Loading the consultation…</p>;
 
-  const { consultation, tracks } = loaded;
-  const hasConsent = consultation.consent_recorded_at !== null;
-  const editable = hasConsent && AUDIO_CAN_CHANGE.includes(consultation.status);
-  const blockedReason = hasConsent ? null : "Record consent first.";
+  const { consultation, tracks, audioLeft } = loaded;
+  const status = consultation.status;
+  const editable = consultation.consent_recorded_at !== null && AUDIO_CAN_CHANGE.includes(status);
+  const both = tracks.length === 2;
+  const language = LANGUAGE_LABEL[consultation.language];
 
-  async function declareRecordedTogether(recordedTogether: boolean) {
+  async function run(step: () => Promise<void>) {
     setBusy(true);
     setProblem(null);
+    await step();
+    setBusy(false);
+    load();
+  }
+  const perform = (name: "record_consent" | "start_transcription") => run(async () => {
+    const outcome = await call(name, { p_consultation_id: consultation.id });
+    if (!outcome.ok) setProblem(explain(outcome.error_category));
+  });
+  const declare = (recordedTogether: boolean) => run(async () => {
     const outcome = await call("declare_recorded_together", {
-      p_consultation_id: consultation.id,
-      p_recorded_together: recordedTogether,
+      p_consultation_id: consultation.id, p_recorded_together: recordedTogether,
     });
-    setBusy(false);
     if (!outcome.ok) setProblem(explain(outcome.error_category));
-    await load();
+  });
+  async function deleteAudio() {
+    await supabase.storage.from("audio").remove(SPEAKERS.map((speaker) => `${userId}/${consultation.id}/${speaker}`));
+    await call("confirm_audio_deleted", { p_consultation_id: consultation.id });
   }
+  const withdraw = () => run(async () => {
+    const outcome = await call("withdraw_consent", { p_consultation_id: consultation.id });
+    if (!outcome.ok) return setProblem(explain(outcome.error_category));
+    setConfirming(false);
+    await deleteAudio();
+  });
 
-  async function recordConsent() {
-    setBusy(true);
-    setProblem(null);
-    const outcome = await call("record_consent", { p_consultation_id: consultation.id });
-    setBusy(false);
-    if (!outcome.ok) setProblem(explain(outcome.error_category));
-    await load();
-  }
+  const canWithdraw = consultation.consent_recorded_at !== null && status !== "consent_withdrawn";
 
   return (
     <>
       {back}
-      <h1 className="mt-2 font-heading text-4xl font-semibold tracking-tight">
-        <span className="font-mono text-3xl">{consultation.synthetic_patient_ref}</span>
-      </h1>
-      <p className="mt-2 text-muted-foreground">
-        {WHEN.format(new Date(consultation.scheduled_at))} · {LANGUAGE_LABEL[consultation.language]}
-      </p>
-      <div className="mt-3"><StatusRail status={consultation.status} /></div>
-      {consultation.scenario_notes && (
-        <p className="mt-4 max-w-2xl"><span className="font-semibold">Notes:</span> {consultation.scenario_notes}</p>
-      )}
-      {problem && (
-        <Alert variant="destructive" className="mt-4"><AlertDescription>Problem: {problem}</AlertDescription></Alert>
-      )}
-
-      <section aria-labelledby="consent-h" className="mt-8">
-        <h2 id="consent-h" className="text-2xl font-semibold">Consent</h2>
-        {hasConsent ? (
-          <p className="mt-2">
-            Consent to transcription was recorded on {WHEN.format(new Date(consultation.consent_recorded_at!))}.
+      <div className="eh-pagehead">
+        <div className="eh-pagehead__text">
+          <h1 className="eh-title">{consultation.synthetic_patient_ref}</h1>
+          <p className="eh-meta">
+            {dateTime(consultation.scheduled_at)} · {language}
+            {consultation.scenario_notes && ` · ${consultation.scenario_notes}`}
           </p>
-        ) : (
-          <>
-            <p className="mt-2 max-w-2xl">
-              No audio can be attached or transcribed until consent to transcription is recorded.
-            </p>
-            <Button className="mt-3" disabled={busy} onClick={recordConsent}>Record consent</Button>
-          </>
-        )}
-      </section>
-
-      <section aria-labelledby="audio-h" className="mt-8">
-        <h2 id="audio-h" className="text-2xl font-semibold">Audio</h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          One track for each speaker. Supported formats: wav, mp3, m4a, mp4, flac, ogg, webm. Up to 50 MB
-          and two hours per track; use a compressed format for long recordings.
-        </p>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {(["practitioner", "patient"] as const).map((speaker) => (
-            <TrackCard key={speaker} speaker={speaker}
-              track={tracks.find((track) => track.speaker === speaker)}
-              consultationId={consultation.id} userId={userId}
-              editable={editable} blockedReason={blockedReason} onChanged={load} />
-          ))}
         </div>
-        <label className="mt-4 flex max-w-2xl items-start gap-3">
-          <input type="checkbox" className="mt-1 size-4 accent-practitioner"
-            checked={consultation.recorded_together} disabled={!editable || busy}
-            onChange={(event) => declareRecordedTogether(event.target.checked)} />
-          <span>
-            <span className="font-semibold">Both tracks were recorded together and start at the same moment</span>
-            <span className="block text-sm text-muted-foreground">
-              Leave this off if you are not sure. The transcript then shows the order of turns as a
-              best guess and says so.
+        {canWithdraw && !confirming && (
+          <button type="button" className="eh-button eh-button--danger eh-button--small" onClick={() => setConfirming(true)}>
+            Withdraw consent
+          </button>
+        )}
+      </div>
+      {confirming && (
+        <Notice tone="attention" title="Withdraw consent?" actions={<>
+          <button type="button" className="eh-button eh-button--danger" disabled={busy} onClick={withdraw}>Withdraw consent</button>
+          <button type="button" className="eh-button eh-button--secondary" disabled={busy} onClick={() => setConfirming(false)}>Keep consent</button>
+        </>}>
+          Any transcription stops, and both audio tracks and the transcript are deleted. This cannot be undone.
+        </Notice>
+      )}
+
+      <Journey status={status} lines={stepLines(loaded)} />
+      {problem && <Notice tone="failed" title="That did not work">{problem}</Notice>}
+
+      {status === "consent_pending" && (
+        <section className="eh-panel" aria-labelledby="consent-title">
+          <h2 className="eh-heading" id="consent-title">Consent</h2>
+          <p className="eh-text">Consent to transcription is not recorded yet. Without it, no audio can be attached or transcribed.</p>
+          <div className="eh-actions">
+            <button type="button" className="eh-button eh-button--primary" disabled={busy} onClick={() => perform("record_consent")}>Record consent</button>
+          </div>
+        </section>
+      )}
+
+      {status === "consent_withdrawn" && (
+        audioLeft ? (
+          <Notice tone="attention" title="Audio not yet deleted" actions={
+            <button type="button" className="eh-button eh-button--primary" disabled={busy} onClick={() => run(deleteAudio)}>Delete audio now</button>
+          }>
+            Consent was withdrawn, but the audio files are still stored. Delete them now.
+          </Notice>
+        ) : (
+          <Notice title="Consent was withdrawn">The audio tracks and any transcript of this consultation are deleted.</Notice>
+        )
+      )}
+
+      {(status === "transcription_processing" || status === "transcription_failed") && (
+        <JobPanel consultationId={consultation.id} status={status} onChanged={load} />
+      )}
+
+      {HAS_TRANSCRIPT.includes(status) && <TranscriptView consultationId={consultation.id} language={language} />}
+
+      {AUDIO_CAN_CHANGE.includes(status) && (
+        <section className="eh-panel" aria-labelledby="audio-title">
+          <div className="eh-panel__head">
+            <h2 className="eh-heading" id="audio-title">Audio</h2>
+            <span className="eh-hint">One track for each speaker</span>
+          </div>
+          <div className="eh-slots">
+            {SPEAKERS.map((speaker) => (
+              <AudioSlot key={speaker} speaker={speaker} track={tracks.find((track) => track.speaker === speaker)}
+                consultationId={consultation.id} userId={userId} editable={editable} onChanged={load} />
+            ))}
+          </div>
+          <label className="eh-check">
+            <input type="checkbox" checked={consultation.recorded_together} disabled={!editable || busy}
+              onChange={(event) => declare(event.target.checked)} />
+            <span className="eh-check__text">
+              <span className="eh-check__label">Both tracks were recorded together and start at the same moment</span>
+              <span className="eh-hint">Leave this off if you are not sure. The transcript then shows the order of turns as a best guess and says so.</span>
             </span>
-          </span>
-        </label>
-      </section>
+          </label>
+          {status !== "transcription_failed" && (
+            <div className="eh-actions">
+              <button type="button" className="eh-button eh-button--primary" disabled={!both || busy}
+                aria-busy={busy || undefined} onClick={() => perform("start_transcription")}>
+                Start transcription
+              </button>
+              {!both && (
+                <p className="eh-hint">
+                  {tracks.length === 0 ? "Attach both tracks first." : `Attach the ${tracks[0].speaker === "patient" ? "practitioner" : "patient"} track first.`}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {(status === "transcription_processing" || HAS_TRANSCRIPT.includes(status)) && tracks.length > 0 && (
+        <aside className="eh-aside" aria-labelledby="audio-summary">
+          <h2 className="eh-heading" id="audio-summary">Audio</h2>
+          <ul className="eh-facts" style={{ display: "grid", gap: 4 }}>
+            {SPEAKERS.map((speaker) => {
+              const track = tracks.find((candidate) => candidate.speaker === speaker);
+              return track && (
+                <li key={speaker}>
+                  <strong className={speaker === "patient" ? "eh-voice--patient" : "eh-voice--practitioner"}>
+                    {speaker === "patient" ? "Patient" : "Practitioner"}
+                  </strong>
+                  {track.duration_seconds !== null && ` · ${clock(track.duration_seconds)}`} · {track.format.toUpperCase()} · {humanSize(track.size_bytes)}
+                </li>
+              );
+            })}
+            <li>{consultation.recorded_together ? "Recorded together" : "Recorded separately"}</li>
+          </ul>
+        </aside>
+      )}
     </>
   );
 }

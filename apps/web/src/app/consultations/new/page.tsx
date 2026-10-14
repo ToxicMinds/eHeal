@@ -1,25 +1,20 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ChevronLeft, CircleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { AppShell } from "@/components/app-shell";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Notice } from "@/components/status";
 import { call, explain } from "@/lib/api";
 import { RequireSession } from "@/lib/session";
 import { LANGUAGE_LABEL } from "@/lib/status";
 
 const schema = z.object({
-  synthetic_patient_ref: z
-    .string()
-    .regex(/^SYN-\d{1,8}$/, "Use SYN- and up to eight digits, for example SYN-0042."),
+  reference: z.string().regex(/^\d{1,8}$/, "Use up to eight digits, for example 0042."),
   scheduled_at: z.string().min(1, "Choose the date and time of the consultation."),
   language: z.enum(["en", "de", "sk", "auto"], "Choose the language of the consultation."),
   consent_recorded: z.boolean(),
@@ -29,6 +24,11 @@ type Values = z.infer<typeof schema>;
 
 export default function NewConsultationPage() {
   return <RequireSession>{(user) => <AppShell user={user}><NewConsultation /></AppShell>}</RequireSession>;
+}
+
+function Problem({ id, message }: { id: string; message?: string }) {
+  if (!message) return null;
+  return <p id={id} className="eh-error"><CircleAlert aria-hidden className="eh-icon" />{message}</p>;
 }
 
 function NewConsultation() {
@@ -41,7 +41,7 @@ function NewConsultation() {
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { synthetic_patient_ref: "SYN-", scheduled_at: "", consent_recorded: false, scenario_notes: "" },
+    defaultValues: { reference: "", scheduled_at: "", consent_recorded: false, scenario_notes: "" },
   });
 
   useEffect(() => {
@@ -54,7 +54,7 @@ function NewConsultation() {
   async function create(values: Values) {
     setFailure(null);
     const outcome = await call<{ consultation_id: string }>("create_consultation", {
-      p_synthetic_patient_ref: values.synthetic_patient_ref,
+      p_synthetic_patient_ref: `SYN-${values.reference}`,
       p_scheduled_at: new Date(values.scheduled_at).toISOString(),
       p_language: values.language,
       p_consent_recorded: values.consent_recorded,
@@ -64,87 +64,83 @@ function NewConsultation() {
     else setFailure(explain(outcome.error_category));
   }
 
-  const problem = (id: string, message?: string) =>
-    message && (
-      <p id={id} className="text-sm font-semibold text-madder">
-        Problem: {message}
-      </p>
-    );
-
   return (
     <>
-      <p className="text-sm">
-        <Link href="/consultations/" className="underline underline-offset-4">Consultations</Link>
-      </p>
-      <h1 className="mt-2 font-heading text-4xl font-semibold tracking-tight">New consultation</h1>
-      <form onSubmit={handleSubmit(create)} noValidate className="mt-6 grid max-w-xl gap-5 rounded-xl border bg-card p-6">
-        <div className="grid gap-1.5">
-          <Label htmlFor="ref">Patient reference</Label>
-          <Input id="ref" className="font-mono" autoComplete="off" spellCheck={false}
-            aria-invalid={Boolean(errors.synthetic_patient_ref)} aria-describedby="ref-help ref-error"
-            {...register("synthetic_patient_ref")} />
-          <p id="ref-help" className="text-sm text-muted-foreground">
-            SYN- and up to eight digits, for example SYN-0042.
-          </p>
-          {problem("ref-error", errors.synthetic_patient_ref?.message)}
-        </div>
+      <Link href="/consultations/" className="eh-crumb"><ChevronLeft aria-hidden className="eh-icon eh-icon--sm" />Consultations</Link>
+      <h1 className="eh-title">New consultation</h1>
+      <div className="eh-split">
+        <form onSubmit={handleSubmit(create)} noValidate className="eh-panel" aria-label="Consultation details">
+          <div className="eh-form">
+            <div className="eh-field">
+              <label className="eh-label" htmlFor="ref">Patient reference</label>
+              <p className="eh-hint" id="ref-hint">Digits only.</p>
+              <div className="eh-affixed" style={{ maxWidth: 280 }}>
+                <span className="eh-affix" aria-hidden>SYN-</span>
+                <input id="ref" className="eh-input" inputMode="numeric" autoComplete="off" spellCheck={false}
+                  aria-invalid={Boolean(errors.reference)} aria-describedby="ref-hint ref-error" {...register("reference")} />
+              </div>
+              <Problem id="ref-error" message={errors.reference?.message} />
+            </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label htmlFor="when">Date and time</Label>
-            <Input id="when" type="datetime-local" aria-invalid={Boolean(errors.scheduled_at)}
-              aria-describedby="when-error" {...register("scheduled_at")} />
-            {problem("when-error", errors.scheduled_at?.message)}
+            <div className="eh-fields-row">
+              <div className="eh-field">
+                <label className="eh-label" htmlFor="when">Date and time</label>
+                <input id="when" type="datetime-local" className="eh-input" aria-invalid={Boolean(errors.scheduled_at)}
+                  aria-describedby="when-error" {...register("scheduled_at")} />
+                <Problem id="when-error" message={errors.scheduled_at?.message} />
+              </div>
+              <div className="eh-field">
+                <label className="eh-label" htmlFor="language">Language spoken</label>
+                <div className="eh-select">
+                  <select id="language" defaultValue="" aria-invalid={Boolean(errors.language)}
+                    aria-describedby="language-hint language-error" {...register("language")}>
+                    <option value="" disabled>Choose…</option>
+                    {Object.entries(LANGUAGE_LABEL).map(([code, label]) => (
+                      <option key={code} value={code}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <Problem id="language-error" message={errors.language?.message} />
+              </div>
+            </div>
+            <p className="eh-hint" id="language-hint" style={{ marginTop: -12 }}>
+              The transcript is made in this language. &ldquo;Mixed or unsure&rdquo; lets the engine guess, which is less reliable.
+            </p>
+
+            <div className="eh-field">
+              <label className="eh-label" htmlFor="notes">Notes</label>
+              <p className="eh-hint" id="notes-hint">For example &ldquo;sleep complaint, patient mentions a supplement&rdquo;.</p>
+              <textarea id="notes" className="eh-textarea" aria-invalid={Boolean(errors.scenario_notes)}
+                aria-describedby="notes-hint notes-error" {...register("scenario_notes")} />
+              <Problem id="notes-error" message={errors.scenario_notes?.message} />
+            </div>
+
+            <label className="eh-check">
+              <input type="checkbox" {...register("consent_recorded")} />
+              <span className="eh-check__text">
+                <span className="eh-check__label">Consent to transcription is recorded</span>
+                <span className="eh-hint">Without it, no audio can be attached or transcribed. You can record it later.</span>
+              </span>
+            </label>
+
+            {failure && <Notice tone="failed" title="The consultation was not created">{failure}</Notice>}
+            <div className="eh-actions">
+              <button type="submit" className="eh-button eh-button--primary" disabled={isSubmitting} aria-busy={isSubmitting || undefined}>
+                {isSubmitting ? "Creating…" : "Create consultation"}
+              </button>
+              <Link href="/consultations/" className="eh-button eh-button--secondary">Cancel</Link>
+            </div>
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="language">Language spoken</Label>
-            <select id="language" defaultValue="" aria-invalid={Boolean(errors.language)}
-              aria-describedby="language-help language-error"
-              className="h-9 rounded-md border border-input bg-card px-3 text-sm"
-              {...register("language")}>
-              <option value="" disabled>Choose…</option>
-              {Object.entries(LANGUAGE_LABEL).map(([code, label]) => (
-                <option key={code} value={code}>{label}</option>
-              ))}
-            </select>
-            {problem("language-error", errors.language?.message)}
-          </div>
-        </div>
-        <p id="language-help" className="-mt-3 text-sm text-muted-foreground">
-          The transcript is made in this language. &ldquo;Mixed or unsure&rdquo; lets the engine guess,
-          which is less reliable.
-        </p>
-
-        <div className="grid gap-1.5">
-          <Label htmlFor="notes">Notes</Label>
-          <Textarea id="notes" rows={3} aria-invalid={Boolean(errors.scenario_notes)}
-            aria-describedby="notes-help notes-error" {...register("scenario_notes")} />
-          <p id="notes-help" className="text-sm text-muted-foreground">
-            For example &ldquo;sleep complaint, patient mentions a supplement&rdquo;.
-          </p>
-          {problem("notes-error", errors.scenario_notes?.message)}
-        </div>
-
-        <label className="flex items-start gap-3">
-          <input type="checkbox" className="mt-1 size-4 accent-practitioner" {...register("consent_recorded")} />
-          <span>
-            <span className="font-semibold">Consent to transcription is recorded</span>
-            <span className="block text-sm text-muted-foreground">
-              Without it, no audio can be attached or transcribed. You can record it later.
-            </span>
-          </span>
-        </label>
-
-        {failure && (
-          <Alert variant="destructive"><AlertDescription>Problem: {failure}</AlertDescription></Alert>
-        )}
-        <div className="flex gap-3">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating…" : "Create consultation"}
-          </Button>
-          <Button variant="outline" asChild><Link href="/consultations/">Cancel</Link></Button>
-        </div>
-      </form>
+        </form>
+        <aside className="eh-aside" aria-labelledby="next-title">
+          <h2 className="eh-heading" id="next-title" style={{ color: "var(--ink)" }}>What happens next</h2>
+          <ol>
+            <li>Attach the two audio tracks: yours and the patient&apos;s.</li>
+            <li>Start transcription. The engine writes each track out and puts the turns in order.</li>
+            <li>Check the transcript. Words the engine is unsure of are marked.</li>
+          </ol>
+        </aside>
+      </div>
     </>
   );
 }

@@ -3,16 +3,16 @@
 The plan is defined in [MASTER_BUILD_SPEC.md](../MASTER_BUILD_SPEC.md), section 21.
 This file only tracks where we are. Update it at the end of every slice.
 
-Last updated: 13 October 2026.
+Last updated: 14 October 2026.
 
 | Slice | When it is done, you can | Status |
 |---|---|---|
 | **Phase 0 — Foundations** | | Done |
-| **Phase 1 — Transcription in the browser** | | In progress |
-| 1.1 Sign-in and consultation list | Sign in and see your list of consultations | In progress |
-| 1.2 Create consultation and audio | Create an invented consultation, record consent, attach or record two tracks | Not started |
-| 1.3 Transcription with a status screen | Press start, watch each stage, read a merged two-speaker transcript | Not started |
-| 1.4 Transcript review | Search, play back, correct, mark reviewed, export | Not started |
+| **Phase 1 — Transcription through the web app** | | In progress |
+| 1.1 Sign-in and consultation list | Sign in and see your list of consultations | Done, live 13 Oct |
+| 1.2 Create consultation and audio | Create an invented consultation, record consent, attach or record two tracks | Done, live 13 Oct |
+| 1.3 Transcription with a status screen | Press start, watch each stage, read a merged two-speaker transcript | In progress |
+| 1.4 Transcript review | Search, play back, correct, mark reviewed, export, delete audio | Not started |
 | 1.5 Fixtures and benchmark | Read measured accuracy and speed per language | Not started |
 | **Phase 2 — Structured draft, approval and report** | | Not started |
 | 2.1 Draft generation | Generate a structured draft in which every item shows its evidence | Not started |
@@ -32,3 +32,37 @@ Last updated: 13 October 2026.
 | Web app | Render static site | Free |
 | Sign-in, database, audio files | Supabase project `eheal`, Frankfurt | Free |
 | Transcription engine | The owner's computer | Free |
+
+## Slice 1.3 — checklist
+
+Done (on branch `phase-1/web-app`, not yet live):
+
+- [x] Database: jobs, engine accounts, transcripts, segments; start, cancel and withdraw-consent
+      functions; engine claim, heartbeat, complete and fail functions; tightened audio rules.
+- [x] Engine rewritten to pull jobs as its own limited account: hash check, per-track
+      transcription in the consultation's language, merge, guards against invented text.
+- [x] Old engine web service, hosted demo code and Dockerfile removed.
+- [x] Engine unit tests (merge order, overlap, offsets, transcript format, settings, logging).
+- [x] Second review applied (specification version 2.2): every engine call names its attempt,
+      engine accounts refused as practitioners, transcripts checked whole before writing,
+      one lock order, audio deletion confirmed against storage.
+- [x] Database tests for the engine contract (`apps/web/tests/transcription.test.ts`): full job,
+      engine limits, cancel, two engines, stalled job taken back, late result refused, three
+      stalls, time limit, eight kinds of bad transcript, withdrawal during processing.
+- [x] Design system proposal published for the owner's review (source in `design/`):
+      https://claude.ai/artifact/VwTRNADCcZnGHPHYK6spht
+
+To do:
+
+- [ ] Owner reviews the design system. Then restyle the live screens to it.
+- [ ] Engine tests with real audio: corrupt, silent and room-noise files; a file changed after
+      registration; no transcript text in logs; a two-hour transcript fits one call.
+- [ ] A dialogue fixture generator: both tracks rendered on one timeline from a script.
+- [ ] Web: start, status panel with stages, cancel while queued, retry after failure,
+      withdraw consent with audio deletion confirmed, "no engine running" notice,
+      read-only two-rails transcript.
+- [ ] A browser test that runs a real local engine end to end.
+- [ ] Quick benchmark on this computer (small, medium, large-v3-turbo) to choose the default model.
+- [ ] Hosted: apply the migration, create the engine account, install the engine as a service
+      on the owner's computer that starts at login.
+- [ ] Publish the web app, run the browser tests against the live site, merge to main.

@@ -18,7 +18,7 @@ checked on 13 October 2026:
 | Render free web service | A tenth of a CPU and 512 MB. A 13-second recording took 165 seconds and returned nonsense with the only model that fits. | Rejected |
 | Hugging Face Docker or Gradio Space | Creating one now requires the PRO plan ($9 a month). Confirmed in their documentation and forum. | Rejected: not free |
 | Hugging Face ZeroGPU | Free for personal accounts with a verified email that are older than 30 days: two apps, five GPU-minutes a day. Gradio and PyTorch only. | Deferred: a candidate for an always-on engine (OD-2) |
-| A hosted speech service's free tier (for example Groq) | A free tier exists, with a 25 MB file limit. A third party would receive the audio. Data terms not checked. | Deferred: conflicts with the rule against third-party AI services |
+| A hosted speech service's free tier (for example Groq) | A free tier exists, with a 25 MB file limit. A third-party AI service would process the audio, and its data terms are not checked. | Deferred: conflicts with the rule against third-party AI services |
 | Transcription inside the browser | Free and private. Speed and accuracy on ordinary laptops are unproven. | Not evaluated |
 | The owner's computer | 8 cores, 15 GB of memory, no GPU. Free, and cannot be withdrawn. | Chosen |
 
@@ -40,8 +40,9 @@ checked on 13 October 2026:
 - Uploaded audio and transcripts are stored in Supabase. That is acceptable only for
   invented data.
 - Another engine can be added later without changing the web app or the database.
-- The Supabase secret key on the engine's machine can read the whole project. It is
-  kept in a private file and never committed.
+- The engine signs in as its own account, limited to the job functions and the audio
+  of the job it has claimed. The project's secret key, which can do everything, is
+  not given to the engine (changed after review; see the specification, section 11).
 
 ## Reversal path
 

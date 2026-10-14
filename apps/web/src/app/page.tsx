@@ -14,7 +14,7 @@ export default function Home() {
   }, [session.status, router]);
 
   return (
-    <p role="status" className="p-8 text-muted-foreground">
+    <p role="status" className="eh-page eh-meta">
       Opening eHeal…
     </p>
   );

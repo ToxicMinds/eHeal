@@ -1,14 +1,12 @@
-"""`clinical-worker` runs the API; `clinical-worker fetch-model` and
-`clinical-worker export-schema` are the two setup commands."""
+"""`clinical-worker engine` runs the engine.
+
+`fetch-model` and `export-schema` are setup commands."""
 
 import json
 import logging
 import os
-import secrets
 import sys
 from pathlib import Path
-
-import uvicorn
 
 from .config import Settings, load_settings
 from .schema import SCHEMA_VERSION, Transcript
@@ -21,42 +19,48 @@ def schema_json() -> str:
 
 
 def _fetch_model(settings: Settings) -> None:
+    # The only network access the engine makes outside Supabase, and only when run explicitly.
     from faster_whisper import download_model
+    from faster_whisper.utils import _MODELS
+    from huggingface_hub import HfApi
 
-    # The only network call in the worker, and only when run explicitly.
     download_model(settings.model, output_dir=str(settings.model_path))
-    print(f"model ready: {settings.model_path}")
+    repository = _MODELS.get(settings.model, settings.model)
+    revision = HfApi().model_info(repository).sha
+    (settings.model_path / "revision.txt").write_text(f"{repository}@{revision}\n")
+    print(f"model ready: {settings.model_path} ({repository}@{revision})")
 
 
-def _serve(settings: Settings) -> None:
-    from .app import create_app
+def _run_engine(settings: Settings) -> None:
+    from .engine import Engine
 
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")  # models come from disk only
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
-    settings.home.mkdir(mode=0o700, parents=True, exist_ok=True)
-    if settings.access_token is not None:
-        token = settings.access_token.get_secret_value()
-    else:
-        token = secrets.token_urlsafe(32)
-        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-        with os.fdopen(os.open(settings.token_path, flags, 0o600), "w") as out:
-            out.write(token)
-    uvicorn.run(
-        create_app(settings, token), host=settings.bind_host, port=settings.port, access_log=False
-    )
+    for noisy in ("httpx", "httpcore", "hpack"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+    if not (
+        settings.engine_email
+        and settings.engine_password.get_secret_value()
+        and settings.supabase_publishable_key
+    ):
+        sys.exit("Set EHEAL_ENGINE_EMAIL, EHEAL_ENGINE_PASSWORD, EHEAL_SUPABASE_PUBLISHABLE_KEY.")
+    Engine(settings).run_forever()
 
 
 def main() -> None:
     settings = load_settings()
-    command = sys.argv[1] if len(sys.argv) > 1 else "serve"
-    if command == "serve":
-        _serve(settings)
+    command = sys.argv[1] if len(sys.argv) > 1 else "engine"
+    if command == "engine":
+        _run_engine(settings)
     elif command == "fetch-model":
         _fetch_model(settings)
     elif command == "export-schema":
         SCHEMA_DIR.mkdir(parents=True, exist_ok=True)
+        for old in SCHEMA_DIR.glob("transcript-*.schema.json"):
+            old.unlink()
         (SCHEMA_DIR / f"transcript-{SCHEMA_VERSION}.schema.json").write_text(schema_json())
     else:
-        sys.exit("usage: clinical-worker [serve|fetch-model|export-schema]")
+        sys.exit("usage: clinical-worker [engine|fetch-model|export-schema]")
 
 
 if __name__ == "__main__":

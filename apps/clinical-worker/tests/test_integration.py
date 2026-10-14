@@ -1,232 +1,269 @@
+"""The real engine against the local Supabase stack (MASTER_BUILD_SPEC.md sections 12.7, 18, 20).
+
+Run `supabase start` first. These tests are skipped when the stack is not running or the tiny
+model has not been fetched (`python -m clinical_worker fetch-model` with EHEAL_MODEL=tiny)."""
+
+import hashlib
 import io
+import json
 import logging
+import random
+import struct
+import subprocess
+import uuid
 import wave
 from pathlib import Path
-from uuid import uuid4
+from typing import Any
 
-import av
 import pytest
-from conftest import FIXTURE, TOKEN, make_client
-from fastapi.testclient import TestClient
-from httpx2 import Response
-from pydantic import SecretStr
+from supabase import Client, ClientOptions, create_client
 
-from clinical_worker import transcribe as transcribe_module
-from clinical_worker.app import create_app
 from clinical_worker.config import Settings
-from clinical_worker.schema import Transcript
+from clinical_worker.engine import Engine
+
+REPO = Path(__file__).resolve().parents[3]
+HOME = Path.home() / ".local" / "share" / "eheal"
+SPEECH = (REPO / "packages/test-fixtures/audio/en-patient-sleep.wav").read_bytes()
+PASSWORD = "correct-horse-battery-1"
 
 
-def _post(client: TestClient, body: bytes, fmt: str = "wav", **params: str) -> tuple[str, Response]:
-    appointment_id = str(uuid4())
-    response = client.post(
-        f"/appointments/{appointment_id}/transcriptions",
-        params={"speaker": "patient", "format": fmt, **params},
-        content=body,
-    )
-    return appointment_id, response
+def _stack() -> dict[str, str] | None:
+    try:
+        raw = subprocess.run(
+            ["supabase", "status", "-o", "json"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        ).stdout
+        status = json.loads(raw[raw.index("{") : raw.rindex("}") + 1])
+        return {
+            "url": status["API_URL"],
+            "public": status["PUBLISHABLE_KEY"],
+            "secret": status["SECRET_KEY"],
+        }
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+        return None
 
 
-def _silence(seconds: int = 3) -> bytes:
+STACK = _stack()
+pytestmark = [
+    pytest.mark.skipif(STACK is None, reason="the local Supabase stack is not running"),
+    pytest.mark.skipif(
+        not (HOME / "models" / "faster-whisper-tiny").is_dir(), reason="no tiny model"
+    ),
+]
+
+
+def _wav(samples: list[int], rate: int = 16000) -> bytes:
     buffer = io.BytesIO()
     with wave.open(buffer, "wb") as out:
         out.setnchannels(1)
         out.setsampwidth(2)
-        out.setframerate(16000)
-        out.writeframes(b"\x00\x00" * 16000 * seconds)
+        out.setframerate(rate)
+        out.writeframes(struct.pack(f"<{len(samples)}h", *samples))
     return buffer.getvalue()
 
 
-def test_health(client: TestClient) -> None:
-    assert client.get("/health").json() == {
-        "status": "ok",
-        "deployment": "local",
-        "model": "tiny",
+_rng = random.Random(7)
+SILENCE = _wav([0] * 16000 * 5)
+ROOM_NOISE = _wav([max(-32768, min(32767, int(_rng.gauss(0, 900)))) for _ in range(16000 * 6)])
+UNDECODABLE = bytes(_rng.getrandbits(8) for _ in range(40_000))
+
+
+def _client(key: str) -> Client:
+    assert STACK is not None
+    return create_client(
+        STACK["url"], key, options=ClientOptions(auto_refresh_token=False, persist_session=False)
+    )
+
+
+def _admin() -> Client:
+    assert STACK is not None
+    return _client(STACK["secret"])
+
+
+def _account(label: str) -> tuple[str, str, Client]:
+    assert STACK is not None
+    email = f"{label}-{uuid.uuid4().hex[:8]}@eheal.test"
+    created = _admin().auth.admin.create_user(
+        {"email": email, "password": PASSWORD, "email_confirm": True}
+    )
+    client = _client(STACK["public"])
+    client.auth.sign_in_with_password({"email": email, "password": PASSWORD})
+    return created.user.id, email, client
+
+
+@pytest.fixture(scope="module")
+def engine() -> Engine:
+    assert STACK is not None
+    user_id, email, _ = _account("engine")
+    _admin().rpc("register_engine", {"p_user_id": user_id, "p_label": "pytest"}).execute()
+    return Engine(
+        Settings(
+            home=HOME,
+            model="tiny",
+            supabase_url=STACK["url"],
+            supabase_publishable_key=STACK["public"],
+            engine_email=email,
+            engine_password=PASSWORD,  # type: ignore[arg-type]
+        )
+    )
+
+
+@pytest.fixture(scope="module")
+def cara() -> tuple[str, str, Client]:
+    return _account("cara")
+
+
+@pytest.fixture(autouse=True)
+def empty_queue() -> None:
+    """One queue serves every test; start each from an empty one."""
+    subprocess.run(
+        ["docker", "exec", "-i", "supabase_db_eHeal", "psql", "-U", "postgres", "-q"],
+        input="update public.transcription_jobs set status = 'cancelled', finished_at = now()"
+        " where status in ('queued', 'processing');",
+        text=True,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _data(request: Any) -> Any:
+    """Runs a request and returns its body, which supabase-py types as any JSON value."""
+    return request.execute().data
+
+
+def _queue(cara: tuple[str, str, Client], practitioner: bytes, patient: bytes) -> str:
+    """Creates a consultation with the two files as its tracks, and starts transcription."""
+    user_id, _, client = cara
+    created = _data(
+        client.rpc(
+            "create_consultation",
+            {
+                "p_synthetic_patient_ref": "SYN-0042",
+                "p_scheduled_at": "2026-10-05T08:30:00Z",
+                "p_language": "en",
+                "p_consent_recorded": True,
+            },
+        )
+    )
+    consultation_id: str = created["consultation_id"]
+    for speaker, data in (("practitioner", practitioner), ("patient", patient)):
+        path = f"{user_id}/{consultation_id}/{speaker}"
+        client.storage.from_("audio").upload(path, data, {"content-type": "audio/wav"})
+        answer = _data(
+            client.rpc(
+                "register_audio_track",
+                {
+                    "p_consultation_id": consultation_id,
+                    "p_speaker": speaker,
+                    "p_format": "wav",
+                    "p_size_bytes": len(data),
+                    "p_sha256": hashlib.sha256(data).hexdigest(),
+                },
+            )
+        )
+        assert answer["ok"], answer
+    assert _data(client.rpc("start_transcription", {"p_consultation_id": consultation_id}))["ok"]
+    return consultation_id
+
+
+def _outcome(cara: tuple[str, str, Client], consultation_id: str) -> dict[str, Any]:
+    client = cara[2]
+    consultation = client.table("consultations").select("status").eq("id", consultation_id)
+    job = (
+        client.table("transcription_jobs")
+        .select("status, error_category, failed_speaker")
+        .eq("consultation_id", consultation_id)
+        .order("queued_at", desc=True)
+        .limit(1)
+    )
+    transcripts = _data(
+        client.table("transcripts").select("id").eq("consultation_id", consultation_id)
+    )
+    segments: list[dict[str, Any]] = (
+        _data(
+            client.table("transcript_segments")
+            .select("speaker, machine_text, confidence, possibly_not_speech")
+            .eq("transcript_id", transcripts[0]["id"])
+            .order("position")
+        )
+        if transcripts
+        else []
+    )
+    return {
+        "status": _data(consultation.single())["status"],
+        "job": _data(job.single()),
+        "segments": segments,
     }
 
 
-def test_transcribes_fixture_and_exports_json(
-    client: TestClient, settings: Settings, caplog: pytest.LogCaptureFixture
-) -> None:
-    caplog.set_level(logging.DEBUG)  # every logger, including faster-whisper's
-    appointment_id, response = _post(client, FIXTURE.read_bytes(), language="en")
-    assert response.status_code == 200
-    transcript = Transcript.model_validate(response.json())
-
-    assert str(transcript.appointment_id) == appointment_id
-    assert transcript.source_languages == ["en"]
-    assert transcript.transcription_model.model == "tiny"
-    assert transcript.segments
-    text = " ".join(s.machine_text for s in transcript.segments).lower()
-    assert "three weeks" in text
-    previous_end = 0.0
-    for segment in transcript.segments:
-        assert segment.speaker == "patient"
-        assert segment.review_status == "unreviewed"
-        assert segment.reviewed_text is None
-        assert previous_end <= segment.start_seconds < segment.end_seconds < 15
-        previous_end = segment.start_seconds
-
-    exported = settings.data_dir / appointment_id / "transcript" / "raw.json"
-    assert Transcript.model_validate_json(exported.read_text()) == transcript
-
-    # Privacy: lifecycle events are logged, transcript content never is.
-    logged = caplog.text.lower()
-    assert "transcription.completed" in logged
-    assert appointment_id in logged
-    for segment in transcript.segments:
-        assert segment.machine_text.lower() not in logged
-    for word in ("sleeping", "three weeks", "synthetic", "morning"):
-        assert word not in logged
-
-
-def test_silence_yields_empty_transcript_not_invented_text(client: TestClient) -> None:
-    _, response = _post(client, _silence())
-    assert response.status_code == 200
-    assert response.json()["segments"] == []
-
-
-@pytest.mark.parametrize(
-    ("body", "fmt", "status", "category"),
-    [
-        (b"x", "exe", 422, "AUDIO_FORMAT_UNSUPPORTED"),
-        (b"", "wav", 422, "AUDIO_FILE_MISSING"),
-        (b"this is not audio" * 100, "wav", 422, "AUDIO_CORRUPT"),
-    ],
-)
-def test_rejects_bad_audio_and_keeps_nothing(
-    client: TestClient, settings: Settings, body: bytes, fmt: str, status: int, category: str
-) -> None:
-    _, response = _post(client, body, fmt)
-    assert response.status_code == status
-    payload = response.json()
-    assert payload["error_category"] == category
-    assert "Traceback" not in payload["message"]
-    assert not [p for p in settings.data_dir.rglob("*") if p.is_file()]
-
-
-def test_rejects_oversized_audio(settings: Settings) -> None:
-    small = settings.model_copy(update={"max_bytes": 1000})
-    with make_client(small) as client:
-        _, response = _post(client, FIXTURE.read_bytes())
-    assert response.status_code == 413
-    assert response.json()["error_category"] == "AUDIO_TOO_LARGE"
-    assert not [p for p in settings.data_dir.rglob("*") if p.is_file()]
-
-
-def test_rejects_overlong_audio(settings: Settings) -> None:
-    short = settings.model_copy(update={"max_duration_seconds": 1.0})
-    with make_client(short) as client:
-        _, response = _post(client, _silence(3))
-    assert response.json()["error_category"] == "AUDIO_DURATION_INVALID"
-
-
-def _files(root: Path, appointment_id: str) -> list[str]:
-    base = root / appointment_id
-    return sorted(str(p.relative_to(base)) for p in base.rglob("*") if p.is_file())
-
-
-def test_missing_model_fails_explicitly_and_keeps_audio(settings: Settings) -> None:
-    missing = settings.model_copy(update={"model": "not-installed"})
-    with make_client(missing) as client:
-        appointment_id, response = _post(client, FIXTURE.read_bytes())
-    assert response.status_code == 503
-    assert response.json()["error_category"] == "TRANSCRIPTION_MODEL_UNAVAILABLE"
-    assert _files(settings.data_dir, appointment_id) == ["audio/patient.wav"]
-
-
-def test_transcription_failure_keeps_audio_and_writes_no_transcript(
-    client: TestClient,
-    settings: Settings,
-    monkeypatch: pytest.MonkeyPatch,
+def test_a_full_job_delivers_a_transcript_and_logs_no_text(
+    engine: Engine,
+    cara: tuple[str, str, Client],
     caplog: pytest.LogCaptureFixture,
+    capfd: pytest.CaptureFixture[str],
 ) -> None:
-    def explode(*_: object) -> None:
-        raise RuntimeError("secret clinical detail")
+    caplog.set_level(logging.DEBUG)  # every logger, every level
+    consultation_id = _queue(cara, SPEECH, SPEECH)
+    assert engine.run_once()
 
-    monkeypatch.setattr(transcribe_module, "_load", explode)
-    caplog.set_level(logging.DEBUG)
-    appointment_id, response = _post(client, FIXTURE.read_bytes())
-    assert response.status_code == 500
-    assert response.json()["error_category"] == "TRANSCRIPTION_FAILED"
-    assert "secret" not in response.text
-    assert "secret" not in caplog.text  # exception messages are never logged
-    assert "RuntimeError" in caplog.text
-    assert _files(settings.data_dir, appointment_id) == ["audio/patient.wav"]
+    outcome = _outcome(cara, consultation_id)
+    assert outcome["status"] == "transcript_ready"
+    assert {s["speaker"] for s in outcome["segments"]} == {"practitioner", "patient"}
+    text = " ".join(s["machine_text"] for s in outcome["segments"]).lower()
+    assert "sleep" in text
 
-
-def test_requires_token(settings: Settings) -> None:
-    with make_client(settings, authorised=False) as client:
-        _, response = _post(client, FIXTURE.read_bytes())
-    assert response.status_code == 401
+    logged = (caplog.text + "".join(capfd.readouterr())).lower()
+    words = {w.strip(".,?!;:'\"") for w in text.split()} - {""}
+    leaked = {w for w in words if len(w) > 5 and w in logged}
+    assert not leaked, f"transcript words in the logs: {sorted(leaked)}"
 
 
-@pytest.mark.parametrize(
-    "headers", [{"Host": "evil.example:8765"}, {"Origin": "http://evil.example"}]
-)
-def test_rejects_foreign_host_and_browser_origin(
-    client: TestClient, headers: dict[str, str]
+def test_digital_silence_gives_an_empty_transcript(
+    engine: Engine, cara: tuple[str, str, Client]
 ) -> None:
-    assert client.get("/health", headers=headers).status_code == 403
+    consultation_id = _queue(cara, SILENCE, SILENCE)
+    assert engine.run_once()
+    outcome = _outcome(cara, consultation_id)
+    assert outcome["status"] == "transcript_ready"
+    assert outcome["segments"] == []
 
 
-def test_same_origin_browser_request_is_allowed(client: TestClient) -> None:
-    assert client.get("/health", headers={"Origin": "http://127.0.0.1:8765"}).status_code == 200
+def test_room_noise_is_flagged_never_passed_off_as_speech(
+    engine: Engine, cara: tuple[str, str, Client]
+) -> None:
+    consultation_id = _queue(cara, ROOM_NOISE, ROOM_NOISE)
+    assert engine.run_once()
+    outcome = _outcome(cara, consultation_id)
+    assert outcome["status"] == "transcript_ready"
+    for segment in outcome["segments"]:
+        assert segment["possibly_not_speech"] or (segment["confidence"] or 0) < 0.5, segment
 
 
-def test_serves_interface_with_strict_content_security_policy(client: TestClient) -> None:
-    page = client.get("/")
-    assert page.status_code == 200
-    assert "Synthetic data only" in page.text
-    assert "script-src 'self'" in page.headers["content-security-policy"]
-    assert client.get("/app.js").status_code == 200
-    assert client.get("/app.css").status_code == 200
-    assert client.get("/../config.py").status_code in (403, 404)
+def test_undecodable_audio_fails_and_names_the_track(
+    engine: Engine, cara: tuple[str, str, Client]
+) -> None:
+    consultation_id = _queue(cara, SPEECH, UNDECODABLE)
+    assert engine.run_once()
+    outcome = _outcome(cara, consultation_id)
+    assert outcome["status"] == "transcription_failed"
+    assert outcome["job"] == {
+        "status": "failed",
+        "error_category": "AUDIO_CORRUPT",
+        "failed_speaker": "patient",
+    }
 
 
-def _unseekable_webm() -> bytes:
-    """Re-encode the fixture the way a browser recorder does: Opus in WebM, no duration."""
-
-    class Pipe(io.BytesIO):
-        def seekable(self) -> bool:
-            return False
-
-    sink = Pipe()
-    with av.open(str(FIXTURE)) as source, av.open(sink, "w", format="webm") as out:
-        stream = out.add_stream("libopus", rate=48000)
-        resampler = av.AudioResampler(format="s16", layout="mono", rate=48000, frame_size=960)
-        for frame in source.decode(audio=0):
-            for resampled in resampler.resample(frame):
-                out.mux(stream.encode(resampled))
-        out.mux(stream.encode(None))
-    return sink.getvalue()
-
-
-def test_transcribes_browser_style_recording(client: TestClient) -> None:
-    _, response = _post(client, _unseekable_webm(), "webm", language="en")
-    assert response.status_code == 200, response.text
-    text = " ".join(s["machine_text"] for s in response.json()["segments"]).lower()
-    assert "sleeping properly" in text
-
-
-def test_cloud_demo_accepts_public_host_and_keeps_nothing(settings: Settings) -> None:
-    cloud = Settings(
-        home=settings.home,
-        model="tiny",
-        deployment="cloud-demo",
-        access_token=SecretStr(TOKEN * 4),
-        public_host="demo.example",
-    )
-    app = create_app(cloud, TOKEN * 4)
-    with TestClient(app, base_url="https://demo.example") as client:
-        assert client.get("/health").json()["deployment"] == "cloud-demo"
-        assert client.get("/", headers={"Origin": "https://demo.example"}).status_code == 200
-        assert client.get("/health", headers={"Origin": "https://evil.example"}).status_code == 403
-        client.headers["Authorization"] = f"Bearer {TOKEN}"
-        _, wrong = _post(client, FIXTURE.read_bytes())
-        assert wrong.status_code == 401
-        client.headers["Authorization"] = f"Bearer {TOKEN * 4}"
-        _, response = _post(client, FIXTURE.read_bytes(), language="en")
-    assert response.status_code == 200
-    assert response.json()["segments"]
-    assert not [p for p in cloud.data_dir.rglob("*") if p.is_file()]
+def test_a_file_changed_after_registration_is_refused(
+    engine: Engine, cara: tuple[str, str, Client]
+) -> None:
+    consultation_id = _queue(cara, SPEECH, SPEECH)
+    # Only the master key can still replace the file; the engine must notice.
+    path = f"{cara[0]}/{consultation_id}/patient"
+    _admin().storage.from_("audio").update(path, SILENCE, {"content-type": "audio/wav"})
+    assert engine.run_once()
+    outcome = _outcome(cara, consultation_id)
+    assert outcome["job"]["error_category"] == "AUDIO_CORRUPT"
+    assert outcome["job"]["failed_speaker"] == "patient"

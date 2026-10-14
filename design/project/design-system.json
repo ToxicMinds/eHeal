@@ -1,0 +1,24 @@
+{
+  "v": 3,
+  "assetGroups": {},
+  "blobs": {},
+  "createdOnFiles": {
+    "at": "2026-10-14T05:20:20Z",
+    "v": 1
+  },
+  "docs": {
+    "sections": []
+  },
+  "groups": [],
+  "lastChange": {
+    "at": "2026-10-14T05:37:51Z",
+    "by": "Claude",
+    "note": "Removed the proof-of-concept band and every reminder about test data, at the owner's request.",
+    "via": "Claude Code"
+  },
+  "layout": "files",
+  "libraries": [],
+  "namespace": "eHeal",
+  "sections": {},
+  "title": "eHeal Design System"
+}
