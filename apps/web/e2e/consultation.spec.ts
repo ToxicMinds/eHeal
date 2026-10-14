@@ -33,7 +33,7 @@ test("create a consultation, record consent, attach and remove audio", async ({ 
   const patient = page.getByRole("region", { name: "Patient track" });
   await practitioner.getByLabel("Practitioner audio file").setInputFiles(FIXTURE);
   await expect(practitioner.getByText("WAV", { exact: true })).toBeVisible();
-  await expect(practitioner.getByText("0:07")).toBeVisible();
+  await expect(practitioner.locator(".wa-player__time")).toContainText("0:07");
   await expect(practitioner.getByText("323 KB")).toBeVisible();
   await practitioner.getByText("Details").click();
   await expect(practitioner.getByText(/^SHA-256 [0-9a-f]{64}$/)).toBeVisible();
