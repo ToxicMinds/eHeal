@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Video } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
@@ -163,6 +163,18 @@ function ConsultationView({ userId }: { userId: string }) {
 
       <Journey status={status} lines={stepLines(loaded)} />
       {problem && <Notice tone="failed" title="That did not work">{problem}</Notice>}
+
+      {["consent_pending", "ready_for_audio"].includes(status) && tracks.length === 0 && (
+        <section className="eh-panel" aria-labelledby="call-title">
+          <h2 className="eh-heading" id="call-title">Consultation call</h2>
+          <p className="eh-text">Talk to the patient by video. Both voices are recorded and transcribed when you end the call.</p>
+          <div className="eh-actions">
+            <Link href={`/room/?id=${consultation.id}`} className="eh-button eh-button--primary">
+              <Video aria-hidden className="eh-icon" />Start video call
+            </Link>
+          </div>
+        </section>
+      )}
 
       {status === "consent_pending" && (
         <section className="eh-panel" aria-labelledby="consent-title">

@@ -17,6 +17,7 @@ test("create a consultation, record consent, attach and remove audio", async ({ 
 
   await page.getByLabel("Patient reference").fill(digits);
   await page.getByLabel("Notes").fill("sleep complaint, patient mentions a supplement");
+  await page.getByLabel(/Consent to transcription is recorded/).uncheck();
   await page.getByRole("button", { name: "Create consultation" }).click();
 
   // Without consent, nothing can be attached.

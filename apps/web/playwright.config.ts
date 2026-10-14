@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
 
 // Local runs serve the static build. Set E2E_BASE_URL (with E2E_EMAIL and
@@ -16,8 +17,14 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         // A synthetic microphone, so recording can be tested without a person.
-        permissions: ["microphone"],
-        launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] },
+        // The speech fixture plays as the microphone; the camera is a test pattern.
+        permissions: ["microphone", "camera"],
+        launchOptions: {
+          args: [
+            "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
+            `--use-file-for-fake-audio-capture=${fileURLToPath(new URL("../../packages/test-fixtures/audio/en-patient-sleep.wav", import.meta.url))}`,
+          ],
+        },
       },
     },
   ],

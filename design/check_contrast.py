@@ -21,6 +21,7 @@ PAIRS = [
     ("on-practitioner", "practitioner-deep", 4.5),
     ("on-patient", "patient", 4.5),
     ("turmeric-ink", "turmeric-tint", 4.5),
+    ("on-screen", "screen", 4.5),
     *[("turmeric-mark", bg, 3) for bg in ("paper", "turmeric-tint")],
     *[(edge, bg, 3) for edge in ("rule-strong", "focus") for bg in ("ground", "paper", "paper-sunk")],
 ]

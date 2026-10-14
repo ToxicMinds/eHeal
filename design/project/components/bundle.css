@@ -226,3 +226,16 @@ body {
   .eh-signin { padding-top: var(--space-8); gap: var(--space-8); }
   .eh-thesis__lead { font-size: 22px; line-height: 30px; }
 }
+
+/* ---------- Call ---------- */
+.eh-call { display: grid; gap: var(--space-4); }
+.eh-screen { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 72vh; border-radius: var(--radius-paper); background: var(--screen); overflow: hidden; }
+.eh-screen > video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.eh-screen__self { position: absolute; right: var(--space-3); bottom: var(--space-3); width: 22%; min-width: 96px; aspect-ratio: 4 / 3; border: 2px solid var(--on-screen); border-radius: var(--radius-paper); background: var(--screen); overflow: hidden; }
+.eh-screen__self > video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.eh-screen__note { position: absolute; inset: 0; display: grid; place-content: center; gap: var(--space-2); padding: var(--space-6); color: var(--on-screen); text-align: center; }
+.eh-live { position: absolute; top: var(--space-3); left: var(--space-3); display: inline-flex; align-items: center; gap: 6px; padding: 2px var(--space-3) 2px var(--space-2); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--screen) 70%, transparent); color: var(--on-screen); font: 600 13px/20px var(--font-text); font-variant-numeric: tabular-nums; }
+.eh-live::before { content: ""; width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--on-screen); animation: eh-pulse 1.2s ease-in-out infinite; }
+.eh-call__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-3); }
+.eh-invite { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.eh-invite > .eh-input { flex: 1; min-width: 0; font: 400 14px/20px var(--font-mono); }
