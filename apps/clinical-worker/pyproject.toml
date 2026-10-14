@@ -32,7 +32,13 @@ dev = [
 line-length = 100
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "E501"]
+# Tests may assert, use a throwaway password for local accounts, call CLI tools on PATH,
+# and seed random noise.
+"tests/*" = ["S101", "E501", "S105", "S311", "S603", "S607"]
+
+[tool.pytest.ini_options]
+# supabase-py warns about its own internal arguments.
+filterwarnings = ["ignore::DeprecationWarning:supabase.*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S"]
