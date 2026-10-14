@@ -52,7 +52,7 @@ function ConsultationList() {
           </p>
         ) : rows.length === 0 ? (
           <p className="rounded-xl border border-dashed bg-card p-8 text-muted-foreground">
-            No consultations yet. Create an invented one to try the workflow.
+            No consultations yet. Create one to attach its audio and get a transcript.
           </p>
         ) : (
           <div className="overflow-x-auto rounded-xl border bg-card">

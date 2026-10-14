@@ -1,11 +1,8 @@
 import { expect, test } from "./account";
 
-const BANNER = "Development proof of concept. Invented data only.";
-
 test("a visitor who is not signed in is sent to sign-in", async ({ page, problems }) => {
   await page.goto("/consultations/");
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-  await expect(page.getByText(BANNER)).toBeVisible();
   await expect(page.getByRole("link", { name: /sign up|register|create account/i })).toHaveCount(0);
   expect(problems).toEqual([]);
 });
@@ -33,7 +30,6 @@ test("a practitioner signs in, sees their consultations, and signs out", async (
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page.getByRole("heading", { name: "Consultations" })).toBeVisible();
-  await expect(page.getByText(BANNER)).toBeVisible();
   await expect(page.getByText(`Signed in as ${account.email}`)).toBeVisible();
   if (account.references.length > 0) {
     await expect(page.getByRole("row", { name: /SYN-0043/ })).toContainText("Slovak");

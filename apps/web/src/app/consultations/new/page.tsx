@@ -19,7 +19,7 @@ import { LANGUAGE_LABEL } from "@/lib/status";
 const schema = z.object({
   synthetic_patient_ref: z
     .string()
-    .regex(/^SYN-\d{1,8}$/, "Use SYN- and up to eight digits, for example SYN-0042. Real names and identifiers are not accepted."),
+    .regex(/^SYN-\d{1,8}$/, "Use SYN- and up to eight digits, for example SYN-0042."),
   scheduled_at: z.string().min(1, "Choose the date and time of the consultation."),
   language: z.enum(["en", "de", "sk", "auto"], "Choose the language of the consultation."),
   consent_recorded: z.boolean(),
@@ -79,12 +79,12 @@ function NewConsultation() {
       <h1 className="mt-2 font-heading text-4xl font-semibold tracking-tight">New consultation</h1>
       <form onSubmit={handleSubmit(create)} noValidate className="mt-6 grid max-w-xl gap-5 rounded-xl border bg-card p-6">
         <div className="grid gap-1.5">
-          <Label htmlFor="ref">Synthetic patient reference</Label>
+          <Label htmlFor="ref">Patient reference</Label>
           <Input id="ref" className="font-mono" autoComplete="off" spellCheck={false}
             aria-invalid={Boolean(errors.synthetic_patient_ref)} aria-describedby="ref-help ref-error"
             {...register("synthetic_patient_ref")} />
           <p id="ref-help" className="text-sm text-muted-foreground">
-            An invented reference such as SYN-0042. Never a real name or identifier.
+            SYN- and up to eight digits, for example SYN-0042.
           </p>
           {problem("ref-error", errors.synthetic_patient_ref?.message)}
         </div>
@@ -116,11 +116,11 @@ function NewConsultation() {
         </p>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="notes">Notes about the invented scenario</Label>
+          <Label htmlFor="notes">Notes</Label>
           <Textarea id="notes" rows={3} aria-invalid={Boolean(errors.scenario_notes)}
             aria-describedby="notes-help notes-error" {...register("scenario_notes")} />
           <p id="notes-help" className="text-sm text-muted-foreground">
-            For example &ldquo;sleep complaint, patient mentions a supplement&rdquo;. Nothing about a real person.
+            For example &ldquo;sleep complaint, patient mentions a supplement&rdquo;.
           </p>
           {problem("notes-error", errors.scenario_notes?.message)}
         </div>
@@ -130,8 +130,7 @@ function NewConsultation() {
           <span>
             <span className="font-semibold">Consent to transcription is recorded</span>
             <span className="block text-sm text-muted-foreground">
-              For this invented consultation. Without it, no audio can be attached or transcribed.
-              You can record it later.
+              Without it, no audio can be attached or transcribed. You can record it later.
             </span>
           </span>
         </label>

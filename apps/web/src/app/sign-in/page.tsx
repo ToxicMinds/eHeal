@@ -117,12 +117,12 @@ const SAMPLE = [
   { at: "0:09.1", speaker: "Practitioner", text: "And when you do wake, what time is it usually?" },
 ] as const;
 
-/** An invented exchange that shows what review looks like: two voices and one honest doubt. */
+/** An example exchange that shows what review looks like: two voices and one honest doubt. */
 function SampleTranscript() {
   return (
     <figure className="mt-8 max-w-md">
       <figcaption className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-        Invented example
+        Example
       </figcaption>
       <ol className="mt-3 grid gap-3">
         {SAMPLE.map((line) => (
