@@ -3,8 +3,8 @@ import type { Database } from "./database.types";
 export type ConsultationStatus = Database["public"]["Enums"]["consultation_status"];
 export type ConsultationLanguage = Database["public"]["Enums"]["consultation_language"];
 
-/** The four things that must happen to a consultation in phase 1, in order. */
-export const STAGES = ["Consent", "Audio", "Transcript", "Review"] as const;
+/** The four things that must happen to a consultation, in order. */
+export const STAGES = ["Consent", "Call", "Transcript", "Form"] as const;
 export type StageState = "done" | "current" | "attention" | "failed" | "pending";
 type Stages = readonly [StageState, StageState, StageState, StageState];
 
@@ -12,7 +12,7 @@ type Stages = readonly [StageState, StageState, StageState, StageState];
 export type Tone = "neutral" | "current" | "working" | "attention" | "failed" | "done";
 
 /** Who has to act next: the groups of the consultation list. */
-export const GROUPS = ["Needs you", "Transcribing", "Done"] as const;
+export const GROUPS = ["Needs you", "Watson is working", "Done"] as const;
 export type Group = (typeof GROUPS)[number];
 
 type Summary = { label: string; tone: Tone; group: Group; stages: Stages };
@@ -23,15 +23,15 @@ const SUMMARY: Record<ConsultationStatus, Summary> = {
   consent_pending: { label: "Waiting for consent", tone: "neutral", group: "Needs you", stages: ["current", "pending", "pending", "pending"] },
   ready_for_audio: { label: "Waiting for audio", tone: "current", group: "Needs you", stages: ["done", "current", "pending", "pending"] },
   audio_imported: { label: "Ready to transcribe", tone: "current", group: "Needs you", stages: ["done", "done", "current", "pending"] },
-  transcription_processing: { label: "Transcribing", tone: "working", group: "Transcribing", stages: ["done", "done", "current", "pending"] },
+  transcription_processing: { label: "Transcribing", tone: "working", group: "Watson is working", stages: ["done", "done", "current", "pending"] },
   transcription_failed: { label: "Transcription failed", tone: "failed", group: "Needs you", stages: ["done", "done", "failed", "pending"] },
-  transcript_ready: { label: "Transcript ready to review", tone: "attention", group: "Needs you", stages: ["done", "done", "done", "attention"] },
+  transcript_ready: { label: "Transcript ready", tone: "attention", group: "Needs you", stages: ["done", "done", "done", "current"] },
   transcript_under_review: { label: "Review in progress", tone: "attention", group: "Needs you", stages: ["done", "done", "done", "attention"] },
-  transcript_reviewed: LATER("Transcript reviewed"),
-  extraction_processing: LATER("Drafting", "working"),
-  extraction_failed: LATER("Drafting failed", "failed"),
-  draft_ready: LATER("Draft ready", "attention"),
-  under_review: LATER("Draft under review", "attention"),
+  transcript_reviewed: { label: "Transcript reviewed", tone: "attention", group: "Needs you", stages: ["done", "done", "done", "current"] },
+  extraction_processing: { label: "Filling in the form", tone: "working", group: "Watson is working", stages: ["done", "done", "done", "current"] },
+  extraction_failed: { label: "Form could not be filled in", tone: "failed", group: "Needs you", stages: ["done", "done", "done", "failed"] },
+  draft_ready: { label: "Form ready to check", tone: "attention", group: "Needs you", stages: ["done", "done", "done", "attention"] },
+  under_review: { label: "Checking the form", tone: "attention", group: "Needs you", stages: ["done", "done", "done", "attention"] },
   approved: LATER("Approved"),
   corrected: LATER("Corrected"),
   consent_withdrawn: { label: "Consent withdrawn", tone: "failed", group: "Done", stages: ["failed", "pending", "pending", "pending"] },

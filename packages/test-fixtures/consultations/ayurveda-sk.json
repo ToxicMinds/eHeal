@@ -1,0 +1,181 @@
+{
+  "title": "Vymyslená konzultácia: zápcha, spánok",
+  "language": "sk",
+  "turns": [
+    [
+      "practitioner",
+      "Dobrý deň. Povedzte mi najprv, koľko máte rokov a čo robíte?"
+    ],
+    [
+      "patient",
+      "Mám tridsaťpäť rokov a pracujem ako účtovníčka."
+    ],
+    [
+      "practitioner",
+      "A čo vás ku mne privádza?"
+    ],
+    [
+      "patient",
+      "Asi pol roka mám zápchu a nafukovanie. A v noci sa často budím okolo druhej a už nezaspím."
+    ],
+    [
+      "practitioner",
+      "Ako sa stravujete počas dňa?"
+    ],
+    [
+      "patient",
+      "Ráno si dám len kávu. Obedujem v práci, väčšinou niečo rýchle. Večer jem dosť chleba so syrom, lebo nemám čas variť."
+    ],
+    [
+      "practitioner",
+      "Ako často chodíte na stolicu?"
+    ],
+    [
+      "patient",
+      "Raz za dva až tri dni a je to dosť tvrdé."
+    ],
+    [
+      "practitioner",
+      "Máte nejaké alergie?"
+    ],
+    [
+      "patient",
+      "Mám alergiu na peľ brezy, inak nič."
+    ],
+    [
+      "practitioner",
+      "Mali ste nejaké operácie?"
+    ],
+    [
+      "patient",
+      "Nie, žiadne."
+    ],
+    [
+      "practitioner",
+      "Podľa pulzu a podľa toho, čo hovoríte, je u vás narušená vata, hlavne v hrubom čreve, odtiaľ tá zápcha a nafukovanie. Vaša konštitúcia je vata kapha."
+    ],
+    [
+      "practitioner",
+      "Odporúčam vám každé ráno pohár teplej vody s citrónom. Večer pol lyžičky triphaly. Cez deň pite teplú vodu, aspoň dva litre. Vynechajte syr a biele pečivo, jedzte teplé varené jedlá. Raz týždenne masáž olejom, abhyanga. Kontrolu si dáme o šesť týždňov."
+    ],
+    [
+      "patient",
+      "Ďakujem, skúsim to."
+    ]
+  ],
+  "expected": {
+    "age": {
+      "discussed": true,
+      "include": [
+        "35|tridsaťpäť"
+      ]
+    },
+    "work": {
+      "discussed": true,
+      "include": [
+        "účtovn"
+      ]
+    },
+    "diet": {
+      "discussed": true,
+      "include": [
+        "káv",
+        "syr|chlieb|chleb"
+      ]
+    },
+    "digestion": {
+      "discussed": true,
+      "include": [
+        "nafuk"
+      ]
+    },
+    "bowel_movements": {
+      "discussed": true,
+      "include": [
+        "dva|2",
+        "tvrd"
+      ]
+    },
+    "sleep": {
+      "discussed": true,
+      "include": [
+        "druh|2"
+      ]
+    },
+    "menstrual_cycle": {
+      "discussed": false
+    },
+    "children": {
+      "discussed": false
+    },
+    "allergies": {
+      "discussed": true,
+      "include": [
+        "peľ|brez"
+      ]
+    },
+    "operations": {
+      "discussed": true,
+      "include": [
+        "žiadn|nie|none|no "
+      ]
+    },
+    "present_conditions": {
+      "discussed": true,
+      "include": [
+        "zápch|vata"
+      ]
+    },
+    "dosha": {
+      "discussed": true,
+      "include": [
+        "vata",
+        "kapha"
+      ]
+    },
+    "therapies": {
+      "discussed": true,
+      "include": [
+        "triphal",
+        "abhyang"
+      ]
+    },
+    "individual_programme": {
+      "discussed": false
+    },
+    "review": {
+      "discussed": true,
+      "include": [
+        "šesť|6"
+      ]
+    },
+    "morning_routine": {
+      "discussed": true,
+      "include": [
+        "citrón"
+      ]
+    },
+    "drinking_routine": {
+      "discussed": true,
+      "include": [
+        "tepl",
+        "dva litre|2 litre|2 l"
+      ]
+    },
+    "diet_restrictions": {
+      "discussed": true,
+      "include": [
+        "syr"
+      ]
+    },
+    "yoga": {
+      "discussed": false
+    },
+    "exercise": {
+      "discussed": false
+    },
+    "other": {
+      "discussed": false
+    }
+  }
+}

@@ -20,6 +20,7 @@ from supabase import Client, ClientOptions, create_client
 
 from clinical_worker.config import Settings
 from clinical_worker.engine import Engine
+from clinical_worker.errors import ErrorCategory, WorkerError
 
 REPO = Path(__file__).resolve().parents[3]
 HOME = Path.home() / ".local" / "share" / "watson"
@@ -122,6 +123,8 @@ def empty_queue() -> None:
     subprocess.run(
         ["docker", "exec", "-i", "supabase_db_watson", "psql", "-U", "postgres", "-q"],
         input="update public.transcription_jobs set status = 'cancelled', finished_at = now()"
+        " where status in ('queued', 'processing');"
+        " update public.form_jobs set status = 'cancelled', finished_at = now()"
         " where status in ('queued', 'processing');",
         text=True,
         check=True,
@@ -267,3 +270,143 @@ def test_a_file_changed_after_registration_is_refused(
     outcome = _outcome(cara, consultation_id)
     assert outcome["job"]["error_category"] == "AUDIO_CORRUPT"
     assert outcome["job"]["failed_speaker"] == "patient"
+
+
+TEMPLATE = json.loads((REPO / "packages/test-fixtures/templates/ayurveda-intake.json").read_text())
+
+
+class StandInModel:
+    """Answers the first field from line 0 (and an invented line 999); leaves the rest empty."""
+
+    last_seconds = 0.1
+    last_usage = {"prompt_tokens": 10, "completion_tokens": 5}
+
+    def complete(self, system: str, user: str, schema: dict[str, Any], stop: Any) -> str:
+        keys = list(schema["properties"])
+        answers: dict[str, Any] = {k: {"lines": [], "answer": None} for k in keys}
+        answers[keys[0]] = {"lines": [0, 999], "answer": "Sleeps badly for three weeks."}
+        return json.dumps(answers)
+
+
+@pytest.fixture(scope="module")
+def dana() -> tuple[str, str, Client]:
+    """A practitioner with a form template (cara has none, so her transcripts stop there)."""
+    account = _account("dana")
+    assert _data(account[2].rpc("set_form_template", {"p_definition": TEMPLATE}))["ok"]
+    return account
+
+
+def _status(practitioner: tuple[str, str, Client], consultation_id: str) -> str:
+    return str(
+        _data(
+            practitioner[2]
+            .table("consultations")
+            .select("status")
+            .eq("id", consultation_id)
+            .single()
+        )["status"]
+    )
+
+
+def test_a_transcript_goes_on_to_a_form_the_practitioner_checks_and_approves(
+    engine: Engine, dana: tuple[str, str, Client]
+) -> None:
+    client = dana[2]
+    consultation_id = _queue(dana, SPEECH, SPEECH)
+    assert engine.run_once()  # the transcript
+    assert _status(dana, consultation_id) == "extraction_processing"
+
+    engine.form_model = StandInModel()  # type: ignore[assignment]
+    assert engine.run_once()  # the form
+    assert _status(dana, consultation_id) == "draft_ready"
+    form = _data(
+        client.table("forms").select("id, status").eq("consultation_id", consultation_id).single()
+    )
+    answers = _data(
+        client.table("form_answers")
+        .select("field_key, machine_text, evidence, review")
+        .eq("form_id", form["id"])
+        .order("position")
+    )
+    assert len(answers) == 21 and answers[0]["field_key"] == "age"
+    assert answers[0]["machine_text"] == "Sleeps badly for three weeks."
+    assert answers[0]["evidence"] == [0]  # line 999 does not exist and was dropped
+    assert all(a["machine_text"] is None for a in answers[1:])
+
+    def review(key: str, decision: str, text: str | None = None) -> dict[str, Any]:
+        return dict(
+            _data(
+                client.rpc(
+                    "review_form_answer",
+                    {
+                        "p_form_id": form["id"],
+                        "p_field_key": key,
+                        "p_decision": decision,
+                        "p_text": text,
+                    },
+                )
+            )
+        )
+
+    def approve() -> dict[str, Any]:
+        return dict(_data(client.rpc("approve_form", {"p_form_id": form["id"]})))
+
+    assert approve()["error_category"] == "FORM_NOT_REVIEWED"
+    assert review("work", "accept")["error_category"] == "VALIDATION"  # nothing to accept
+    assert review("work", "edit", "Teacher")["ok"]
+    assert _status(dana, consultation_id) == "under_review"
+    assert review("age", "accept")["ok"]
+    assert approve()["ok"]
+    assert _status(dana, consultation_id) == "approved"
+    assert review("age", "reject")["error_category"] == "INVALID_STATE_TRANSITION"
+
+
+def test_a_form_that_cannot_be_filled_fails_and_can_be_tried_again(
+    engine: Engine, dana: tuple[str, str, Client], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    consultation_id = _queue(dana, SPEECH, SPEECH)
+    assert engine.run_once()
+
+    def unavailable() -> Any:
+        raise WorkerError(ErrorCategory.FORM_MODEL_UNAVAILABLE)
+
+    monkeypatch.setattr(engine, "_load_form_model", unavailable)
+    assert engine.run_once()
+    assert _status(dana, consultation_id) == "extraction_failed"
+    job = _data(
+        dana[2]
+        .table("form_jobs")
+        .select("error_category")
+        .eq("consultation_id", consultation_id)
+        .single()
+    )
+    assert job["error_category"] == "FORM_MODEL_UNAVAILABLE"
+    assert _data(dana[2].rpc("start_form", {"p_consultation_id": consultation_id}))["ok"]
+    assert _status(dana, consultation_id) == "extraction_processing"
+
+
+def test_the_database_refuses_answers_that_do_not_match_the_form(
+    engine: Engine, dana: tuple[str, str, Client]
+) -> None:
+    _queue(dana, SPEECH, SPEECH)
+    assert engine.run_once()
+    claimed = engine.main.rpc("engine_claim_form_job", {})["job"]
+    args = {"p_job_id": claimed["job_id"], "p_attempt": claimed["attempt"], "p_metrics": {}}
+    one_field = [{"key": "age", "text": "42", "evidence": []}]
+    assert (
+        engine.main.rpc("engine_complete_form_job", {**args, "p_answers": one_field})[
+            "error_category"
+        ]
+        == "VALIDATION"
+    )
+    every_field = [
+        {"key": f["key"], "text": None, "evidence": [999]}
+        for s in TEMPLATE["sections"]
+        for f in s["fields"]
+    ]
+    assert (
+        engine.main.rpc("engine_complete_form_job", {**args, "p_answers": every_field})[
+            "error_category"
+        ]
+        == "VALIDATION"
+    )

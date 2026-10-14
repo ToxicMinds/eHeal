@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -185,3 +186,36 @@ class TestSettings:
 def test_log_event_refuses_fields_outside_the_allow_list() -> None:
     with pytest.raises(ValueError, match="machine_text"):
         log_event("x", machine_text="anything")
+
+
+def test_form_answers_keep_only_real_lines_and_say_nothing_for_topics_not_discussed() -> None:
+    from clinical_worker.form import Line, Template, parse
+
+    template = Template.model_validate(
+        {
+            "title": "T",
+            "sections": [
+                {
+                    "title": "S",
+                    "fields": [
+                        {"key": "sleep", "label": "Sleep"},
+                        {"key": "diet", "label": "Diet"},
+                        {"key": "work", "label": "Work"},
+                    ],
+                }
+            ],
+        }
+    )
+    lines = [Line(0, "patient", "I sleep badly."), Line(1, "practitioner", "Since when?")]
+    raw = json.dumps(
+        {
+            "sleep": {"lines": [0, 0, 7, "1"], "answer": "  Sleeps badly.  "},
+            "diet": {"lines": [1], "answer": "None specified."},
+            "extra": {"lines": [0], "answer": "not asked for"},
+        }
+    )
+    answers = {a.key: a for a in parse(raw, template, lines)}
+    assert answers["sleep"].text == "Sleeps badly." and answers["sleep"].evidence == [0]
+    assert answers["diet"].text is None and answers["diet"].evidence == []
+    assert answers["work"].text is None  # missing from the output
+    assert set(answers) == {"sleep", "diet", "work"}

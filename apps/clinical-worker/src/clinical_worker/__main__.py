@@ -1,6 +1,6 @@
 """`clinical-worker engine` runs the engine.
 
-`fetch-model` and `export-schema` are setup commands."""
+`fetch-model`, `fetch-form-model` and `export-schema` are setup commands."""
 
 import json
 import logging
@@ -31,6 +31,19 @@ def _fetch_model(settings: Settings) -> None:
     print(f"model ready: {settings.model_path} ({repository}@{revision})")
 
 
+def _fetch_form_model(settings: Settings) -> None:
+    # The form model (decision 0005), fetched once; the engine reads it from disk only.
+    from huggingface_hub import hf_hub_download
+
+    settings.form_model_path.parent.mkdir(parents=True, exist_ok=True)
+    hf_hub_download(
+        settings.form_model_repository,
+        settings.form_model_file,
+        local_dir=str(settings.form_model_path.parent),
+    )
+    print(f"form model ready: {settings.form_model_path}")
+
+
 def _run_engine(settings: Settings) -> None:
     from .engine import Engine
 
@@ -56,13 +69,15 @@ def main() -> None:
         _run_engine(settings)
     elif command == "fetch-model":
         _fetch_model(settings)
+    elif command == "fetch-form-model":
+        _fetch_form_model(settings)
     elif command == "export-schema":
         SCHEMA_DIR.mkdir(parents=True, exist_ok=True)
         for old in SCHEMA_DIR.glob("transcript-*.schema.json"):
             old.unlink()
         (SCHEMA_DIR / f"transcript-{SCHEMA_VERSION}.schema.json").write_text(schema_json())
     else:
-        sys.exit("usage: clinical-worker [engine|fetch-model|export-schema]")
+        sys.exit("usage: clinical-worker [engine|fetch-model|fetch-form-model|export-schema]")
 
 
 if __name__ == "__main__":

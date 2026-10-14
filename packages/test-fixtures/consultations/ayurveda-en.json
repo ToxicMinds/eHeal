@@ -1,0 +1,285 @@
+{
+  "title": "Invented first consultation: acidity, poor sleep",
+  "language": "en",
+  "voices": {
+    "practitioner": "en_GB-alan-medium",
+    "patient": "en_US-amy-medium"
+  },
+  "turns": [
+    [
+      "practitioner",
+      "Good morning. Can you hear me well? Good. So, this is our first consultation. Tell me a little about yourself first. How old are you?"
+    ],
+    [
+      "patient",
+      "I'm forty-two. I'm a primary school teacher, I teach the third class."
+    ],
+    [
+      "practitioner",
+      "And what brings you to me?"
+    ],
+    [
+      "patient",
+      "Mostly my stomach, I think. For about two months I get this burning after I eat, like heartburn, and I'm bloated in the evenings. And I'm not sleeping well."
+    ],
+    [
+      "practitioner",
+      "Let's go slowly. What does a normal day of eating look like for you?"
+    ],
+    [
+      "patient",
+      "Honestly, I skip breakfast most days. I have coffee, maybe three cups before lunch. Lunch is a sandwich at my desk, quickly, between classes. And then dinner is the big meal, usually around nine in the evening, after the kids are in bed."
+    ],
+    [
+      "practitioner",
+      "Do you like spicy food?"
+    ],
+    [
+      "patient",
+      "Yes, a lot. Chilli, curries, and I drink everything cold, even in winter, ice water."
+    ],
+    [
+      "practitioner",
+      "And the burning, when is it worst?"
+    ],
+    [
+      "patient",
+      "After dinner, and when I eat tomatoes or spicy things. Sometimes it comes up into my throat at night."
+    ],
+    [
+      "practitioner",
+      "How are your bowel movements?"
+    ],
+    [
+      "patient",
+      "Not regular. Sometimes I'm constipated for two or three days, and then it's loose. Well, actually, it's more like every second day, I'd say."
+    ],
+    [
+      "practitioner",
+      "And your sleep? You said it's not good."
+    ],
+    [
+      "patient",
+      "I fall asleep fine around eleven, but I wake up at three and then my head starts going, school, lists, and I can't fall back asleep until five or so."
+    ],
+    [
+      "practitioner",
+      "Is your period regular?"
+    ],
+    [
+      "patient",
+      "Yes, every twenty-eight days. The first day is quite painful, and it's been heavier for the last half a year."
+    ],
+    [
+      "practitioner",
+      "Do you have children?"
+    ],
+    [
+      "patient",
+      "Two, they're eight and eleven. Both normal births, no complications."
+    ],
+    [
+      "practitioner",
+      "Any allergies? Food that doesn't agree with you?"
+    ],
+    [
+      "patient",
+      "No allergies that I know of. But milk, I think milk makes me bloated, so I avoid it a bit."
+    ],
+    [
+      "practitioner",
+      "Have you had any operations?"
+    ],
+    [
+      "patient",
+      "My appendix was taken out when I was nineteen. Nothing else."
+    ],
+    [
+      "practitioner",
+      "And in the family, anything I should know?"
+    ],
+    [
+      "patient",
+      "My mother has type two diabetes. I'm a little worried about that, but my own blood tests were fine last spring."
+    ],
+    [
+      "practitioner",
+      "Good. Let me tell you what I see. From what you describe, and from your pulse last week, there is a lot of pitta, heat, especially in the digestion. That is the burning and the acidity, what we call amla pitta. And vata is disturbed too: the irregular bowels and waking at three in the morning are typical. By nature I would say you are a pitta vata constitution."
+    ],
+    [
+      "patient",
+      "That makes sense, I'm always hot."
+    ],
+    [
+      "practitioner",
+      "So, what I recommend. Every morning, wake up by half past six, scrape your tongue, and drink a glass of warm water before anything else. No coffee on an empty stomach."
+    ],
+    [
+      "patient",
+      "No coffee at all?"
+    ],
+    [
+      "practitioner",
+      "One cup, after breakfast, before noon. Through the day drink warm water, about two litres, never ice cold. For the food: no chilli, no tomatoes, nothing fried, and no alcohol for now. Eat a real breakfast, a warm porridge is good, and have dinner before half past seven, and keep it light, soup or rice and vegetables."
+    ],
+    [
+      "patient",
+      "Okay, the dinner will be hard but I'll try."
+    ],
+    [
+      "practitioner",
+      "For the acidity I will give you avipattikar churna, half a teaspoon after lunch and after dinner. I also recommend a warm oil massage, abhyanga, once a week for four weeks, and shirodhara for the sleep. For the breath, do sheetali, the cooling breath, ten rounds every evening, and some gentle yoga before bed."
+    ],
+    [
+      "patient",
+      "Do I need to come in for all of that?"
+    ],
+    [
+      "practitioner",
+      "I suggest an individual programme of twenty-one days, and we review everything in four weeks."
+    ],
+    [
+      "patient",
+      "Thank you. That's clear."
+    ]
+  ],
+  "expected": {
+    "age": {
+      "discussed": true,
+      "include": [
+        "42|forty-two"
+      ]
+    },
+    "work": {
+      "discussed": true,
+      "include": [
+        "teacher"
+      ]
+    },
+    "diet": {
+      "discussed": true,
+      "include": [
+        "breakfast",
+        "coffee",
+        "dinner",
+        "spicy|chilli|curr"
+      ]
+    },
+    "digestion": {
+      "discussed": true,
+      "include": [
+        "burning",
+        "bloat"
+      ]
+    },
+    "bowel_movements": {
+      "discussed": true,
+      "include": [
+        "constipat",
+        "second day"
+      ]
+    },
+    "sleep": {
+      "discussed": true,
+      "include": [
+        "three|3",
+        "eleven|11"
+      ]
+    },
+    "menstrual_cycle": {
+      "discussed": true,
+      "include": [
+        "28|twenty-eight",
+        "pain"
+      ]
+    },
+    "children": {
+      "discussed": true,
+      "include": [
+        "two|2"
+      ]
+    },
+    "allergies": {
+      "discussed": true,
+      "include": [
+        "milk"
+      ]
+    },
+    "operations": {
+      "discussed": true,
+      "include": [
+        "appendix"
+      ]
+    },
+    "present_conditions": {
+      "discussed": true,
+      "include": [
+        "acid"
+      ],
+      "exclude": [
+        "diabetes"
+      ]
+    },
+    "dosha": {
+      "discussed": true,
+      "include": [
+        "pitta",
+        "vata"
+      ]
+    },
+    "therapies": {
+      "discussed": true,
+      "include": [
+        "avipattikar",
+        "abhyanga",
+        "shirodhara"
+      ]
+    },
+    "individual_programme": {
+      "discussed": true,
+      "include": [
+        "21|twenty-one"
+      ]
+    },
+    "review": {
+      "discussed": true,
+      "include": [
+        "four weeks|4 weeks"
+      ]
+    },
+    "morning_routine": {
+      "discussed": true,
+      "include": [
+        "tongue",
+        "warm water"
+      ]
+    },
+    "drinking_routine": {
+      "discussed": true,
+      "include": [
+        "warm",
+        "two litres|2 litres|2 l"
+      ]
+    },
+    "diet_restrictions": {
+      "discussed": true,
+      "include": [
+        "chilli",
+        "tomato",
+        "alcohol"
+      ]
+    },
+    "yoga": {
+      "discussed": true,
+      "include": [
+        "sheetali"
+      ]
+    },
+    "exercise": {
+      "discussed": false
+    },
+    "other": {
+      "discussed": false
+    }
+  }
+}

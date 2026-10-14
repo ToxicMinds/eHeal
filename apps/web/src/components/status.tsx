@@ -23,7 +23,7 @@ export function StatusChip({ status }: { status: ConsultationStatus }) {
   );
 }
 
-/** Consent, Audio, Transcript, Review: four bars with a word under each. */
+/** Consent, Call, Transcript, Form: four bars with a word under each. */
 export function Journey({ status, lines }: { status: ConsultationStatus; lines: readonly string[] }) {
   const { stages } = summarise(status);
   return (

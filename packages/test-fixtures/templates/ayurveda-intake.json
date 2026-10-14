@@ -1,0 +1,46 @@
+{
+  "title": "Ayurvedic intake (example)",
+  "sections": [
+    {
+      "title": "About the patient",
+      "fields": [
+        { "key": "age", "label": "Age", "mode": "extract", "hint": "The patient's age in years." },
+        { "key": "work", "label": "Work", "mode": "extract", "hint": "What the patient does for a living." }
+      ]
+    },
+    {
+      "title": "Questionnaire",
+      "fields": [
+        { "key": "diet", "label": "Diet", "mode": "extract", "hint": "What, how much and when the patient eats and drinks." },
+        { "key": "digestion", "label": "Digestion", "mode": "extract", "hint": "Appetite, bloating, acidity, discomfort after meals." },
+        { "key": "bowel_movements", "label": "Bowel movements", "mode": "extract", "hint": "How often, consistency, constipation or loose stools." },
+        { "key": "sleep", "label": "Sleep", "mode": "extract", "hint": "When the patient sleeps and wakes, and how well." },
+        { "key": "menstrual_cycle", "label": "Menstrual cycle", "mode": "extract", "hint": "Regularity, length, pain, flow." },
+        { "key": "children", "label": "Children", "mode": "extract", "hint": "Number of children, pregnancies, births." },
+        { "key": "allergies", "label": "Allergies and food intolerances", "mode": "extract", "hint": "Known allergies and foods the patient does not tolerate." },
+        { "key": "operations", "label": "Operations", "mode": "extract", "hint": "Past surgery and when." }
+      ]
+    },
+    {
+      "title": "Assessment",
+      "fields": [
+        { "key": "present_conditions", "label": "Diagnosis: present conditions", "mode": "suggest", "hint": "The patient's own current health problems, as the practitioner assessed them in the conversation." },
+        { "key": "dosha", "label": "Constitution (dosha)", "mode": "suggest", "hint": "The patient's constitution and current imbalance in Ayurvedic terms." }
+      ]
+    },
+    {
+      "title": "Recommendations",
+      "fields": [
+        { "key": "therapies", "label": "Therapies", "mode": "extract", "hint": "Treatments, herbs and remedies the practitioner recommended." },
+        { "key": "individual_programme", "label": "Individual programme", "mode": "extract", "hint": "Whether an individual programme was recommended, and for how many days." },
+        { "key": "review", "label": "Review", "mode": "extract", "hint": "When the follow-up consultation should be." },
+        { "key": "morning_routine", "label": "Morning routine", "mode": "extract", "hint": "What the practitioner advised for the morning." },
+        { "key": "drinking_routine", "label": "Drinking routine", "mode": "extract", "hint": "What, when and how much to drink." },
+        { "key": "diet_restrictions", "label": "Diet and restrictions", "mode": "extract", "hint": "Foods and habits to avoid or change." },
+        { "key": "yoga", "label": "Yoga", "mode": "extract", "hint": "Yoga or breathing practice recommended." },
+        { "key": "exercise", "label": "Exercise", "mode": "extract", "hint": "Physical exercise recommended." },
+        { "key": "other", "label": "Other", "mode": "extract", "hint": "Any other advice." }
+      ]
+    }
+  ]
+}
