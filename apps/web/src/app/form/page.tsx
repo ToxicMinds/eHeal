@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, ChevronLeft, Info, Pencil, Plus, X } from "lucide-react";
+import { Check, ChevronLeft, Pencil, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Notice } from "@/components/status";
 import { call, explain } from "@/lib/api";
@@ -49,7 +49,7 @@ async function fetchForm(id: string): Promise<Loaded | "missing" | "failed"> {
   const [answers, segments] = await Promise.all([
     supabase.from("form_answers").select("*").eq("form_id", form.data.id).order("position"),
     supabase.from("transcript_segments").select("position, speaker, start_seconds, machine_text, reviewed_text")
-      .eq("transcript_id", form.data.transcript_id),
+      .eq("transcript_id", form.data.transcript_id).order("position"),
   ]);
   if (answers.error || segments.error) return "failed";
   return {
@@ -74,6 +74,8 @@ function FormView() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [active, setActive] = useState<string | null>(null);
+  const aside = useRef<HTMLElement>(null);
 
   const load = useCallback(() => {
     fetchForm(id).then(setLoaded);
@@ -86,6 +88,13 @@ function FormView() {
       current = false;
     };
   }, [id]);
+
+  // Bring the first lit line of the conversation into view, inside its own panel only.
+  useEffect(() => {
+    const panel = aside.current;
+    const lit = panel?.querySelector<HTMLElement>(".wa-turn--lit");
+    if (panel && lit) panel.scrollTo({ top: lit.offsetTop - 80, behavior: "smooth" });
+  }, [active, loaded]);
 
   const back = (
     <Link href={`/consultation/?id=${id}`} className="wa-crumb"><ChevronLeft aria-hidden className="wa-icon wa-icon--sm" />Consultation</Link>
@@ -101,7 +110,12 @@ function FormView() {
   const approved = form.status === "approved";
   const answered = answers.filter((answer) => answer.machine_text !== null).length;
   const toCheck = answers.filter((answer) => answer.machine_text !== null && answer.review === "unreviewed").length;
-  const suggestions = template.sections.flatMap((section) => section.fields).filter((field) => field.mode === "suggest").length;
+  const isEmpty = (answer: Answer) => answer.machine_text === null && answer.review !== "edited";
+  const suggested = answers.filter((answer) => fields.get(answer.field_key)?.mode === "suggest" && !isEmpty(answer) && answer.review !== "rejected");
+  const checked = answered - toCheck;
+  // The answer whose quotes are lit: the one picked, else the first still to check.
+  const focus = active ?? answers.find((answer) => !isEmpty(answer) && answer.review === "unreviewed")?.field_key ?? null;
+  const lit = new Set(byKey.get(focus ?? "")?.evidence ?? []);
 
   async function decide(key: string, decision: "accept" | "reject" | "edit" | "undo", text?: string) {
     setBusy(true);
@@ -130,14 +144,15 @@ function FormView() {
   function card(answer: Answer) {
     const field = fields.get(answer.field_key);
     const label = field?.label ?? answer.field_key;
-    const empty = answer.machine_text === null && answer.review !== "edited";
+    const empty = isEmpty(answer);
     const text = answer.review === "edited" ? answer.practitioner_text : answer.machine_text;
     const [chipClass, chipText] = empty ? ["wa-chip--done", "Not discussed"] : CHIP[answer.review];
     const settled = answer.review !== "unreviewed";
     const modifier = empty ? " wa-answer--empty" : answer.review === "rejected" ? " wa-answer--rejected wa-answer--settled" : settled ? " wa-answer--settled" : "";
     const quotes = answer.evidence.map((position) => segments.get(position)).filter((segment) => segment !== undefined);
     return (
-      <article key={answer.field_key} className={`wa-answer${modifier}`} aria-labelledby={`f-${answer.field_key}`}>
+      <article key={answer.field_key} className={`wa-answer${modifier}${focus === answer.field_key ? " wa-answer--active" : ""}`}
+        aria-labelledby={`f-${answer.field_key}`} onClick={() => setActive(answer.field_key)} onFocus={() => setActive(answer.field_key)}>
         <div className="wa-answer__head">
           <h3 className="wa-answer__label" id={`f-${answer.field_key}`}>
             {label}{field?.mode === "suggest" && <> <span className="wa-tag wa-tag--attention">Suggestion</span></>}
@@ -179,11 +194,7 @@ function FormView() {
         )}
         {!approved && editing !== answer.field_key && (
           <div className="wa-actions">
-            {empty ? (
-              <button type="button" className="wa-button wa-button--quiet wa-button--small" disabled={busy} onClick={() => edit(answer)}>
-                <Plus aria-hidden className="wa-icon wa-icon--sm" />Add an answer
-              </button>
-            ) : settled ? (
+            {settled ? (
               <button type="button" className="wa-button wa-button--quiet wa-button--small" disabled={busy}
                 onClick={() => decide(answer.field_key, "undo")}>Change</button>
             ) : (
@@ -205,36 +216,81 @@ function FormView() {
   return (
     <>
       {back}
-      <div className="wa-pagehead">
-        <div className="wa-pagehead__text">
-          <h1 className="wa-title">{consultation.synthetic_patient_ref}</h1>
-          <p className="wa-meta">{template.title} · filled in by Watson from the conversation of {dateTime(consultation.scheduled_at)}</p>
-        </div>
-      </div>
-      <ul className="wa-facts">
-        <li>{answered} of {answers.length} answered</li>
-        <li>{answers.length - answered} not discussed</li>
-        {suggestions > 0 && <li>{suggestions} {suggestions === 1 ? "suggestion" : "suggestions"}</li>}
-      </ul>
-      {approved ? (
-        <Notice title={`Approved ${form.approved_at ? dateTime(form.approved_at) : ""}`}>This form is final. It is the record of the consultation.</Notice>
-      ) : (
-        <div className="wa-notice">
-          <Info aria-hidden className="wa-icon" />
-          <div className="wa-notice__body">
-            <p className="wa-notice__title">Check every answer against its quote</p>
-            <p className="wa-text">Watson wrote these from the transcript. Accept, edit or reject each one, then approve the form. Nothing is final until you approve.</p>
+      <section className="wa-hero" aria-labelledby="form-title">
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 24 }}>
+          <div style={{ display: "grid", gap: 6 }}>
+            <p className="wa-hero__eyebrow">{template.title}</p>
+            <h1 className="wa-hero__title" id="form-title">{consultation.synthetic_patient_ref}</h1>
+            <p className="wa-hero__meta">
+              Filled in by Watson from the call of {dateTime(consultation.scheduled_at)} · {answered} of {answers.length} answered
+              {answers.length > answered && ` · ${answers.length - answered} not discussed`}
+            </p>
           </div>
+          {!approved && answered > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div className="wa-ring" style={{ "--p": checked / answered } as CSSProperties}>
+                <span>{checked}/{answered}<small>checked</small></span>
+              </div>
+            </div>
+          )}
         </div>
+        {suggested.length > 0 && (
+          <div className="wa-suggests">
+            <p className="wa-suggests__title">Watson suggests · decide yourself</p>
+            {suggested.map((answer) => (
+              <p key={answer.field_key} className="wa-suggests__text">{answer.review === "edited" ? answer.practitioner_text : answer.machine_text}</p>
+            ))}
+          </div>
+        )}
+      </section>
+      {approved && (
+        <Notice title={`Approved ${form.approved_at ? dateTime(form.approved_at) : ""}`}>This form is final. It is the record of the consultation.</Notice>
       )}
       {problem && <Notice tone="failed" title="That did not work">{problem}</Notice>}
-      <div className="wa-sheet">
-        {template.sections.map((section, index) => (
-          <section key={section.title} className="wa-sheet__section" aria-labelledby={`s-${index}`}>
-            <h2 className="wa-sheet__title" id={`s-${index}`}>{section.title}</h2>
-            {section.fields.map((field) => byKey.get(field.key)).filter((answer) => answer !== undefined).map(card)}
-          </section>
-        ))}
+      <div className="wa-review">
+        <div className="wa-sheet">
+          {template.sections.map((section, index) => {
+            const members = section.fields.map((field) => byKey.get(field.key)).filter((answer) => answer !== undefined);
+            const tucked = members.filter((answer) => isEmpty(answer) && editing !== answer.field_key);
+            return (
+              <section key={section.title} className="wa-sheet__section" aria-labelledby={`s-${index}`}>
+                <h2 className="wa-sheet__title" id={`s-${index}`}>{section.title}</h2>
+                {members.filter((answer) => !tucked.includes(answer)).map(card)}
+                {tucked.length > 0 && (
+                  <p className="wa-tucked">
+                    Not discussed:
+                    {tucked.map((answer) => approved ? (
+                      <strong key={answer.field_key}>{fields.get(answer.field_key)?.label ?? answer.field_key}</strong>
+                    ) : (
+                      <button key={answer.field_key} type="button" className="wa-button wa-button--quiet wa-button--small"
+                        aria-label={`Add an answer: ${fields.get(answer.field_key)?.label ?? answer.field_key}`}
+                        disabled={busy} onClick={() => edit(answer)}>
+                        {fields.get(answer.field_key)?.label ?? answer.field_key}
+                      </button>
+                    ))}
+                  </p>
+                )}
+              </section>
+            );
+          })}
+        </div>
+        <aside className="wa-review__aside" aria-label="The conversation" ref={aside}>
+          <h2 className="wa-heading">The conversation</h2>
+          <p className="wa-hint">Lines the selected answer comes from are lit.</p>
+          <ol className="wa-turns">
+            {[...segments.values()].map((segment) => (
+              <li key={segment.position} className={`wa-turn wa-turn--${segment.speaker}${lit.has(segment.position) ? " wa-turn--lit" : ""}`}>
+                <div className="wa-turn__body">
+                  <p className="wa-turn__head" style={{ margin: 0 }}>
+                    <span className="wa-turn__who">{segment.speaker === "patient" ? "Patient" : "Practitioner"}</span>
+                    <span className="wa-turn__time">{clock(Number(segment.start_seconds))}</span>
+                  </p>
+                  <p className="wa-turn__text">{segment.reviewed_text ?? segment.machine_text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </aside>
       </div>
       {!approved && (
         <div className="wa-approve">

@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircleAlert } from "lucide-react";
+import { AudioLines, CalendarCheck, CircleAlert, ClipboardCheck, Video } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Notice } from "@/components/status";
@@ -44,23 +44,18 @@ export default function SignIn() {
 
   return (
     <main className="wa-signin">
-      <section className="wa-thesis" aria-labelledby="what-it-does">
+      <section className="wa-hero" aria-labelledby="what-it-does">
         <span className="wa-wordmark">Watson</span>
-        <h1 id="what-it-does" className="wa-thesis__lead">
-          Turn a consultation&apos;s two audio tracks into a transcript you can check and correct.
-        </h1>
-        <p className="wa-text wa-meta">
-          Each voice keeps its own track. Every word the machine is unsure of is marked for you. Nothing is filled in.
-        </p>
-        <figure className="wa-sample" aria-label="Example" style={{ margin: 0 }}>
-          <ol className="wa-turns">
-            <SampleTurn speaker="patient" at="0:04.2">I have not been sleeping properly for around three weeks.</SampleTurn>
-            <SampleTurn speaker="practitioner" at="0:11.0">And when you do wake, what time is it usually?</SampleTurn>
-            <SampleTurn speaker="patient" at="0:14.6">
-              About four in the morning. I take <mark className="wa-unsure">ashwagandha</mark> at night.
-            </SampleTurn>
-          </ol>
-        </figure>
+        <div style={{ display: "grid", gap: 6 }}>
+          <h1 id="what-it-does" className="wa-hero__title">Every doctor deserves a Watson.</h1>
+          <p className="wa-hero__meta">You see the patient. Watson does the paperwork.</p>
+        </div>
+        <ol className="wa-promise">
+          <li><span className="wa-promise__icon"><CalendarCheck aria-hidden className="wa-icon" /></span><p className="wa-promise__title">Booked and paid</p><p className="wa-promise__text">Patients choose you, pick a time and pay online.</p></li>
+          <li><span className="wa-promise__icon"><Video aria-hidden className="wa-icon" /></span><p className="wa-promise__title">Meet by video</p><p className="wa-promise__text">A private call in the browser. Nothing to install.</p></li>
+          <li><span className="wa-promise__icon"><AudioLines aria-hidden className="wa-icon" /></span><p className="wa-promise__title">Watson takes the notes</p><p className="wa-promise__text">Every word written down, in English, German or Slovak.</p></li>
+          <li><span className="wa-promise__icon"><ClipboardCheck aria-hidden className="wa-icon" /></span><p className="wa-promise__title">Your form, filled in</p><p className="wa-promise__text">Watson answers your questionnaire with quotes from the call. You check and approve.</p></li>
+        </ol>
       </section>
 
       <section className="wa-panel" aria-labelledby="sign-in">
@@ -91,16 +86,3 @@ export default function SignIn() {
   );
 }
 
-function SampleTurn({ speaker, at, children }: { speaker: "patient" | "practitioner"; at: string; children: ReactNode }) {
-  return (
-    <li className={`wa-turn wa-turn--${speaker}`}>
-      <div className="wa-turn__body">
-        <p className="wa-turn__head">
-          <span className="wa-turn__who">{speaker === "patient" ? "Patient" : "Practitioner"}</span>
-          <span className="wa-turn__time">{at}</span>
-        </p>
-        <p className="wa-turn__text">{children}</p>
-      </div>
-    </li>
-  );
-}

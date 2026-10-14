@@ -62,7 +62,7 @@ describe("a payment", () => {
   it("can be recorded only by the server, once, and only for the right amount", async () => {
     const made = await create(eva, 4000);
     const id = made.consultation_id!;
-    const args = { p_consultation_id: id, p_session_id: "cs_test_abc", p_amount_cents: 4000 };
+    const args = { p_consultation_id: id, p_session_id: `cs_test_${id}`, p_amount_cents: 4000 };
     expect((await browserClient(stack).rpc("record_payment", args)).error).not.toBeNull();
     expect((await eva.client.rpc("record_payment", args)).error).not.toBeNull();
 

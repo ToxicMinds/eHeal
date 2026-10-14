@@ -8,18 +8,19 @@
 <body>
 <div>
   <main class="wa-signin">
-    <div class="wa-thesis">
+    <section class="wa-hero" aria-labelledby="what">
       <span class="wa-wordmark">Watson</span>
-      <p class="wa-thesis__lead">Turn a consultation's two audio tracks into a transcript you can check and correct.</p>
-      <p class="wa-text wa-meta">Each voice keeps its own track. Every word the machine is unsure of is marked for you. Nothing is filled in.</p>
-      <div class="wa-sample" aria-label="Example">
-        <ol class="wa-turns">
-          <li class="wa-turn wa-turn--patient"><div class="wa-turn__body"><p class="wa-turn__head" style="margin: 0"><span class="wa-turn__who">Patient</span><span class="wa-turn__time">0:04.2</span></p><p class="wa-turn__text">I have not been sleeping properly for around three weeks.</p></div></li>
-          <li class="wa-turn wa-turn--practitioner"><div class="wa-turn__body"><p class="wa-turn__head" style="margin: 0"><span class="wa-turn__who">Practitioner</span><span class="wa-turn__time">0:11.0</span></p><p class="wa-turn__text">And when you do wake, what time is it usually?</p></div></li>
-          <li class="wa-turn wa-turn--patient"><div class="wa-turn__body"><p class="wa-turn__head" style="margin: 0"><span class="wa-turn__who">Patient</span><span class="wa-turn__time">0:14.6</span></p><p class="wa-turn__text">About four in the morning. I take <mark class="wa-unsure">ashwagandha</mark> at night.</p></div></li>
-        </ol>
+      <div style="display:grid;gap:6px">
+        <h2 class="wa-hero__title" id="what">Every doctor deserves a Watson.</h2>
+        <p class="wa-hero__meta">You see the patient. Watson does the paperwork.</p>
       </div>
-    </div>
+      <ol class="wa-promise">
+          <li><span class="wa-promise__icon"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg></span><p class="wa-promise__title">Booked and paid</p><p class="wa-promise__text">Patients choose you, pick a time and pay online.</p></li>
+          <li><span class="wa-promise__icon"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></span><p class="wa-promise__title">Meet by video</p><p class="wa-promise__text">A private call in the browser. Nothing to install.</p></li>
+          <li><span class="wa-promise__icon"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg></span><p class="wa-promise__title">Watson takes the notes</p><p class="wa-promise__text">Every word written down, in English, German or Slovak.</p></li>
+          <li><span class="wa-promise__icon"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><p class="wa-promise__title">Your form, filled in</p><p class="wa-promise__text">Watson answers your questionnaire with quotes from the call. You check and approve.</p></li>
+      </ol>
+    </section>
     <section class="wa-panel" aria-labelledby="signin-title">
       <h1 class="wa-heading" id="signin-title">Sign in</h1>
       <p class="wa-hint">Accounts are made by the project owner. There is no public sign-up.</p>

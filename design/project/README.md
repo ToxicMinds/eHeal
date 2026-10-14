@@ -1,4 +1,4 @@
-Watson helps Ayurveda and integrative-care practitioners turn a consultation's two audio tracks into a transcript they check and correct. Every screen serves a practitioner between consultations who needs three answers fast: what needs me, what is the machine unsure of, and what happens next.
+Watson helps Ayurveda and integrative-care practitioners run their practice online: patients book and pay, practitioner and patient meet by video, and Watson writes the transcript and fills in the practitioner's own form for them to check and approve. Every screen serves a practitioner between consultations who needs three answers fast: what needs me, what is the machine unsure of, and what happens next.
 
 ## The name
 

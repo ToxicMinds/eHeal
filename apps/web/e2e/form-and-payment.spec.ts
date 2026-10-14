@@ -56,7 +56,7 @@ test("check every answer of the filled-in form against its quote, then approve i
   await expect(page.getByRole("listitem").filter({ hasText: "Ready to check" })).toBeVisible();
   await page.getByRole("link", { name: "Check the form" }).click();
 
-  await expect(page.getByText("Check every answer against its quote")).toBeVisible();
+  await expect(page.getByText("Watson suggests · decide yourself")).toBeVisible();
   await expect(page.getByText("3 of 21 answered")).toBeVisible();
   await expect(page.getByText("3 answers still to check")).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve form" })).toBeDisabled();
@@ -79,8 +79,8 @@ test("check every answer of the filled-in form against its quote, then approve i
   await diagnosis.getByRole("button", { name: "Reject" }).click();
   await expect(diagnosis.getByText("Rejected")).toBeVisible();
 
-  const exercise = page.getByRole("article", { name: "Exercise" });
-  await expect(exercise.getByText("Not discussed in the conversation.")).toBeVisible();
+  // What was not discussed is folded into one line per section, each with a way to add an answer.
+  await expect(page.getByRole("button", { name: "Add an answer: Exercise" })).toBeVisible();
 
   await expect(page.getByText("Every answer is checked.")).toBeVisible();
   await page.getByRole("button", { name: "Approve form" }).click();
@@ -111,7 +111,7 @@ test("set a fee, send the patient's link; the patient sees the fee, then pays an
 
   // What Stripe's confirmation does, done here directly: the server records the payment.
   const id = new URL(page.url()).searchParams.get("id")!;
-  const recorded = await adminClient(localStack()).rpc("record_payment", { p_consultation_id: id, p_session_id: "cs_test_e2e", p_amount_cents: 4000 });
+  const recorded = await adminClient(localStack()).rpc("record_payment", { p_consultation_id: id, p_session_id: `cs_test_${id}`, p_amount_cents: 4000 });
   expect(recorded.data).toEqual({ ok: true });
   await patient.reload();
   await expect(patient.getByText("Paid. Thank you.")).toBeVisible();

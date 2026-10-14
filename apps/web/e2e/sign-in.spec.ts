@@ -29,7 +29,7 @@ test("a practitioner signs in, sees their consultations, and signs out", async (
   await page.getByLabel("Password").fill(account.password);
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await expect(page.getByRole("heading", { name: "Consultations" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Good (morning|afternoon|evening)$/ })).toBeVisible();
   await expect(page.getByText(`Signed in as ${account.email}`)).toBeVisible();
   if (account.references.length > 0) {
     await expect(page.getByRole("link", { name: /SYN-0043/ })).toContainText("Slovak");
@@ -39,7 +39,7 @@ test("a practitioner signs in, sees their consultations, and signs out", async (
 
   // The session survives a reload, and ends on sign-out.
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Consultations" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Good (morning|afternoon|evening)$/ })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await page.goto("/consultations/");
