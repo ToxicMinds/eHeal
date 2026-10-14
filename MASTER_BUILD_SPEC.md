@@ -4,6 +4,8 @@
 
 This document says what eHeal is, how it is built, and in what order. It replaces version 1, which is kept unchanged at `docs/archive/MASTER_BUILD_SPEC-v1.md`. Appendix A lists every change from version 1 and why it was made. Versions 2.1 and 2.2 apply the findings of two independent reviews; those changes are listed at the end of Appendix A. Progress against the roadmap is tracked in `docs/roadmap.md`.
 
+**Owner's decision of 14 October 2026 ([decision 0005](docs/decision-log/0005-call-to-form.md)):** the product flow is video call → recording → transcription → an AI that fills in the doctor's questionnaire and may suggest a diagnosis. The consultation room comes next, before the structured draft. Where this document differs, decision 0005 wins until the document is rewritten.
+
 It is written for two readers: the product owner, who decides, and whoever builds the product, human or AI.
 
 | Part | What it answers |
