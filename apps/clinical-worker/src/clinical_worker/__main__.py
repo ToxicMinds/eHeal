@@ -44,7 +44,7 @@ def _run_engine(settings: Settings) -> None:
         and settings.supabase_publishable_key
     ):
         sys.exit(
-            "EHEAL_ENGINE_EMAIL, EHEAL_ENGINE_PASSWORD and EHEAL_SUPABASE_PUBLISHABLE_KEY must be set."
+            "Set EHEAL_ENGINE_EMAIL, EHEAL_ENGINE_PASSWORD, EHEAL_SUPABASE_PUBLISHABLE_KEY."
         )
     Engine(settings).run_forever()
 
