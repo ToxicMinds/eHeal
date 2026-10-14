@@ -14,7 +14,7 @@ Last updated: 14 October 2026 (order changed by [decision 0005](decision-log/000
 | 1.3 Transcription with a status screen | Press start, watch each stage, read a merged two-speaker transcript | Done, live 14 Oct |
 | 1.4 Consultation room (moved up, decision 0005) | Start a video call, send the patient a link, both voices recorded; transcription starts when the call ends | Done, live 14 Oct |
 | 1.5 AI fills the doctor's form (decision 0005) | Read the doctor's questionnaire filled in from the conversation, each answer with its quote; a suggested diagnosis; check and approve | Done, live 14 Oct |
-| 1.5b Patient payment (decision 0007) | Set a fee; the patient pays on Stripe Checkout from their link, then joins; see "Paid" | Built 14 Oct; live once the Stripe test key is set |
+| 1.5b Patient payment (decision 0007) | Set a fee; the patient pays on Stripe Checkout from their link, then joins; see "Paid" | Live 14 Oct (Stripe test mode); a test-card payment passes against the hosted app |
 | 1.6 Transcript review | Search, play back, correct, mark reviewed, export, delete audio | Folded into 1.5 where the form needs it |
 | 1.7 Fixtures and benchmark | Read measured accuracy and speed per language | Started 14 Oct (first measurements below) |
 | **Phase 2 — Structured draft, approval and report** | | Not started |
@@ -64,8 +64,7 @@ Left over:
       Wi-Fi with a phone on mobile data; add a free relay if needed.
 - [ ] A call that is cut off before "End call" loses its recording (kept in the browser).
 - [ ] Design system: add the call room screens.
-- [ ] Patient payment: owner to choose (options A, B, C in the conversation of 14 Oct;
-      recommended A, Stripe Checkout in test mode, its own slice).
+- [x] Patient payment: option A chosen, Stripe Checkout in test mode (decision 0007).
 
 ## Slice 1.5 — done 14 October
 
@@ -87,9 +86,17 @@ Left over:
 A fee per consultation; the patient's link exists from creation; Stripe Checkout through two
 edge functions (`payment`, `stripe-webhook`). Left over:
 
-- [ ] Set the Stripe test key and the webhook secret on the hosted project, then test a payment live.
+- [x] Stripe test key and webhook secret set on the hosted project; live test-card payment passes (14 Oct).
 - [ ] Refuse an unpaid link in the call handshake, not only on the page (before Gate R).
 - [ ] Paying practitioners directly (Stripe Connect), refunds, invoices.
+
+## Raised by the owner on 14 October, scope to agree
+
+- [ ] Patients find a practitioner they prefer and book a time (today the practitioner creates
+      the consultation and sends the link).
+- [ ] The patient uploads documents (reports, lab results) when joining; the practitioner views
+      them; Watson reads them for the form and the suggested diagnosis. Needs a patient key
+      (email or phone), and real health documents: conflicts with "invented data only" until Gate R.
 
 ## First measurements (slice 1.7, started 14 October)
 
