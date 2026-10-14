@@ -11,10 +11,10 @@
   },
   "groups": [],
   "lastChange": {
-    "at": "2026-10-14T05:37:51Z",
+    "at": "2026-10-14T11:06:53Z",
     "by": "Claude",
-    "note": "Removed the proof-of-concept band and every reminder about test data, at the owner's request.",
-    "via": "Claude Code"
+    "via": "Claude Code",
+    "note": "Renamed eHeal to Watson: Baker Street at night (ink navy, bottle green, lamplight, London fog, oxblood), the pen-nib mark, class prefix wa-, and the call-room tokens and classes."
   },
   "layout": "files",
   "libraries": [],
