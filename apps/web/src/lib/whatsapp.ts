@@ -8,6 +8,9 @@ export function whatsappLink(phone: string, text: string): string {
   return `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 }
 
+/** Watson's own WhatsApp number (Meta's test number until there are paying customers). */
+export const WATSON_WHATSAPP = process.env.NEXT_PUBLIC_WATSON_WHATSAPP ?? "+15556623667";
+
 type Language = "en" | "sk" | "de";
 const LOCALE: Record<Language, string> = { en: "en-GB", sk: "sk-SK", de: "de-DE" };
 // "on Tuesday" in Slovak takes a preposition and the accusative: v utorok, v stredu, vo štvrtok.
