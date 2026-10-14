@@ -12,8 +12,8 @@ Last updated: 14 October 2026 (order changed by [decision 0005](decision-log/000
 | 1.1 Sign-in and consultation list | Sign in and see your list of consultations | Done, live 13 Oct |
 | 1.2 Create consultation and audio | Create an invented consultation, record consent, attach or record two tracks | Done, live 13 Oct |
 | 1.3 Transcription with a status screen | Press start, watch each stage, read a merged two-speaker transcript | Done, live 14 Oct |
-| 1.4 Consultation room (moved up, decision 0005) | Start a video call, send the patient a link, both voices recorded; transcription starts when the call ends | Next |
-| 1.5 AI fills the doctor's form (decision 0005) | Read the doctor's questionnaire filled in from the conversation, each answer with its quote; a suggested diagnosis; check and approve | Not started |
+| 1.4 Consultation room (moved up, decision 0005) | Start a video call, send the patient a link, both voices recorded; transcription starts when the call ends | Done, live 14 Oct |
+| 1.5 AI fills the doctor's form (decision 0005) | Read the doctor's questionnaire filled in from the conversation, each answer with its quote; a suggested diagnosis; check and approve | Next |
 | 1.6 Transcript review | Search, play back, correct, mark reviewed, export, delete audio | Folded into 1.5 where the form needs it |
 | 1.7 Fixtures and benchmark | Read measured accuracy and speed per language | Not started |
 | **Phase 2 — Structured draft, approval and report** | | Not started |
@@ -49,3 +49,19 @@ Left over, picked up when the work needs them:
 - [ ] Upload progress as a percentage (shown as "Uploading…" today).
 - [ ] A two-hour transcript fits in one database call (review 4.11).
 - [ ] A dialogue fixture generator; the speed and accuracy benchmark (slice 1.7).
+
+## Slice 1.4 — done 14 October
+
+A doctor starts a call from a consultation (`/room/?id=`), copies the link, the patient opens
+it (`/join/?t=`) with no account. Browser to browser (WebRTC, public STUN, handshake over
+Supabase Realtime). The doctor's browser records two voice tracks; "End call" uploads them,
+declares them recorded together and starts transcription. Tested live with two browsers.
+
+Left over:
+
+- [ ] No relay (TURN): calls between some strict networks may not connect. Test laptop on
+      Wi-Fi with a phone on mobile data; add a free relay if needed.
+- [ ] A call that is cut off before "End call" loses its recording (kept in the browser).
+- [ ] Design system: add the call room screens.
+- [ ] Patient payment: owner to choose (options A, B, C in the conversation of 14 Oct;
+      recommended A, Stripe Checkout in test mode, its own slice).
