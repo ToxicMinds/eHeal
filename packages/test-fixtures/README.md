@@ -8,6 +8,16 @@
 
 Regenerate or add fixtures with `scripts/make-fixture.sh <voice> <output.wav> <text>`.
 
+| File | What it is |
+|---|---|
+| `templates/ayurveda-intake.json` | A generic Ayurvedic intake form (21 fields), the shape practitioners' templates take. Not any real practitioner's form. |
+| `consultations/ayurveda-en.json` | An invented first consultation in English (34 turns): acidity, poor sleep. Each field's expected answer, including fields never discussed. |
+| `consultations/ayurveda-sk.json` | A shorter invented consultation in Slovak (15 turns): constipation, waking at night. |
+
+`scripts/make-dialogue.py <consultation.json> <dir>` speaks a consultation into two tracks, one per
+speaker, as a call records them. `apps/clinical-worker/bench/form_bench.py` scores a form model on a
+consultation; `bench/transcribe_bench.py` measures a speech model's word error rate on the tracks.
+
 ## Limits as a transcription benchmark
 
 The audio is text-to-speech: one clean studio voice, no accent variation, no

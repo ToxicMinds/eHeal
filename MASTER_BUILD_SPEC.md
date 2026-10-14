@@ -1227,6 +1227,8 @@ Version 2.2 applies a second review, of version 2.1 and the slice 1.3 migration.
 | S9 | The owner made the free rule permanent and confirmed no payment method is on file. | Section 3, OD-6 and OD-9 updated. | 3, 22 |
 | S10 | The owner found the on-screen reminders that data is invented unnecessary. | The banner and reminders are removed from the app. The `SYN-` format still refuses names. | 5.1, 14, 21.2 |
 | S11 | The owner found that the name "eHeal" did not feel right and asked for one with a story. | Renamed Watson: the practitioner is Sherlock, the app is their Watson ([decision 0006](docs/decision-log/0006-renamed-watson.md)). | All |
+| S12 | The owner approved the form screens; the model, fixtures and review rules were chosen. | [Decision 0008](docs/decision-log/0008-form-filling.md). | 13, 15, 20 |
+| S13 | The owner chose Stripe Checkout for patient payment. | [Decision 0007](docs/decision-log/0007-patient-payment.md). | 3, 22 |
 
 # Appendix B — Where each section of version 1 went
 

@@ -3,7 +3,7 @@
 The plan is defined in [MASTER_BUILD_SPEC.md](../MASTER_BUILD_SPEC.md), section 21.
 This file only tracks where we are. Update it at the end of every slice.
 
-Last updated: 14 October 2026 (order changed by [decision 0005](decision-log/0005-call-to-form.md)).
+Last updated: 14 October 2026 (order changed by [decision 0005](decision-log/0005-call-to-form.md); payment added by [decision 0007](decision-log/0007-patient-payment.md)).
 
 | Slice | When it is done, you can | Status |
 |---|---|---|
@@ -13,7 +13,8 @@ Last updated: 14 October 2026 (order changed by [decision 0005](decision-log/000
 | 1.2 Create consultation and audio | Create an invented consultation, record consent, attach or record two tracks | Done, live 13 Oct |
 | 1.3 Transcription with a status screen | Press start, watch each stage, read a merged two-speaker transcript | Done, live 14 Oct |
 | 1.4 Consultation room (moved up, decision 0005) | Start a video call, send the patient a link, both voices recorded; transcription starts when the call ends | Done, live 14 Oct |
-| 1.5 AI fills the doctor's form (decision 0005) | Read the doctor's questionnaire filled in from the conversation, each answer with its quote; a suggested diagnosis; check and approve | Next |
+| 1.5 AI fills the doctor's form (decision 0005) | Read the doctor's questionnaire filled in from the conversation, each answer with its quote; a suggested diagnosis; check and approve | Done, live 14 Oct |
+| 1.5b Patient payment (decision 0007) | Set a fee; the patient pays on Stripe Checkout from their link, then joins; see "Paid" | Built 14 Oct; live once the Stripe test key is set |
 | 1.6 Transcript review | Search, play back, correct, mark reviewed, export, delete audio | Folded into 1.5 where the form needs it |
 | 1.7 Fixtures and benchmark | Read measured accuracy and speed per language | Not started |
 | **Phase 2 — Structured draft, approval and report** | | Not started |
@@ -65,3 +66,27 @@ Left over:
 - [ ] Design system: add the call room screens.
 - [ ] Patient payment: owner to choose (options A, B, C in the conversation of 14 Oct;
       recommended A, Stripe Checkout in test mode, its own slice).
+
+## Slice 1.5 — done 14 October
+
+When a transcript is ready, the engine fills in the practitioner's form with a model on the
+owner's laptop ([decision 0008](decision-log/0008-form-filling.md)). `/form/?id=` shows each
+answer with its quote; the practitioner accepts, edits or rejects each one and approves.
+Measured on invented consultations: English 18 of 21 fields, Slovak 21 of 21. Live: a recorded
+call went on to a filled-in form in under two minutes after its transcript.
+
+Left over:
+
+- [ ] Templates are set by script (owner: Dr. Robin's form, kept outside the repository);
+      a screen to set up one's own form.
+- [ ] After correcting the transcript, fill the form in again from the corrected text.
+- [ ] Measure the model on longer, messier conversations (slice 1.7).
+
+## Patient payment — built 14 October
+
+A fee per consultation; the patient's link exists from creation; Stripe Checkout through two
+edge functions (`payment`, `stripe-webhook`). Left over:
+
+- [ ] Set the Stripe test key and the webhook secret on the hosted project, then test a payment live.
+- [ ] Refuse an unpaid link in the call handshake, not only on the page (before Gate R).
+- [ ] Paying practitioners directly (Stripe Connect), refunds, invoices.

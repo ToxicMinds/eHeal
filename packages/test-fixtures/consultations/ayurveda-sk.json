@@ -177,5 +177,9 @@
     "other": {
       "discussed": false
     }
+  },
+  "voices": {
+    "practitioner": "sk_SK-lili-medium",
+    "patient": "sk_SK-lili-medium"
   }
 }

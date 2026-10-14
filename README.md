@@ -31,6 +31,11 @@ Nothing in this project may be charged for (specification, section 3).
     supabase start                         # local sign-in, database and storage in Docker
     (cd apps/web && node scripts/use-local-stack.mjs)
     (cd apps/clinical-worker && uv sync && WATSON_MODEL=tiny uv run clinical-worker fetch-model)
+    (cd apps/clinical-worker && uv run clinical-worker fetch-form-model)   # 2.7 GB, fills in forms
+
+Patient payment needs a Stripe test key on the hosted project (`supabase secrets set
+STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=... SITE_URLS=https://watson-app.onrender.com`)
+and a webhook endpoint at `<project>/functions/v1/stripe-webhook` (decision 0007).
 
 ## Check everything
 
