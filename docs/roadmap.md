@@ -90,13 +90,24 @@ edge functions (`payment`, `stripe-webhook`). Left over:
 - [ ] Refuse an unpaid link in the call handshake, not only on the page (before Gate R).
 - [ ] Paying practitioners directly (Stripe Connect), refunds, invoices.
 
-## Raised by the owner on 14 October, scope to agree
+## Raised by the owner on 14 October
 
-- [ ] Patients find a practitioner they prefer and book a time (today the practitioner creates
-      the consultation and sends the link).
-- [ ] The patient uploads documents (reports, lab results) when joining; the practitioner views
-      them; Watson reads them for the form and the suggested diagnosis. Needs a patient key
-      (email or phone), and real health documents: conflicts with "invented data only" until Gate R.
+Order agreed with the owner: patient documents, then booking last. Booking is the product's
+selling point; the transcript and form are what assist the practitioner once a patient has booked.
+
+- [ ] **Patient documents** (approved in outline). The patient uploads documents from their link;
+      they are kept under the patient's phone number or email (patients may have no email);
+      the practitioner views them; Watson reads them for the form and the suggested diagnosis.
+      The owner accepts real documents for the test drive (14 Oct), knowing GDPR applies before
+      real use. Mocks in the design system (ScreenPhoneJoinDocuments, ScreenConsultationDocuments,
+      ScreenFormDocumentQuote) await approval; they also propose patient names instead of SYN numbers.
+- [ ] **WhatsApp**: proposal at https://claude.ai/artifact/HiKzstjnEHBTq6UiBjFVjH. Tap to send
+      (wa.me links, free) now; Meta's Cloud API later (free test number for 5 people; about 2 cents
+      per message since 1 Oct 2026, so it needs a card). Not Baileys (Synculariti's way). Awaiting
+      the owner's decisions.
+- [ ] **Booking**: patients find a practitioner and book a time. Last.
+- [ ] **Sign-in**: the owner found the hero not gelling with its background; proposal
+      ScreenSignInNight in the design system awaits approval.
 
 ## First measurements (slice 1.7, started 14 October)
 
