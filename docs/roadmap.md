@@ -16,7 +16,7 @@ Last updated: 14 October 2026 (order changed by [decision 0005](decision-log/000
 | 1.5 AI fills the doctor's form (decision 0005) | Read the doctor's questionnaire filled in from the conversation, each answer with its quote; a suggested diagnosis; check and approve | Done, live 14 Oct |
 | 1.5b Patient payment (decision 0007) | Set a fee; the patient pays on Stripe Checkout from their link, then joins; see "Paid" | Built 14 Oct; live once the Stripe test key is set |
 | 1.6 Transcript review | Search, play back, correct, mark reviewed, export, delete audio | Folded into 1.5 where the form needs it |
-| 1.7 Fixtures and benchmark | Read measured accuracy and speed per language | Not started |
+| 1.7 Fixtures and benchmark | Read measured accuracy and speed per language | Started 14 Oct (first measurements below) |
 | **Phase 2 — Structured draft, approval and report** | | Not started |
 | 2.1 Draft generation | Generate a structured draft in which every item shows its evidence | Not started |
 | 2.2 Draft review | Accept, edit, reject and add items in a split view | Not started |
@@ -90,3 +90,16 @@ edge functions (`payment`, `stripe-webhook`). Left over:
 - [ ] Set the Stripe test key and the webhook secret on the hosted project, then test a payment live.
 - [ ] Refuse an unpaid link in the call handshake, not only on the page (before Gate R).
 - [ ] Paying practitioners directly (Stripe Connect), refunds, invoices.
+
+## First measurements (slice 1.7, started 14 October)
+
+Invented calls spoken by text-to-speech, two tracks squeezed through the browser's 32 kbit/s
+Opus, transcribed on the owner's laptop (`bench/transcribe_bench.py`):
+
+| Speech model | English word errors | Slovak word errors | Time per minute of call (both tracks) |
+|---|---|---|---|
+| small | 3.1% | 55% | 11 s |
+| large-v3-turbo | 2.9% | 26% | 30 s |
+
+The engine now uses large-v3-turbo. Slovak at 26% is still poor; the synthetic Slovak voice is
+part of that, so real Slovak calls must be measured before trusting the figure.

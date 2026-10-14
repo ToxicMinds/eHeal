@@ -16,7 +16,7 @@ class Settings(BaseModel):
 
     # Outside the repository and outside cloud-synced folders.
     home: Path = Path.home() / ".local" / "share" / "watson"
-    model: str = "small"
+    model: str = "large-v3-turbo"  # measured 14 Oct: Slovak 26% word errors, small 55%
     device: str = "cpu"
     compute_type: str = "int8"
     cpu_threads: int = Field(default=0, ge=0)  # 0 lets the library decide
