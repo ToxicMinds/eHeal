@@ -25,6 +25,11 @@
           </div>
           <p class="wa-hint" style="margin-top: -12px">The transcript is made in this language. "Mixed or unsure" lets the engine guess, which is less reliable.</p>
           <div class="wa-field">
+            <label class="wa-label" for="fee">Fee</label>
+            <p class="wa-hint" id="fee-hint">The patient pays this when they open your link, before the call. Leave it empty for a free consultation.</p>
+            <div class="wa-affixed" style="max-width: 200px"><span class="wa-affix" aria-hidden="true">€</span><input class="wa-input" id="fee" inputmode="decimal" value="40.00" aria-describedby="fee-hint"></div>
+          </div>
+          <div class="wa-field">
             <label class="wa-label" for="notes">Notes</label>
             <p class="wa-hint" id="notes-hint">For example "sleep complaint, patient mentions a supplement".</p>
             <textarea class="wa-textarea" id="notes" aria-describedby="notes-hint">follow-up, joint stiffness</textarea>

@@ -150,13 +150,18 @@ export type Database = {
           consent_withdrawn_at: string | null
           consent_withdrawn_by: string | null
           created_at: string
+          fee_cents: number | null
           id: string
+          invite_token: string
           language: Database["public"]["Enums"]["consultation_language"]
+          paid_amount_cents: number | null
+          paid_at: string | null
           practitioner_id: string
           recorded_together: boolean
           scenario_notes: string
           scheduled_at: string
           status: Database["public"]["Enums"]["consultation_status"]
+          stripe_checkout_session_id: string | null
           synthetic_patient_ref: string
           updated_at: string
         }
@@ -166,13 +171,18 @@ export type Database = {
           consent_withdrawn_at?: string | null
           consent_withdrawn_by?: string | null
           created_at?: string
+          fee_cents?: number | null
           id?: string
+          invite_token?: string
           language: Database["public"]["Enums"]["consultation_language"]
+          paid_amount_cents?: number | null
+          paid_at?: string | null
           practitioner_id: string
           recorded_together?: boolean
           scenario_notes?: string
           scheduled_at: string
           status: Database["public"]["Enums"]["consultation_status"]
+          stripe_checkout_session_id?: string | null
           synthetic_patient_ref: string
           updated_at?: string
         }
@@ -182,13 +192,18 @@ export type Database = {
           consent_withdrawn_at?: string | null
           consent_withdrawn_by?: string | null
           created_at?: string
+          fee_cents?: number | null
           id?: string
+          invite_token?: string
           language?: Database["public"]["Enums"]["consultation_language"]
+          paid_amount_cents?: number | null
+          paid_at?: string | null
           practitioner_id?: string
           recorded_together?: boolean
           scenario_notes?: string
           scheduled_at?: string
           status?: Database["public"]["Enums"]["consultation_status"]
+          stripe_checkout_session_id?: string | null
           synthetic_patient_ref?: string
           updated_at?: string
         }
@@ -211,6 +226,180 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      form_answers: {
+        Row: {
+          evidence: number[]
+          field_key: string
+          form_id: string
+          machine_text: string | null
+          position: number
+          practitioner_text: string | null
+          review: string
+        }
+        Insert: {
+          evidence?: number[]
+          field_key: string
+          form_id: string
+          machine_text?: string | null
+          position: number
+          practitioner_text?: string | null
+          review?: string
+        }
+        Update: {
+          evidence?: number[]
+          field_key?: string
+          form_id?: string
+          machine_text?: string | null
+          position?: number
+          practitioner_text?: string | null
+          review?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_answers_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_jobs: {
+        Row: {
+          attempt: number
+          claimed_at: string | null
+          consultation_id: string
+          engine_user_id: string | null
+          error_category: string | null
+          finished_at: string | null
+          heartbeat_at: string | null
+          id: string
+          metrics: Json
+          queued_at: string
+          status: Database["public"]["Enums"]["job_status"]
+          transcript_id: string
+        }
+        Insert: {
+          attempt?: number
+          claimed_at?: string | null
+          consultation_id: string
+          engine_user_id?: string | null
+          error_category?: string | null
+          finished_at?: string | null
+          heartbeat_at?: string | null
+          id?: string
+          metrics?: Json
+          queued_at?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          transcript_id: string
+        }
+        Update: {
+          attempt?: number
+          claimed_at?: string | null
+          consultation_id?: string
+          engine_user_id?: string | null
+          error_category?: string | null
+          finished_at?: string | null
+          heartbeat_at?: string | null
+          id?: string
+          metrics?: Json
+          queued_at?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          transcript_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_jobs_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_jobs_transcript_id_fkey"
+            columns: ["transcript_id"]
+            isOneToOne: false
+            referencedRelation: "transcripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_templates: {
+        Row: {
+          definition: Json
+          practitioner_id: string
+          updated_at: string
+        }
+        Insert: {
+          definition: Json
+          practitioner_id: string
+          updated_at?: string
+        }
+        Update: {
+          definition?: Json
+          practitioner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      forms: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          consultation_id: string
+          created_at: string
+          id: string
+          job_id: string
+          status: string
+          template: Json
+          transcript_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          consultation_id: string
+          created_at?: string
+          id?: string
+          job_id: string
+          status?: string
+          template: Json
+          transcript_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          consultation_id?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          status?: string
+          template?: Json
+          transcript_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forms_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "form_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forms_transcript_id_fkey"
+            columns: ["transcript_id"]
+            isOneToOne: false
+            referencedRelation: "transcripts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transcript_segments: {
         Row: {
@@ -386,6 +575,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_form: { Args: { p_form_id: string }; Returns: Json }
       cancel_transcription: {
         Args: { p_consultation_id: string }
         Returns: Json
@@ -397,6 +587,7 @@ export type Database = {
       create_consultation: {
         Args: {
           p_consent_recorded: boolean
+          p_fee_cents?: number
           p_language: Database["public"]["Enums"]["consultation_language"]
           p_scenario_notes?: string
           p_scheduled_at: string
@@ -408,7 +599,17 @@ export type Database = {
         Args: { p_consultation_id: string; p_recorded_together: boolean }
         Returns: Json
       }
+      engine_claim_form_job: { Args: never; Returns: Json }
       engine_claim_job: { Args: never; Returns: Json }
+      engine_complete_form_job: {
+        Args: {
+          p_answers: Json
+          p_attempt: number
+          p_job_id: string
+          p_metrics?: Json
+        }
+        Returns: Json
+      }
       engine_complete_job: {
         Args: {
           p_attempt: number
@@ -416,6 +617,10 @@ export type Database = {
           p_metrics?: Json
           p_transcript: Json
         }
+        Returns: Json
+      }
+      engine_fail_form_job: {
+        Args: { p_attempt: number; p_error_category: string; p_job_id: string }
         Returns: Json
       }
       engine_fail_job: {
@@ -428,6 +633,10 @@ export type Database = {
         }
         Returns: Json
       }
+      engine_form_heartbeat: {
+        Args: { p_attempt: number; p_job_id: string }
+        Returns: Json
+      }
       engine_heartbeat: {
         Args: {
           p_attempt: number
@@ -438,7 +647,16 @@ export type Database = {
         Returns: Json
       }
       engine_status: { Args: never; Returns: Json }
+      invite_details: { Args: { p_token: string }; Returns: Json }
       record_consent: { Args: { p_consultation_id: string }; Returns: Json }
+      record_payment: {
+        Args: {
+          p_amount_cents: number
+          p_consultation_id: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       register_audio_track: {
         Args: {
           p_consultation_id: string
@@ -461,6 +679,17 @@ export type Database = {
         }
         Returns: Json
       }
+      review_form_answer: {
+        Args: {
+          p_decision: string
+          p_field_key: string
+          p_form_id: string
+          p_text?: string
+        }
+        Returns: Json
+      }
+      set_form_template: { Args: { p_definition: Json }; Returns: Json }
+      start_form: { Args: { p_consultation_id: string }; Returns: Json }
       start_transcription: {
         Args: { p_consultation_id: string }
         Returns: Json

@@ -17,6 +17,7 @@ from supabase import Client, ClientOptions, create_client
 from .audio import audio_duration_seconds
 from .config import AUDIO_FORMATS, Settings
 from .errors import ErrorCategory, Stopped, WorkerError
+from .form import Cancelled, Line, LlamaModel, Template, fill
 from .log import log_event
 from .merge import merge
 from .schema import Speaker, Track, Transcript, TranscriptionModel
@@ -82,8 +83,16 @@ class Heartbeat(threading.Thread):
     """Tells the database where the job is, at least every `interval` seconds, and
     raises the `stopped` flag when the answer is to stop."""
 
-    def __init__(self, connection: Connection, job_id: str, attempt: int, interval: float) -> None:
+    def __init__(
+        self,
+        connection: Connection,
+        job_id: str,
+        attempt: int,
+        interval: float,
+        rpc: str = "engine_heartbeat",
+    ) -> None:
         super().__init__(daemon=True)
+        self.rpc = rpc
         self.connection = connection
         self.job_id = job_id
         self.attempt = attempt
@@ -97,15 +106,10 @@ class Heartbeat(threading.Thread):
     def beat(self) -> None:
         with self._lock:
             try:
-                answer = self.connection.rpc(
-                    "engine_heartbeat",
-                    {
-                        "p_job_id": self.job_id,
-                        "p_attempt": self.attempt,
-                        "p_stage": self.stage,
-                        "p_audio_seconds": self.audio_seconds,
-                    },
-                )
+                args: dict[str, Any] = {"p_job_id": self.job_id, "p_attempt": self.attempt}
+                if self.rpc == "engine_heartbeat":
+                    args |= {"p_stage": self.stage, "p_audio_seconds": self.audio_seconds}
+                answer = self.connection.rpc(self.rpc, args)
                 if not answer.get("continue"):
                     self.stopped.set()
             except Exception as exc:
@@ -134,6 +138,7 @@ class Engine:
         self.beats = Connection(
             settings
         )  # a second session, so a long download never delays a heartbeat
+        self.form_model: LlamaModel | None = None  # loaded at the first form job
 
     def run_forever(self) -> None:
         log_event(
@@ -156,11 +161,120 @@ class Engine:
         answer = self.main.rpc("engine_claim_job", {})
         if not answer.get("ok"):
             raise RuntimeError(str(answer.get("error_category")))
-        job = answer.get("job")
-        if not job:
-            return False
-        self.process(job)
-        return True
+        if answer.get("job"):
+            self.process(answer["job"])
+            return True
+        # Transcripts first: a doctor waits for those. Forms come after.
+        answer = self.main.rpc("engine_claim_form_job", {})
+        if not answer.get("ok"):
+            raise RuntimeError(str(answer.get("error_category")))
+        if answer.get("job"):
+            self.process_form(answer["job"])
+            return True
+        return False
+
+    def _load_form_model(self) -> LlamaModel:
+        if self.form_model is None:
+            path = self.settings.form_model_path
+            if not path.is_file():
+                raise WorkerError(ErrorCategory.FORM_MODEL_UNAVAILABLE)
+            try:
+                self.form_model = LlamaModel(
+                    path, self.settings.form_context_tokens, self.settings.cpu_threads
+                )
+            except Exception as exc:
+                raise WorkerError(ErrorCategory.FORM_MODEL_UNAVAILABLE) from exc
+        return self.form_model
+
+    def process_form(self, job: dict[str, Any]) -> None:
+        ids: dict[str, str | int] = {
+            "job_id": job["job_id"],
+            "consultation_id": job["consultation_id"],
+            "attempt": job["attempt"],
+        }
+        heartbeat = Heartbeat(
+            self.beats,
+            job["job_id"],
+            job["attempt"],
+            self.settings.heartbeat_seconds,
+            rpc="engine_form_heartbeat",
+        )
+        heartbeat.start()
+        log_event("form.claimed", **ids)
+        try:
+            template = Template.model_validate(job["template"])
+            lines = [Line(int(x["position"]), x["speaker"], str(x["text"])) for x in job["lines"]]
+            model = self._load_form_model()
+            answers = fill(
+                model, template, lines, job.get("language") or "", heartbeat.stopped.is_set
+            )
+            answered = sum(1 for a in answers if a.text is not None)
+            metrics = {
+                "form_model_name": self.settings.form_model_file,
+                "form_duration_seconds": model.last_seconds,
+                "prompt_tokens": model.last_usage.get("prompt_tokens"),
+                "completion_tokens": model.last_usage.get("completion_tokens"),
+                "answered_field_count": answered,
+            }
+            answer = self.main.rpc(
+                "engine_complete_form_job",
+                {
+                    "p_job_id": job["job_id"],
+                    "p_attempt": job["attempt"],
+                    "p_answers": [
+                        {"key": a.key, "text": a.text, "evidence": a.evidence} for a in answers
+                    ],
+                    "p_metrics": metrics,
+                },
+            )
+            if answer.get("ok"):
+                log_event(
+                    "form.completed",
+                    **ids,
+                    answered_field_count=answered,
+                    prompt_tokens=model.last_usage.get("prompt_tokens"),
+                    completion_tokens=model.last_usage.get("completion_tokens"),
+                    duration_seconds=model.last_seconds,
+                )
+            elif answer.get("error_category") == "VALIDATION":
+                raise WorkerError(ErrorCategory.FORM_FAILED)
+            else:
+                log_event(
+                    "form.result_refused", **ids, error_category=str(answer.get("error_category"))
+                )
+        except (Stopped, Cancelled):
+            log_event("form.stopped", **ids)
+        except WorkerError as error:
+            self._fail_form(job, error.category, ids, error.__cause__)
+        except Exception as exc:
+            self._fail_form(job, ErrorCategory.FORM_FAILED, ids, exc)
+        finally:
+            heartbeat.finish()
+
+    def _fail_form(
+        self,
+        job: dict[str, Any],
+        category: ErrorCategory,
+        ids: dict[str, str | int],
+        cause: BaseException | None,
+    ) -> None:
+        log_event(
+            "form.failed",
+            **ids,
+            error_category=category.value,
+            exception_type=type(cause).__name__ if cause else None,
+        )
+        try:
+            self.main.rpc(
+                "engine_fail_form_job",
+                {
+                    "p_job_id": job["job_id"],
+                    "p_attempt": job["attempt"],
+                    "p_error_category": category.value,
+                },
+            )
+        except Exception as exc:
+            log_event("form.failure_not_reported", **ids, exception_type=type(exc).__name__)
 
     def process(self, job: dict[str, Any]) -> None:
         ids: dict[str, str | int] = {

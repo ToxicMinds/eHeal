@@ -22,6 +22,9 @@ ALLOWED_FIELDS = frozenset(
         "device",
         "compute_type",
         "segment_count",
+        "answered_field_count",
+        "prompt_tokens",
+        "completion_tokens",
         "error_category",
         "exception_type",
     }

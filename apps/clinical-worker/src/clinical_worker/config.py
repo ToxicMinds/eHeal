@@ -35,9 +35,19 @@ class Settings(BaseModel):
     max_bytes: int = Field(default=50 * 1024 * 1024, gt=0)
     max_duration_seconds: float = Field(default=2 * 60 * 60, gt=0)
 
+    # The model that fills in forms (decision 0005): a GGUF file, fetched once with
+    # `clinical-worker fetch-form-model`, run on this computer by llama.cpp.
+    form_model_repository: str = "unsloth/Qwen3.5-4B-GGUF"
+    form_model_file: str = "Qwen3.5-4B-Q4_K_M.gguf"
+    form_context_tokens: int = Field(default=16384, ge=2048)
+
     @property
     def model_path(self) -> Path:
         return self.home / "models" / f"faster-whisper-{self.model}"
+
+    @property
+    def form_model_path(self) -> Path:
+        return self.home / "models" / "llm" / self.form_model_file
 
     @property
     def work_dir(self) -> Path:

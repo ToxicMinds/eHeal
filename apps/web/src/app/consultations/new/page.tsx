@@ -19,6 +19,8 @@ const schema = z.object({
   language: z.enum(["en", "de", "sk", "auto"], "Choose the language of the consultation."),
   consent_recorded: z.boolean(),
   scenario_notes: z.string().max(500, "Keep the notes under 500 characters."),
+  fee: z.string().trim().refine((fee) => fee === "" || (/^\d{1,4}([.,]\d{1,2})?$/.test(fee) && Number(fee.replace(",", ".")) >= 0.5 && Number(fee.replace(",", ".")) <= 1000),
+    "Enter an amount between 0.50 and 1000, for example 40 or 40.00, or leave it empty."),
 });
 type Values = z.infer<typeof schema>;
 
@@ -41,7 +43,7 @@ function NewConsultation() {
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { reference: "", scheduled_at: "", consent_recorded: true, scenario_notes: "" },
+    defaultValues: { reference: "", scheduled_at: "", consent_recorded: true, scenario_notes: "", fee: "" },
   });
 
   useEffect(() => {
@@ -59,6 +61,7 @@ function NewConsultation() {
       p_language: values.language,
       p_consent_recorded: values.consent_recorded,
       p_scenario_notes: values.scenario_notes,
+      p_fee_cents: values.fee === "" ? undefined : Math.round(Number(values.fee.replace(",", ".")) * 100),
     });
     if (outcome.ok) router.push(`/consultation/?id=${outcome.consultation_id}`);
     else setFailure(explain(outcome.error_category));
@@ -108,6 +111,17 @@ function NewConsultation() {
             </p>
 
             <div className="wa-field">
+              <label className="wa-label" htmlFor="fee">Fee</label>
+              <p className="wa-hint" id="fee-hint">The patient pays this when they open your link, before the call. Leave it empty for a free consultation.</p>
+              <div className="wa-affixed" style={{ maxWidth: 200 }}>
+                <span className="wa-affix" aria-hidden>€</span>
+                <input id="fee" className="wa-input" inputMode="decimal" autoComplete="off" placeholder="40.00"
+                  aria-invalid={Boolean(errors.fee)} aria-describedby="fee-hint fee-error" {...register("fee")} />
+              </div>
+              <Problem id="fee-error" message={errors.fee?.message} />
+            </div>
+
+            <div className="wa-field">
               <label className="wa-label" htmlFor="notes">Notes</label>
               <p className="wa-hint" id="notes-hint">For example &ldquo;sleep complaint, patient mentions a supplement&rdquo;.</p>
               <textarea id="notes" className="wa-textarea" aria-invalid={Boolean(errors.scenario_notes)}
@@ -135,9 +149,10 @@ function NewConsultation() {
         <aside className="wa-aside" aria-labelledby="next-title">
           <h2 className="wa-heading" id="next-title" style={{ color: "var(--ink)" }}>What happens next</h2>
           <ol>
-            <li>Attach the two audio tracks: yours and the patient&apos;s.</li>
-            <li>Start transcription. The engine writes each track out and puts the turns in order.</li>
-            <li>Check the transcript. Words the engine is unsure of are marked.</li>
+            <li>Send the patient their link. If you set a fee, they pay it there.</li>
+            <li>Start the video call. Both voices are recorded.</li>
+            <li>When you end the call, Watson writes the transcript and fills in your form.</li>
+            <li>Check each answer against its quote, then approve.</li>
           </ol>
         </aside>
       </div>

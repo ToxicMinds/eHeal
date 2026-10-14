@@ -6,7 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { AudioSlot } from "@/components/audio-slot";
+import { FormPanel } from "@/components/form-panel";
 import { JobPanel } from "@/components/job-panel";
+import { euros, PatientPanel } from "@/components/patient-panel";
 import { Journey, Notice } from "@/components/status";
 import { TranscriptView } from "@/components/transcript-view";
 import { call, explain } from "@/lib/api";
@@ -21,6 +23,8 @@ type Track = Tables<"audio_tracks">;
 type Loaded = { consultation: Consultation; tracks: Track[]; audioLeft: boolean };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SPEAKERS = ["practitioner", "patient"] as const;
+const FORM_STATUSES = ["transcript_ready", "transcript_reviewed", "extraction_processing", "extraction_failed",
+  "draft_ready", "under_review", "approved"];
 const AUDIO_CAN_CHANGE = ["ready_for_audio", "audio_imported", "transcription_failed"];
 const HAS_TRANSCRIPT = ["transcript_ready", "transcript_under_review", "transcript_reviewed", "extraction_processing",
   "extraction_failed", "draft_ready", "under_review", "approved", "corrected", "archived"];
@@ -54,8 +58,9 @@ function stepLines({ consultation, tracks }: Loaded): string[] {
       ? missing.length === 2 ? "Waiting for both tracks" : `Waiting for the ${missing[0]} track` : "Not yet",
     { current: consultation.status === "transcription_processing" ? "Transcribing" : "Ready to start", failed: "Failed", done: "Done" }[
       stages[2] as "current" | "failed" | "done"] ?? "Not yet",
-    stages[3] === "attention" ? consultation.status === "transcript_ready" ? "Ready to review" : "In progress"
-      : stages[3] === "done" ? "Reviewed" : "Not yet",
+    ({ transcript_ready: "Not set up", transcript_reviewed: "Not set up", extraction_processing: "Filling in",
+      extraction_failed: "Failed", draft_ready: "Ready to check", under_review: "Checking", approved: "Approved" } as Record<string, string>)[
+      consultation.status] ?? "Not yet",
   ];
 }
 
@@ -143,6 +148,7 @@ function ConsultationView({ userId }: { userId: string }) {
           <h1 className="wa-title">{consultation.synthetic_patient_ref}</h1>
           <p className="wa-meta">
             {dateTime(consultation.scheduled_at)} · {language}
+            {consultation.fee_cents !== null && ` · Fee ${euros(consultation.fee_cents)}`}
             {consultation.scenario_notes && ` · ${consultation.scenario_notes}`}
           </p>
         </div>
@@ -201,6 +207,10 @@ function ConsultationView({ userId }: { userId: string }) {
       {(status === "transcription_processing" || status === "transcription_failed") && (
         <JobPanel consultationId={consultation.id} status={status} onChanged={load} />
       )}
+
+      {FORM_STATUSES.includes(status) && <FormPanel consultationId={consultation.id} status={status} onChanged={load} />}
+
+      {status !== "consent_withdrawn" && <PatientPanel consultation={consultation} />}
 
       {HAS_TRANSCRIPT.includes(status) && <TranscriptView consultationId={consultation.id} language={language} />}
 

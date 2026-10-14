@@ -8,7 +8,7 @@ import { AppShell } from "@/components/app-shell";
 import { Notice } from "@/components/status";
 import { call as rpc, explain } from "@/lib/api";
 import { clock } from "@/lib/audio";
-import { connect, inviteLink, newInviteToken, recordCall, type CallState, type Recording } from "@/lib/call";
+import { connect, inviteLink, recordCall, type CallState, type Recording } from "@/lib/call";
 import type { Tables } from "@/lib/database.types";
 import { RequireSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
@@ -118,9 +118,7 @@ function Room({ userId }: { userId: string }) {
     }
     media.current = local;
     if (localVideo.current) localVideo.current.srcObject = local;
-    const saved = sessionStorage.getItem(`call-${id}`);
-    const invite = saved ?? newInviteToken();
-    sessionStorage.setItem(`call-${id}`, invite);
+    const invite = consultation.invite_token; // the link the patient already has
     setToken(invite);
     const recording = recordCall(local);
     recorder.current = recording;
@@ -156,7 +154,6 @@ function Room({ userId }: { userId: string }) {
     setStep("Starting transcription…");
     await rpc("declare_recorded_together", { p_consultation_id: id, p_recorded_together: true });
     await rpc("start_transcription", { p_consultation_id: id });
-    sessionStorage.removeItem(`call-${id}`);
     router.push(`/consultation/?id=${id}`);
   }
 
@@ -167,7 +164,6 @@ function Room({ userId }: { userId: string }) {
     media.current?.getTracks().forEach((track) => track.stop());
     const recording = await recorder.current?.stop();
     if (recording) return save(recording);
-    sessionStorage.removeItem(`call-${id}`);
     router.push(`/consultation/?id=${id}`);
   }
 

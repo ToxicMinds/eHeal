@@ -15,11 +15,6 @@ type Signal = Message & { from: Role; session: string };
 // ponytail: no relay (TURN); add one if some networks cannot connect directly.
 const ICE: RTCConfiguration = { iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }] };
 
-/** An unguessable token: whoever holds the invite link can join the call, nobody else. */
-export function newInviteToken(): string {
-  return crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "");
-}
-
 export function inviteLink(token: string): string {
   return `${window.location.origin}/join/?t=${token}`;
 }
