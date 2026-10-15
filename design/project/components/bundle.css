@@ -214,19 +214,10 @@ body {
 .wa-tag { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 6px; border: 1px solid var(--rule); border-radius: var(--radius-paper); font: 600 12px/18px var(--font-text); color: var(--ink-muted); }
 .wa-tag--attention { border-color: transparent; background: var(--lamp-tint); color: var(--lamp-ink); }
 
-/* ---------- Sign-in ---------- */
-.wa-signin { box-sizing: border-box; max-width: var(--content-width); margin: 0 auto; padding: var(--space-12) var(--space-4); display: grid; gap: var(--space-12); align-items: start; }
-@media (min-width: 900px) { .wa-signin { grid-template-columns: minmax(0, 1fr) 400px; } }
-.wa-thesis { display: grid; gap: var(--space-6); min-width: 0; }
-.wa-thesis__lead { margin: 0; max-width: 22em; font: 500 26px/34px var(--font-display); text-wrap: balance; }
-.wa-sample { padding: var(--space-2) var(--space-4); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius-paper); }
-
 @media (max-width: 560px) {
   .wa-page { padding-top: var(--space-6); }
   .wa-title { font-size: 28px; line-height: 32px; }
   .wa-panel { padding: var(--space-4); }
-  .wa-signin { padding-top: var(--space-8); gap: var(--space-8); }
-  .wa-thesis__lead { font-size: 22px; line-height: 30px; }
 }
 
 /* ---------- Call ---------- */
@@ -346,13 +337,6 @@ body {
   .wa-door__title { font-size: 40px; line-height: 44px; }
   .wa-door__lead { font-size: 17px; line-height: 25px; }
 }
-/* Sign-in as it is live today: the journey list on the hero. Replaced by the night door once approved. */
-.wa-hero .wa-wordmark { color: var(--on-night); }
-.wa-promise { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
-.wa-promise > li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 2px var(--space-4); align-items: start; }
-.wa-promise__icon { grid-row: span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: color-mix(in srgb, var(--on-night) 10%, transparent); color: var(--lamp); }
-.wa-promise__title { margin: 0; font: 600 17px/24px var(--font-text); }
-.wa-promise__text { margin: 0; font-size: 15px; line-height: 22px; color: color-mix(in srgb, var(--on-night) 78%, transparent); }
 .wa-case__top { flex-wrap: wrap; }
 .wa-case__ref { white-space: nowrap; }
 .wa-tucked { gap: var(--space-1) var(--space-2); }

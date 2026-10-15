@@ -7,28 +7,32 @@
 </head>
 <body>
 <div>
-  <main class="wa-signin">
-    <section class="wa-hero" aria-labelledby="what">
+<main class="wa-night">
+  <div class="wa-door">
+    <header class="wa-door__head">
       <span class="wa-wordmark">Watson</span>
-      <div style="display:grid;gap:6px">
-        <h2 class="wa-hero__title" id="what">Every doctor deserves a Watson.</h2>
-        <p class="wa-hero__meta">You see the patient. Watson does the paperwork.</p>
-      </div>
-      <ol class="wa-promise">
-          <li><span class="wa-promise__icon"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg></span><p class="wa-promise__title">Booked and paid</p><p class="wa-promise__text">Patients choose you, pick a time and pay online.</p></li>
-          <li><span class="wa-promise__icon"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></span><p class="wa-promise__title">Meet by video</p><p class="wa-promise__text">A private call in the browser. Nothing to install.</p></li>
-          <li><span class="wa-promise__icon"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg></span><p class="wa-promise__title">Watson takes the notes</p><p class="wa-promise__text">Every word written down, in English, German or Slovak.</p></li>
-          <li><span class="wa-promise__icon"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><p class="wa-promise__title">Your form, filled in</p><p class="wa-promise__text">Watson answers your questionnaire with quotes from the call. You check and approve.</p></li>
-      </ol>
-    </section>
-    <section class="wa-panel" aria-labelledby="signin-title">
-      <h1 class="wa-heading" id="signin-title">Sign in</h1>
+      <h1 class="wa-door__title">Every doctor deserves a&nbsp;Watson.</h1>
+      <p class="wa-door__lead">You see the patient. Watson does the paperwork.</p>
+    </header>
+    <section class="wa-panel wa-door__card" aria-labelledby="signin-title">
+      <h2 class="wa-heading" id="signin-title">Sign in</h2>
       <p class="wa-hint">Accounts are made by the project owner. There is no public sign-up.</p>
       <div class="wa-field"><label class="wa-label" for="email">Email</label><input class="wa-input" id="email" type="email" autocomplete="username" value="practitioner@example.com"></div>
       <div class="wa-field"><label class="wa-label" for="password">Password</label><input class="wa-input" id="password" type="password" autocomplete="current-password" value="••••••••••••"></div>
       <button class="wa-button wa-button--primary" type="button">Sign in</button>
     </section>
-  </main>
+    <figure class="wa-notebook">
+      <figcaption class="wa-notebook__title">From Watson's notebook</figcaption>
+      <ol>
+        <li><time>08:12</time><span>Booked for 09:30 and paid, €40.00</span></li>
+        <li><time>09:30</time><span>Video call with the patient, 32 minutes</span></li>
+        <li><time>10:03</time><span>Notes written: every word, both voices</span></li>
+        <li><time>10:06</time><span>Your form filled in: 18 of 21 answers, each with its quote</span></li>
+        <li class="is-now"><time>Now</time><span>Waiting for you to check and approve</span></li>
+      </ol>
+    </figure>
+  </div>
+</main>
 </div>
 </body>
 </html>
