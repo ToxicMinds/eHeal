@@ -76,12 +76,19 @@ as $$
     end);
 $$;
 
--- Whether a consultation still takes up its time: not withdrawn, and paid, free, or still held.
+-- An unpaid booking whose hold ran out: its time is open again and it is no longer the
+-- practitioner's business. Also a column the app can read and filter on ("released").
+create function public.released(p_consultation public.consultations) returns boolean
+language sql stable set search_path = ''
+as $$
+  select p_consultation.hold_until is not null and p_consultation.paid_at is null and p_consultation.hold_until <= now();
+$$;
+
+-- Whether a consultation still takes up its time: not withdrawn, and not released.
 create function private.takes_time(p_consultation public.consultations) returns boolean
 language sql stable set search_path = ''
 as $$
-  select p_consultation.status not in ('consent_withdrawn', 'archived')
-    and (p_consultation.hold_until is null or p_consultation.paid_at is not null or p_consultation.hold_until > now());
+  select p_consultation.status not in ('consent_withdrawn', 'archived') and not public.released(p_consultation);
 $$;
 
 -- Whether anything other than p_except blocks a consultation of this practitioner over [p_start, p_end).
@@ -171,7 +178,7 @@ begin
   if char_length(coalesce(p_about, '')) > 1000 then
     return private.refuse('VALIDATION', 'about');
   end if;
-  if p_languages is null or 'auto' = any (p_languages) then
+  if p_languages is null or cardinality(p_languages) = 0 or 'auto' = any (p_languages) then
     return private.refuse('VALIDATION', 'languages');
   end if;
   if p_hours is null or not private.valid_hours(p_hours) then
@@ -309,7 +316,31 @@ begin
 end;
 $$;
 
--- For the practitioner: their page, open times, Google busy times and Google connection, for a week.
+-- The patient's link names the page the time was booked from, so a patient whose unpaid time
+-- was taken can choose another. Otherwise as in the WhatsApp migration.
+create or replace function public.invite_details(p_token text) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  select coalesce(
+    (select jsonb_build_object('ok', true, 'scheduled_at', c.scheduled_at, 'fee_cents', c.fee_cents,
+              'currency', 'eur', 'paid', c.paid_at is not null, 'paid_at', c.paid_at,
+              'whatsapp_code', c.whatsapp_code,
+              'booked_from', case when c.booked_at is not null then
+                (select p.slug from public.practitioner_profiles p where p.practitioner_id = c.practitioner_id) end,
+              'patient', (select jsonb_build_object('name', p.name, 'contact', coalesce(p.phone, p.email))
+                          from public.patients p where p.id = c.patient_id),
+              'documents', (select coalesce(jsonb_agg(jsonb_build_object(
+                                'id', d.id, 'file_name', d.file_name, 'media_type', d.media_type,
+                                'size_bytes', d.size_bytes, 'created_at', d.created_at)
+                              order by d.created_at), '[]'::jsonb)
+                            from public.patient_documents d
+                            where d.consultation_id = c.id and d.uploaded_at is not null))
+     from private.consultation_for_token(p_token) c
+     where c.id is not null),
+    private.refuse('NOT_FOUND'));
+$$;
+
+-- For the practitioner: their page, open times, bookings, Google busy times and Google connection, for a week.
 create function public.calendar_week(p_from timestamptz, p_to timestamptz) returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -332,6 +363,13 @@ begin
     'busy', (select coalesce(jsonb_agg(jsonb_build_object('starts_at', b.starts_at, 'ends_at', b.ends_at) order by b.starts_at), '[]'::jsonb)
              from public.busy_times b
              where b.practitioner_id = v_user and tstzrange(b.starts_at, b.ends_at) && tstzrange(p_from, p_to)),
+    'bookings', (select coalesce(jsonb_agg(jsonb_build_object('consultation_id', c.id, 'starts_at', c.scheduled_at,
+                   'minutes', c.duration_minutes, 'who', coalesce(p.name, c.synthetic_patient_ref),
+                   'paid', case when c.fee_cents is null then null else c.paid_at is not null end,
+                   'held', c.hold_until is not null and c.paid_at is null) order by c.scheduled_at), '[]'::jsonb)
+                 from public.consultations c left join public.patients p on p.id = c.patient_id
+                 where c.practitioner_id = v_user and private.takes_time(c)
+                   and tstzrange(c.scheduled_at, c.scheduled_at + make_interval(mins => c.duration_minutes)) && tstzrange(p_from, p_to)),
     'google', (select jsonb_build_object('email', g.email, 'connected_at', g.connected_at, 'checked_at', g.checked_at, 'problem', g.problem)
                from public.google_calendars g where g.practitioner_id = v_user));
 end;
@@ -389,6 +427,8 @@ begin
 end;
 $$;
 
+revoke all on function public.released(public.consultations) from public, anon;
+grant execute on function public.released(public.consultations) to authenticated, service_role;
 revoke all on function
   public.save_booking_page(text, text, text, public.consultation_language[], jsonb, int, int, int),
   public.booking_times(text, timestamptz, timestamptz),

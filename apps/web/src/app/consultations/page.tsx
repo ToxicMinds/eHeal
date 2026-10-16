@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowRight, Plus, Server } from "lucide-react";
+import { ArrowRight, Laptop, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { euros } from "@/components/patient-panel";
+import { euros } from "@/lib/fee";
 import { Notice, StatusChip } from "@/components/status";
 import type { ConsultationStatus } from "@/lib/status";
+import { clockTime, viewerZone } from "@/lib/booking";
 import { dateTime, LANGUAGE_LABEL, summarise } from "@/lib/status";
 import { RequireSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
@@ -48,15 +49,23 @@ function Dashboard() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [engine, setEngine] = useState<Engine | null>(null);
   const [failed, setFailed] = useState(false);
+  const [openToday, setOpenToday] = useState<number | null>(null);
 
   useEffect(() => {
     // Row-level security returns only the signed-in practitioner's consultations.
     supabase
       .from("consultations")
       .select("id, synthetic_patient_ref, scheduled_at, updated_at, language, status, fee_cents, paid_at, forms(form_answers(machine_text)), patients(name)")
+      .filter("released", "eq", false) // an unpaid booking whose hold ran out is not the practitioner's business
       .order("scheduled_at", { ascending: false })
       .then(({ data, error }) => (error ? setFailed(true) : setRows(data as unknown as Row[])));
     supabase.rpc("engine_status").then(({ data }) => setEngine(data as Engine | null));
+    const start = new Date();
+    const midnight = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+    supabase.rpc("calendar_week", { p_from: start.toISOString(), p_to: midnight.toISOString() }).then(({ data }) => {
+      const week = data as { ok: boolean; page: object | null; open: string[] } | null;
+      if (week?.ok && week.page) setOpenToday(week.open.length);
+    });
   }, []);
 
   const now = new Date();
@@ -67,7 +76,8 @@ function Dashboard() {
   const today = rows?.filter((row) => new Date(row.scheduled_at).toDateString() === now.toDateString()).length ?? 0;
   const weekAgo = now.getTime() - 7 * 86_400_000;
   const approved = done.filter((row) => ["approved", "corrected"].includes(row.status) && Date.parse(row.updated_at) > weekAgo).length;
-  const lastReport = engine?.last_seen_at ? Math.max(0, Math.round((now.getTime() - Date.parse(engine.last_seen_at)) / 1000)) : null;
+  const next = rows?.filter((row) => Date.parse(row.scheduled_at) > now.getTime() && summarise(row.status).stages[1] !== "done")
+    .sort((a, b) => Date.parse(a.scheduled_at) - Date.parse(b.scheduled_at))[0];
 
   const summary = rows === null ? " " : [
     needYou.length ? `${plural(needYou.length, "consultation needs", "consultations need")} you.` : "Nothing needs you right now.",
@@ -82,6 +92,14 @@ function Dashboard() {
             <p className="wa-hero__eyebrow">{DAY.format(now)}</p>
             <h1 className="wa-hero__title" id="greeting">{greeting(now.getHours())}</h1>
             <p className="wa-hero__meta">{summary}</p>
+            {(next || openToday !== null) && (
+              <p className="wa-hero__next">
+                {next && <>Next: <Link href={`/consultation/?id=${next.id}`}>{who(next)} {nextWhen(next.scheduled_at, now)}</Link>{next.fee_cents !== null && (next.paid_at ? ", paid" : ", not paid yet")}</>}
+                {next && openToday !== null && " · "}
+                {openToday !== null && <>{openToday === 1 ? "One open time" : `${openToday} open times`} left today · <Link href="/calendar/">Calendar</Link></>}
+              </p>
+            )}
+            {engine && <LaptopStatus engine={engine} />}
           </div>
           <Link href="/consultations/new/" className="wa-button wa-button--primary">
             <Plus aria-hidden className="wa-icon" />New consultation
@@ -127,13 +145,7 @@ function Dashboard() {
           )}
           {working.length > 0 && (
             <section className="wa-shelf" aria-labelledby="working">
-              <div className="wa-shelf__head">
-                <h2 className="wa-heading" id="working">Watson is working</h2>
-                <p className="wa-engine" style={{ margin: 0 }}>
-                  <Server aria-hidden className="wa-icon wa-icon--sm" />
-                  {engine?.online ? `Engine online${lastReport === null ? "" : ` · last report ${lastReport} s ago`}` : "Engine offline: work waits until it is back"}
-                </p>
-              </div>
+              <div className="wa-shelf__head"><h2 className="wa-heading" id="working">Watson is working</h2></div>
               <div className="wa-cases">{working.map((row) => <Case key={row.id} row={row} />)}</div>
             </section>
           )}
@@ -154,6 +166,22 @@ function Dashboard() {
         </>
       )}
     </>
+  );
+}
+
+/** "at 11:00" today, else "on Thu 22 Oct 2026, 11:00". */
+const nextWhen = (iso: string, now: Date) =>
+  new Date(iso).toDateString() === now.toDateString() ? `at ${clockTime(iso, viewerZone())}` : `on ${dateTime(iso)}`;
+
+/** Whether the laptop that runs Watson's engine is on: transcripts and forms wait while it is off. */
+function LaptopStatus({ engine }: { engine: Engine }) {
+  const since = engine.last_seen_at ? ` since ${dateTime(engine.last_seen_at)}` : "";
+  return engine.online ? (
+    <span className="wa-laptop"><Laptop aria-hidden className="wa-icon wa-icon--sm" />Watson&apos;s laptop is on</span>
+  ) : (
+    <span className="wa-laptop wa-laptop--off">
+      <Laptop aria-hidden className="wa-icon wa-icon--sm" />Watson&apos;s laptop is off{since}: transcripts and forms wait until it is back
+    </span>
   );
 }
 

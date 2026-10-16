@@ -394,6 +394,8 @@ body {
 .wa-week__now::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--practitioner); }
 .wa-block { position: absolute; left: 3px; right: 3px; z-index: 1; box-sizing: border-box; display: grid; align-content: start; padding: 2px 6px; border-radius: var(--radius-control); font: 600 14px/18px var(--font-text); overflow: hidden; }
 .wa-block span { font-weight: 400; }
+.wa-week .wa-block { white-space: nowrap; }
+.wa-week .wa-block > span { overflow: hidden; text-overflow: ellipsis; }
 .wa-block--booked { background: var(--practitioner); color: var(--on-practitioner); }
 .wa-block--held { border: 1.5px dashed var(--practitioner); background: var(--practitioner-tint); color: var(--practitioner); }
 .wa-block--busy { border: 1px solid var(--rule-strong); background: repeating-linear-gradient(135deg, var(--paper-sunk) 0 6px, var(--rule) 6px 8px); color: var(--ink-muted); }
@@ -450,3 +452,6 @@ body {
 .wa-laptop--off { background: var(--lamp-tint); color: var(--lamp-ink); }
 .wa-hero__next { margin: 0; font-size: 15px; line-height: 22px; }
 .wa-hero__next a { color: var(--on-night); font-weight: 600; }
+/* One layout for wide screens, another for phones, where both are in the page. */
+@media (max-width: 720px) { .wa-only-wide { display: none !important; } }
+@media (min-width: 721px) { .wa-only-narrow { display: none !important; } }

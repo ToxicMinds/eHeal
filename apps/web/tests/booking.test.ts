@@ -61,12 +61,13 @@ describe("a practitioner's booking page", () => {
     expect(evaSlug).toBe(eva.email.split("@")[0]);
   });
 
-  it("refuses hours that are not a weekday with a start before its end", async () => {
+  it("refuses hours that are not a weekday with a start before its end, and a page without a language", async () => {
     const who = await newPractitioner(stack, "hours");
     for (const hours of [{ "8": ["09:00", "12:00"] }, { "1": ["12:00", "09:00"] }, { "1": ["9am", "noon"] }, { "1": ["09:00"] }]) {
       expect(await call(who.client, "save_booking_page", page({ p_hours: hours }))).toEqual({ ok: false, error_category: "VALIDATION", field: "hours" });
     }
     expect(await call(who.client, "save_booking_page", page({ p_languages: ["auto"] }))).toEqual({ ok: false, error_category: "VALIDATION", field: "languages" });
+    expect(await call(who.client, "save_booking_page", page({ p_languages: [] }))).toEqual({ ok: false, error_category: "VALIDATION", field: "languages" });
     expect(await call(who.client, "save_booking_page", page({ p_display_name: " " }))).toEqual({ ok: false, error_category: "VALIDATION", field: "display_name" });
   });
 
@@ -142,7 +143,7 @@ describe("booking a time", () => {
     expect(Date.parse(made!.scheduled_at)).toBe(Date.parse(nine));
     expect(Date.parse(made!.hold_until!) - Date.parse(made!.booked_at!)).toBe(35 * 60_000);
     expect(await times(slug)).toEqual([`${MONDAY} 10:00`, `${MONDAY} 11:00`]);
-    expect(await call(patient, "invite_details", { p_token: booked.token })).toMatchObject({ ok: true, fee_cents: 4000, paid: false });
+    expect(await call(patient, "invite_details", { p_token: booked.token })).toMatchObject({ ok: true, fee_cents: 4000, paid: false, booked_from: slug });
   });
 
   it("gives a time to one patient only, even when two book it at the same moment", async () => {
@@ -186,6 +187,17 @@ describe("booking a time", () => {
     expect(await call(server, "renew_hold", { p_token: first.token })).toEqual({ ok: false, error_category: "TIME_TAKEN" });
   });
 
+  it("that was let go leaves the practitioner's list; a paid or free one stays", async () => {
+    const who = await newPractitioner(stack, "gone");
+    const slug = await openPage(who);
+    const [nine, ten] = (await call(patient, "booking_times", { p_slug: slug, p_from: from, p_to: to })).times as string[];
+    const unpaid = await call(patient, "book_time", booking(slug, nine));
+    await call(patient, "book_time", booking(slug, ten, { p_contact: "+421 905 777 888" }));
+    sqlAsOwner(`update public.consultations set hold_until = now() - interval '1 minute' where invite_token = '${unpaid.token}';`);
+    const { data } = await who.client.from("consultations").select("scheduled_at, released").eq("released" as never, false as never);
+    expect((data as unknown as { scheduled_at: string }[]).map((row) => Date.parse(row.scheduled_at))).toEqual([Date.parse(ten)]);
+  });
+
   it("of a free consultation holds nothing: the time is simply booked", async () => {
     const who = await newPractitioner(stack, "free");
     const slug = await openPage(who, { p_fee_cents: null });
@@ -193,6 +205,12 @@ describe("booking a time", () => {
     expect((await call(patient, "book_time", booking(slug, nine))).ok).toBe(true);
     const { data } = await who.client.from("consultations").select("fee_cents, hold_until").single();
     expect(data).toEqual({ fee_cents: null, hold_until: null });
+  });
+
+  it("made by the practitioner is not from a booking page, so the patient's link offers no page to book again", async () => {
+    const made = await rpc(eva.client, "create_consultation", { p_synthetic_patient_ref: "SYN-0102", p_scheduled_at: from, p_language: "en", p_consent_recorded: true });
+    const { data } = await eva.client.from("consultations").select("invite_token").eq("id", made.consultation_id!).single();
+    expect(await call(patient, "invite_details", { p_token: data!.invite_token })).toMatchObject({ ok: true, booked_from: null });
   });
 });
 
@@ -223,6 +241,23 @@ describe("the practitioner's week", () => {
     expect(week.google).toMatchObject({ email: "eva@gmail.example", problem: null });
     expect(JSON.stringify(week)).not.toContain("secret-refresh");
     expect(week.page).toMatchObject({ display_name: "Dr. Eva Test", hours: MONDAY_MORNING });
+    expect(week.bookings).toEqual([]);
+  });
+
+  it("lists the bookings that still take their time, with the patient's name and whether they paid", async () => {
+    const who = await newPractitioner(stack, "agenda");
+    const slug = await openPage(who);
+    const [nine, ten, eleven] = (await call(patient, "booking_times", { p_slug: slug, p_from: from, p_to: to })).times as string[];
+    await call(patient, "book_time", booking(slug, nine));
+    const gone = await call(patient, "book_time", booking(slug, ten, { p_contact: "+421 905 999 000", p_name: "Peter Kováč" }));
+    sqlAsOwner(`update public.consultations set hold_until = now() - interval '1 minute' where invite_token = '${gone.token}';`);
+    const made = await rpc(who.client, "create_consultation", { p_synthetic_patient_ref: "SYN-0103", p_scheduled_at: eleven, p_language: "en", p_consent_recorded: true });
+
+    const week = await call(who.client, "calendar_week", { p_from: from, p_to: to });
+    expect(week.bookings).toEqual([
+      { consultation_id: expect.any(String), starts_at: expect.any(String), minutes: 45, who: "Jana Nováková", paid: false, held: true },
+      { consultation_id: made.consultation_id, starts_at: expect.any(String), minutes: 45, who: "SYN-0103", paid: null, held: false },
+    ]);
   });
 
   it("keeps Google's keys out of every browser's reach", async () => {

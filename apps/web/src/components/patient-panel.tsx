@@ -4,10 +4,9 @@ import { Check, Copy, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { inviteLink } from "@/lib/call";
 import type { Tables } from "@/lib/database.types";
+import { euros } from "@/lib/fee";
 import { dateTime } from "@/lib/status";
 import { patientMessage, whatsappLink } from "@/lib/whatsapp";
-
-export const euros = (cents: number) => `€${(cents / 100).toFixed(2)}`;
 
 /** The patient's link, a way to send it on WhatsApp, and whether they have paid. */
 export function PatientPanel({ consultation, patient }: {

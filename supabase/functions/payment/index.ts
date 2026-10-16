@@ -31,7 +31,7 @@ Deno.serve(async (request) => {
   if (!token) return reply(origin, 400, { error: "VALIDATION" });
 
   const { data: consultation } = await admin.from("consultations")
-    .select("id, fee_cents, paid_at, status").eq("invite_token", token).maybeSingle();
+    .select("id, fee_cents, paid_at, status, hold_until").eq("invite_token", token).maybeSingle();
   if (!consultation || consultation.status === "consent_withdrawn") return reply(origin, 404, { error: "NOT_FOUND" });
 
   try {
@@ -42,6 +42,13 @@ Deno.serve(async (request) => {
     }
     if (consultation.fee_cents === null) return reply(origin, 409, { error: "NO_FEE" });
     if (consultation.paid_at) return reply(origin, 409, { error: "ALREADY_PAID" });
+    // A booked time is held while the patient pays; Stripe's page closes when the hold ends.
+    let expiresAt: number | undefined;
+    if (consultation.hold_until) {
+      const { data: hold } = await admin.rpc("renew_hold", { p_token: token });
+      if (!hold?.ok) return reply(origin, 409, { error: hold?.error_category ?? "TIME_TAKEN" });
+      expiresAt = Math.floor(Date.parse(hold.hold_until) / 1000);
+    }
 
     const session = await stripe().checkout.sessions.create({
       mode: "payment",
@@ -51,6 +58,7 @@ Deno.serve(async (request) => {
       }],
       client_reference_id: consultation.id,
       metadata: { consultation_id: consultation.id },
+      expires_at: expiresAt,
       success_url: `${origin}/join/?t=${token}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/join/?t=${token}&cancelled=1`,
     });

@@ -1,30 +1,22 @@
 "use client";
 
 import { Lock, Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { PatientDocuments, type SentDocument } from "@/components/patient-documents";
-import { euros } from "@/components/patient-panel";
+import { euros } from "@/lib/fee";
 import { Notice } from "@/components/status";
 import { connect, type CallState } from "@/lib/call";
+import { payment } from "@/lib/payment";
 import { dateTime } from "@/lib/status";
 import { supabase } from "@/lib/supabase";
 
 type Details = {
   scheduled_at: string; fee_cents: number | null; paid: boolean; paid_at: string | null;
   patient: { name: string; contact: string } | null; documents: SentDocument[]; whatsapp_code: string;
+  booked_from: string | null;
 };
-const PAYMENT = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/payment`;
-
-/** Starts a payment (returns Stripe's page) or, with a session, confirms one. */
-async function payment(body: { token: string; session_id?: string }): Promise<{ url?: string; paid?: boolean } | null> {
-  try {
-    const response = await fetch(PAYMENT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    return response.ok ? await response.json() : null;
-  } catch {
-    return null;
-  }
-}
 
 /** Where a patient joins a call from the doctor's link. No account, no sign-in. */
 export default function JoinPage() {
@@ -57,6 +49,7 @@ function Join() {
   const [details, setDetails] = useState<Details | "missing" | null>(null);
   const [paying, setPaying] = useState(false);
   const [payProblem, setPayProblem] = useState<string | null>(null);
+  const [taken, setTaken] = useState(false);
   const [state, setState] = useState<CallState | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
@@ -100,7 +93,8 @@ function Join() {
     const answer = await payment({ token });
     if (answer?.url) return window.location.assign(answer.url);
     setPaying(false);
-    setPayProblem("Payment is not available right now. Try again in a moment.");
+    if (answer?.error === "TIME_TAKEN") setTaken(true);
+    else setPayProblem("Payment is not available right now. Try again in a moment.");
   }
 
   async function join() {
@@ -147,7 +141,13 @@ function Join() {
       </div>
       {mustPay ? (
         <>
-          {cancelled && <Notice title="The payment was not completed">Nothing was charged. You can try again.</Notice>}
+          {cancelled && !taken && <Notice title="The payment was not completed">Nothing was charged. You can try again.</Notice>}
+          {taken && (
+            <Notice tone="failed" title="This time was given to another patient"
+              actions={details.booked_from ? <Link className="wa-button wa-button--primary" href={`/book/?p=${details.booked_from}`}>Choose another time</Link> : undefined}>
+              It was not paid within 35 minutes of booking, so it was free again. Nothing was charged.
+            </Notice>
+          )}
           {returning && <Notice tone="attention" title="Your payment is not confirmed yet">If you paid, reload this page in a moment.</Notice>}
           <div className="wa-fee">
             <p className="wa-meta" style={{ margin: 0 }}>Consultation fee</p>
