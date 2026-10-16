@@ -114,7 +114,7 @@ function NewConsultation() {
               <input type="checkbox" {...register("consent_recorded")} />
               <span className="wa-check__text">
                 <span className="wa-check__label">Consent to transcription is recorded</span>
-                <span className="wa-hint">Without it, no audio can be attached or transcribed. You can record it later.</span>
+                <span className="wa-hint">If you leave this off, it is recorded when you start the video call.</span>
               </span>
             </label>
 

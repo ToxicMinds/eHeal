@@ -10,15 +10,15 @@
 <div class="demo wa-form">
   <div class="wa-fields-row">
     <div class="wa-field">
-      <label class="wa-label" for="ref">Patient reference</label>
-      <p class="wa-hint" id="ref-hint">Digits only.</p>
-      <div class="wa-affixed"><span class="wa-affix" aria-hidden="true">SYN-</span><input class="wa-input" id="ref" inputmode="numeric" value="0042" aria-describedby="ref-hint"></div>
+      <label class="wa-label" for="fee">Fee</label>
+      <p class="wa-hint" id="fee-hint">Leave it empty for a free consultation.</p>
+      <div class="wa-affixed"><span class="wa-affix" aria-hidden="true">€</span><input class="wa-input" id="fee" inputmode="decimal" value="40.00" aria-describedby="fee-hint"></div>
     </div>
     <div class="wa-field">
-      <label class="wa-label" for="ref-bad">Patient reference</label>
-      <p class="wa-hint" id="ref-bad-hint">Digits only.</p>
-      <div class="wa-affixed"><span class="wa-affix" aria-hidden="true">SYN-</span><input class="wa-input" id="ref-bad" value="Anna" aria-invalid="true" aria-describedby="ref-bad-hint ref-bad-error"></div>
-      <p class="wa-error" id="ref-bad-error"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>Use digits only, for example 0042.</p>
+      <label class="wa-label" for="fee-bad">Fee</label>
+      <p class="wa-hint" id="fee-bad-hint">Leave it empty for a free consultation.</p>
+      <div class="wa-affixed"><span class="wa-affix" aria-hidden="true">€</span><input class="wa-input" id="fee-bad" value="forty" aria-invalid="true" aria-describedby="fee-bad-hint fee-bad-error"></div>
+      <p class="wa-error" id="fee-bad-error"><svg class="wa-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>Enter an amount between 0.50 and 1000, for example 40 or 40.00, or leave it empty.</p>
     </div>
   </div>
   <div class="wa-fields-row">

@@ -144,31 +144,8 @@ body {
 .wa-skeleton { display: block; height: 12px; border-radius: var(--radius-paper); background: var(--paper-sunk); }
 .wa-empty { display: grid; justify-items: start; gap: var(--space-3); padding: var(--space-8) var(--space-6); }
 
-/* ---------- Audio slot ---------- */
-.wa-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); }
-.wa-slot { --voice: var(--practitioner); --voice-tint: var(--practitioner-tint); --on-voice: var(--on-practitioner); display: grid; gap: var(--space-3); align-content: start; padding: var(--space-4); border: 1px solid var(--rule); border-radius: var(--radius-paper); background: var(--paper); }
-.wa-slot--patient { --voice: var(--patient); --voice-tint: var(--patient-tint); --on-voice: var(--on-patient); }
-.wa-slot__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); }
-.wa-slot__voice { display: flex; align-items: center; gap: var(--space-2); font: 700 16px/24px var(--font-text); color: var(--voice); }
-.wa-slot__voice::before { content: ""; width: 4px; height: 18px; border-radius: 2px; background: var(--voice); }
-.wa-drop { display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-6) var(--space-4); border: 1.5px dashed var(--rule-strong); border-radius: var(--radius-control); background: var(--paper-sunk); text-align: center; }
-.wa-drop[data-over="true"] { border-color: var(--voice); background: var(--voice-tint); }
-.wa-drop__lead { font-weight: 600; }
-.wa-drop__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-1); }
-.wa-player { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); }
-.wa-play { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--voice); color: var(--on-voice); cursor: pointer; }
-.wa-scrub { position: relative; height: 6px; border-radius: var(--radius-pill); background: var(--paper-sunk); overflow: hidden; }
-.wa-scrub__fill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--voice); }
-.wa-player__time { font: 500 14px/20px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-muted); }
+/* ---------- Facts and progress ---------- */
 .wa-facts { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; padding: 0; list-style: none; font-size: 14px; line-height: 20px; color: var(--ink-muted); }
-.wa-details summary { cursor: pointer; font-size: 14px; line-height: 20px; color: var(--ink-muted); }
-.wa-details[open] summary { margin-bottom: var(--space-2); }
-.wa-rec { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-control); background: var(--voice-tint); }
-.wa-rec__dot { width: 12px; height: 12px; border-radius: var(--radius-pill); background: var(--voice); animation: wa-pulse 1.2s ease-in-out infinite; }
-@keyframes wa-pulse { 50% { opacity: 0.35; } }
-.wa-rec__time { font: 600 16px/22px var(--font-mono); font-variant-numeric: tabular-nums; }
-.wa-level { display: flex; flex: 1; align-items: flex-end; gap: 3px; min-width: 60px; height: 20px; }
-.wa-level > span { width: 4px; border-radius: 2px; background: var(--voice); }
 .wa-progress { height: 6px; border-radius: var(--radius-pill); background: var(--paper-sunk); overflow: hidden; }
 .wa-progress__fill { height: 100%; border-radius: inherit; background: var(--voice, var(--practitioner)); }
 
