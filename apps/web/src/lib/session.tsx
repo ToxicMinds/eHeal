@@ -48,3 +48,8 @@ export function RequireSession({ children }: { children: (user: User) => ReactNo
   }
   return <>{children(session.user)}</>;
 }
+
+/** Logins are plain names ("nik"); the sign-in service needs an email, so a name stands for name@watson.test. */
+const DOMAIN = "@watson.test";
+export const loginEmail = (name: string) => (name.includes("@") ? name.trim() : `${name.trim().toLowerCase()}${DOMAIN}`);
+export const loginName = (email: string | undefined) => (email?.endsWith(DOMAIN) ? email.slice(0, -DOMAIN.length) : email ?? "");

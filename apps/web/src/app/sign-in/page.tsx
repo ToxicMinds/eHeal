@@ -7,11 +7,11 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Notice } from "@/components/status";
-import { useSession } from "@/lib/session";
+import { loginEmail, useSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 
 const schema = z.object({
-  email: z.email("Enter your email address."),
+  name: z.string().trim().min(1, "Enter your name."),
   password: z.string().min(1, "Enter your password."),
 });
 type Values = z.infer<typeof schema>;
@@ -32,12 +32,12 @@ export default function SignIn() {
 
   async function signIn(values: Values) {
     setFailure(null);
-    const { error } = await supabase.auth.signInWithPassword(values);
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail(values.name), password: values.password });
     if (!error) return; // the session listener redirects
-    // The same message whether or not the email exists.
+    // The same message whether or not the name exists.
     setFailure(
       error.status === 400
-        ? "That email and password do not match an account."
+        ? "That name and password do not match an account."
         : "Sign-in is not available right now. Try again in a moment.",
     );
   }
@@ -56,11 +56,11 @@ export default function SignIn() {
           <p className="wa-hint">Accounts are made by the project owner. There is no public sign-up.</p>
           <form onSubmit={handleSubmit(signIn)} noValidate className="wa-form" style={{ gap: 16 }}>
             <div className="wa-field">
-              <label className="wa-label" htmlFor="email">Email</label>
-              <input id="email" type="email" autoComplete="username" className="wa-input"
-                aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "email-error" : undefined}
-                {...register("email")} />
-              {errors.email && <p id="email-error" className="wa-error"><CircleAlert aria-hidden className="wa-icon" />{errors.email.message}</p>}
+              <label className="wa-label" htmlFor="name">Name</label>
+              <input id="name" autoComplete="username" autoCapitalize="none" spellCheck={false} className="wa-input"
+                aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? "name-error" : undefined}
+                {...register("name")} />
+              {errors.name && <p id="name-error" className="wa-error"><CircleAlert aria-hidden className="wa-icon" />{errors.name.message}</p>}
             </div>
             <div className="wa-field">
               <label className="wa-label" htmlFor="password">Password</label>
