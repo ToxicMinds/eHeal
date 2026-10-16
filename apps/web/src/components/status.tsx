@@ -1,4 +1,4 @@
-import { ArrowRight, Check, CircleX, Clock, Eye, Info, LoaderCircle, TriangleAlert } from "lucide-react";
+import { ArrowRight, Check, CircleAlert, CircleX, Clock, Eye, Info, LoaderCircle, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { STAGES, summarise, type ConsultationStatus, type Tone } from "@/lib/status";
 
@@ -64,4 +64,10 @@ export function Notice({ tone = "neutral", title, children, actions }: {
       </div>
     </div>
   );
+}
+
+/** What is wrong with one field, under it; nothing when the field is fine. */
+export function FieldError({ id, message }: { id: string; message?: string | null }) {
+  if (!message) return null;
+  return <p id={id} className="wa-error"><CircleAlert aria-hidden className="wa-icon" />{message}</p>;
 }

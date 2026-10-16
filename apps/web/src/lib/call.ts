@@ -3,7 +3,7 @@
 import { formatOfRecording, type AudioFormat } from "./audio";
 import { supabase } from "./supabase";
 
-export type Role = "doctor" | "patient";
+type Role = "doctor" | "patient";
 export type CallState = "joining" | "waiting" | "connecting" | "connected" | "reconnecting" | "ended";
 type Message =
   | { kind: "hello" | "bye" }
@@ -15,8 +15,9 @@ type Signal = Message & { from: Role; session: string };
 // ponytail: no relay (TURN); add one if some networks cannot connect directly.
 const ICE: RTCConfiguration = { iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }] };
 
-export function inviteLink(token: string): string {
-  return `${window.location.origin}/join/?t=${token}`;
+/** The patient's link, short enough to read out: /j/K7P4QX9M opens their page (app/j). */
+export function patientLink(shortCode: string): string {
+  return `${window.location.origin}/j/${shortCode}`;
 }
 
 /** Joins the call as doctor or patient. The doctor makes every offer, so either can arrive first. */

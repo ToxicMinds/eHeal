@@ -1,7 +1,6 @@
 // Limits and formats: MASTER_BUILD_SPEC.md section 11.
 export const FORMATS = ["wav", "mp3", "m4a", "mp4", "flac", "ogg", "webm"] as const;
 export type AudioFormat = (typeof FORMATS)[number];
-export const MAX_BYTES = 50 * 1024 * 1024;
 export const MAX_SECONDS = 2 * 60 * 60;
 
 const MIME: Record<AudioFormat, string> = {
@@ -14,16 +13,6 @@ const MIME: Record<AudioFormat, string> = {
   webm: "audio/webm",
 };
 export const mimeOf = (format: AudioFormat) => MIME[format];
-
-function isFormat(value: string): value is AudioFormat {
-  return (FORMATS as readonly string[]).includes(value);
-}
-
-/** The format of a chosen file, from its extension. */
-export function formatOfFile(name: string): AudioFormat | null {
-  const extension = name.split(".").pop()?.toLowerCase() ?? "";
-  return isFormat(extension) ? extension : null;
-}
 
 /** The format a browser recorder produced, from its media type. */
 export function formatOfRecording(mediaType: string): AudioFormat {

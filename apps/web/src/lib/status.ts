@@ -5,15 +5,14 @@ export type ConsultationLanguage = Database["public"]["Enums"]["consultation_lan
 
 /** The four things that must happen to a consultation, in order. */
 export const STAGES = ["Consent", "Call", "Transcript", "Form"] as const;
-export type StageState = "done" | "current" | "attention" | "failed" | "pending";
+type StageState = "done" | "current" | "attention" | "failed" | "pending";
 type Stages = readonly [StageState, StageState, StageState, StageState];
 
 /** How a status chip looks: see the StatusChip component of the design system. */
 export type Tone = "neutral" | "current" | "working" | "attention" | "failed" | "done";
 
 /** Who has to act next: the groups of the consultation list. */
-export const GROUPS = ["Needs you", "Watson is working", "Done"] as const;
-export type Group = (typeof GROUPS)[number];
+type Group = "Needs you" | "Watson is working" | "Done";
 
 type Summary = { label: string; tone: Tone; group: Group; stages: Stages };
 const ALL_DONE: Stages = ["done", "done", "done", "done"];
@@ -21,7 +20,7 @@ const LATER = (label: string, tone: Tone = "done"): Summary => ({ label, tone, g
 
 const SUMMARY: Record<ConsultationStatus, Summary> = {
   consent_pending: { label: "Waiting for consent", tone: "neutral", group: "Needs you", stages: ["current", "pending", "pending", "pending"] },
-  ready_for_audio: { label: "Waiting for audio", tone: "current", group: "Needs you", stages: ["done", "current", "pending", "pending"] },
+  ready_for_audio: { label: "Waiting for the call", tone: "current", group: "Needs you", stages: ["done", "current", "pending", "pending"] },
   audio_imported: { label: "Ready to transcribe", tone: "current", group: "Needs you", stages: ["done", "done", "current", "pending"] },
   transcription_processing: { label: "Transcribing", tone: "working", group: "Watson is working", stages: ["done", "done", "current", "pending"] },
   transcription_failed: { label: "Transcription failed", tone: "failed", group: "Needs you", stages: ["done", "done", "failed", "pending"] },

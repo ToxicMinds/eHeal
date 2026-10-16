@@ -1,20 +1,10 @@
 // The patient's page calls this with its link token: to start a payment, or, back from
 // Stripe, to confirm it. The token is the only credential; it names one consultation.
-import { admin, fulfill, stripe } from "../_shared/payment.ts";
+import { fulfill, stripe } from "../_shared/payment.ts";
+import { admin, reply, SITES } from "../_shared/server.ts";
 
-const SITES = (Deno.env.get("SITE_URLS") ?? "").split(",").map((site) => site.trim()).filter(Boolean);
 const TOKEN = /^[0-9a-f]{64}$/;
 const SESSION = /^cs_(test|live)_[A-Za-z0-9]{10,200}$/;
-
-function reply(origin: string | null, status: number, body: unknown) {
-  const headers: Record<string, string> = { "Content-Type": "application/json", Vary: "Origin" };
-  if (origin && SITES.includes(origin)) {
-    headers["Access-Control-Allow-Origin"] = origin;
-    headers["Access-Control-Allow-Headers"] = "content-type";
-    headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
-  }
-  return new Response(body === null ? null : JSON.stringify(body), { status, headers });
-}
 
 Deno.serve(async (request) => {
   const origin = request.headers.get("Origin");
@@ -31,7 +21,7 @@ Deno.serve(async (request) => {
   if (!token) return reply(origin, 400, { error: "VALIDATION" });
 
   const { data: consultation } = await admin.from("consultations")
-    .select("id, fee_cents, paid_at, status").eq("invite_token", token).maybeSingle();
+    .select("id, fee_cents, paid_at, status, hold_until").eq("invite_token", token).maybeSingle();
   if (!consultation || consultation.status === "consent_withdrawn") return reply(origin, 404, { error: "NOT_FOUND" });
 
   try {
@@ -42,6 +32,13 @@ Deno.serve(async (request) => {
     }
     if (consultation.fee_cents === null) return reply(origin, 409, { error: "NO_FEE" });
     if (consultation.paid_at) return reply(origin, 409, { error: "ALREADY_PAID" });
+    // A booked time is held while the patient pays; Stripe's page closes when the hold ends.
+    let expiresAt: number | undefined;
+    if (consultation.hold_until) {
+      const { data: hold } = await admin.rpc("renew_hold", { p_token: token });
+      if (!hold?.ok) return reply(origin, 409, { error: hold?.error_category ?? "TIME_TAKEN" });
+      expiresAt = Math.floor(Date.parse(hold.hold_until) / 1000);
+    }
 
     const session = await stripe().checkout.sessions.create({
       mode: "payment",
@@ -51,6 +48,7 @@ Deno.serve(async (request) => {
       }],
       client_reference_id: consultation.id,
       metadata: { consultation_id: consultation.id },
+      expires_at: expiresAt,
       success_url: `${origin}/join/?t=${token}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/join/?t=${token}&cancelled=1`,
     });

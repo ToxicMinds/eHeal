@@ -1,8 +1,10 @@
 "use client";
 
-import { Check, Laptop, LoaderCircle, RotateCcw } from "lucide-react";
+import { Check, LoaderCircle, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { LaptopLine } from "@/components/laptop";
 import { Notice } from "@/components/status";
+import { engineStatus, type Engine } from "@/lib/engine";
 import { call, explain } from "@/lib/api";
 import { clock } from "@/lib/audio";
 import type { Database, Tables } from "@/lib/database.types";
@@ -11,7 +13,6 @@ import { supabase } from "@/lib/supabase";
 
 type Job = Tables<"transcription_jobs">;
 type Stage = "queued" | Database["public"]["Enums"]["job_stage"];
-type Engine = { online: boolean; last_seen_at: string | null };
 
 const STAGES: readonly [Stage, string][] = [
   ["queued", "Waiting for the engine"],
@@ -58,12 +59,12 @@ export function JobPanel({ consultationId, status, onChanged }: {
   const [problem, setProblem] = useState<string | null>(null);
 
   const read = useCallback(async () => {
-    const [jobs, engineStatus] = await Promise.all([
+    const [jobs, engine] = await Promise.all([
       supabase.from("transcription_jobs").select("*").eq("consultation_id", consultationId)
         .order("queued_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.rpc("engine_status"),
+      engineStatus(),
     ]);
-    return { latest: jobs.data, engine: engineStatus.data as Engine | null };
+    return { latest: jobs.data, engine };
   }, [consultationId]);
 
   useEffect(() => {
@@ -118,7 +119,6 @@ export function JobPanel({ consultationId, status, onChanged }: {
 
   const queuedFor = (job.claimed_at ? Date.parse(job.claimed_at) : now) - Date.parse(job.queued_at);
   const current = job.status === "queued" ? 0 : Math.max(1, STAGES.findIndex(([stage]) => stage === (job.stage ?? "validating")));
-  const lastReport = engine?.last_seen_at ? Math.max(0, Math.round((now - Date.parse(engine.last_seen_at)) / 1000)) : null;
 
   return (
     <section className="wa-panel" aria-labelledby="job-title">
@@ -139,16 +139,8 @@ export function JobPanel({ consultationId, status, onChanged }: {
           </li>
         ))}
       </ol>
-      {engine?.online ? (
-        <p className="wa-engine">
-          <Laptop aria-hidden className="wa-icon wa-icon--sm" />
-          Engine online{lastReport === null ? "" : ` · last report ${lastReport} s ago`}
-        </p>
-      ) : (
-        <Notice tone="attention" title="No transcription engine is running">
-          Your consultation is in line and starts as soon as the engine is back. Nothing is lost while you wait.
-        </Notice>
-      )}
+      <LaptopLine engine={engine} now={now}
+        waiting="Your consultation is in line and starts as soon as the laptop is back. Nothing is lost while you wait." />
       <p className="wa-hint">You can leave this page. The transcript appears here when it is ready.</p>
       {job.status === "queued" && (
         <div className="wa-actions">

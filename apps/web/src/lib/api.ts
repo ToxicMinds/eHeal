@@ -9,14 +9,15 @@ export type Outcome<T = object> =
   | { ok: false; error_category: string; field?: string };
 
 /** Calls a database function. A network or permission failure becomes a refused outcome. */
-export async function call<T = object>(
-  name: keyof Functions,
-  args: Functions[typeof name]["Args"],
-): Promise<Outcome<T>> {
+export async function call<T = object>(name: keyof Functions, args: object = {}): Promise<Outcome<T>> {
   const { data, error } = await supabase.rpc(name, args as never);
   if (error || data === null) return { ok: false, error_category: "STORAGE_UNAVAILABLE" };
   return data as unknown as Outcome<T>;
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Whether a value from the address bar can be a record's id, before asking the database. */
+export const isId = (value: string) => UUID.test(value);
 
 const MESSAGE: Record<string, string> = {
   AUDIO_FILE_MISSING: "No audio arrived. Attach the file again.",

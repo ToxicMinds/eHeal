@@ -4,7 +4,6 @@ test("a video call records both voices and starts transcription when it ends", a
   test.setTimeout(120_000);
   await signIn(page, account);
   await page.getByRole("link", { name: "New consultation" }).first().click();
-  await page.getByLabel("Patient reference").fill(String(Math.floor(1000 + Math.random() * 9000)));
   await page.getByLabel("Language spoken").selectOption("en");
   await page.getByRole("button", { name: "Create consultation" }).click();
 

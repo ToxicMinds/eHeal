@@ -1,12 +1,16 @@
 "use client";
 
-import { ArrowRight, Plus, Server } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { euros } from "@/components/patient-panel";
+import { euros } from "@/lib/fee";
+import { LaptopStatus } from "@/components/laptop";
 import { Notice, StatusChip } from "@/components/status";
 import type { ConsultationStatus } from "@/lib/status";
+import { call } from "@/lib/api";
+import { clockTime, viewerZone, type Week } from "@/lib/booking";
+import { engineStatus, type Engine } from "@/lib/engine";
 import { dateTime, LANGUAGE_LABEL, summarise } from "@/lib/status";
 import { RequireSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
@@ -20,7 +24,6 @@ type Row = {
 };
 /** The patient's name once known, else the consultation's reference. */
 const who = (row: Row) => row.patients?.name ?? row.synthetic_patient_ref;
-type Engine = { online: boolean; last_seen_at: string | null };
 
 export default function ConsultationsPage() {
   return <RequireSession>{(user) => <AppShell user={user}><Dashboard /></AppShell>}</RequireSession>;
@@ -29,8 +32,8 @@ export default function ConsultationsPage() {
 /** What the practitioner does next, on the card. */
 const NEXT: Partial<Record<ConsultationStatus, string>> = {
   consent_pending: "Record the patient's consent",
-  ready_for_audio: "Start the call, or add its recordings",
-  audio_imported: "Start the transcript",
+  ready_for_audio: "Start the call",
+  audio_imported: "The call is recorded: start the transcript",
   transcription_processing: "Watson is writing the transcript",
   transcription_failed: "The transcript stopped. Try again.",
   transcript_ready: "Fill in the form",
@@ -48,30 +51,39 @@ function Dashboard() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [engine, setEngine] = useState<Engine | null>(null);
   const [failed, setFailed] = useState(false);
+  const [openToday, setOpenToday] = useState<number | null>(null);
+  const [filter, setFilter] = useState<Filter | null>(null);
 
   useEffect(() => {
     // Row-level security returns only the signed-in practitioner's consultations.
     supabase
       .from("consultations")
       .select("id, synthetic_patient_ref, scheduled_at, updated_at, language, status, fee_cents, paid_at, forms(form_answers(machine_text)), patients(name)")
+      .filter("released", "eq", false) // an unpaid booking whose hold ran out is not the practitioner's business
       .order("scheduled_at", { ascending: false })
       .then(({ data, error }) => (error ? setFailed(true) : setRows(data as unknown as Row[])));
-    supabase.rpc("engine_status").then(({ data }) => setEngine(data as Engine | null));
+    engineStatus().then(setEngine);
+    const start = new Date();
+    const midnight = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+    call<Week>("calendar_week", { p_from: start.toISOString(), p_to: midnight.toISOString() }).then((week) => {
+      if (week.ok && week.page) setOpenToday(week.open.length);
+    });
   }, []);
 
   const now = new Date();
-  const group = (name: string) => rows?.filter((row) => summarise(row.status).group === name) ?? [];
+  const count = (key: Filter) => rows?.filter((row) => FILTER[key](row, now)).length ?? 0;
+  // The numbers count every consultation; the shelves show what the pressed number picks.
+  const shown = rows?.filter((row) => !filter || FILTER[filter](row, now)) ?? [];
+  const group = (name: string) => shown.filter((row) => summarise(row.status).group === name);
   const needYou = group("Needs you");
   const working = group("Watson is working");
   const done = group("Done");
-  const today = rows?.filter((row) => new Date(row.scheduled_at).toDateString() === now.toDateString()).length ?? 0;
-  const weekAgo = now.getTime() - 7 * 86_400_000;
-  const approved = done.filter((row) => ["approved", "corrected"].includes(row.status) && Date.parse(row.updated_at) > weekAgo).length;
-  const lastReport = engine?.last_seen_at ? Math.max(0, Math.round((now.getTime() - Date.parse(engine.last_seen_at)) / 1000)) : null;
+  const next = rows?.filter((row) => Date.parse(row.scheduled_at) > now.getTime() && summarise(row.status).stages[1] !== "done")
+    .sort((a, b) => Date.parse(a.scheduled_at) - Date.parse(b.scheduled_at))[0];
 
   const summary = rows === null ? " " : [
-    needYou.length ? `${plural(needYou.length, "consultation needs", "consultations need")} you.` : "Nothing needs you right now.",
-    working.length ? `Watson is working on ${working.length === 1 ? "one" : working.length}.` : "",
+    count("needs") ? `${plural(count("needs"), "consultation needs", "consultations need")} you.` : "Nothing needs you right now.",
+    count("working") ? `Watson is working on ${count("working") === 1 ? "one" : count("working")}.` : "",
   ].join(" ");
 
   return (
@@ -82,6 +94,14 @@ function Dashboard() {
             <p className="wa-hero__eyebrow">{DAY.format(now)}</p>
             <h1 className="wa-hero__title" id="greeting">{greeting(now.getHours())}</h1>
             <p className="wa-hero__meta">{summary}</p>
+            {(next || openToday !== null) && (
+              <p className="wa-hero__next">
+                {next && <>Next: <Link href={`/consultation/?id=${next.id}`}>{who(next)} {nextWhen(next.scheduled_at, now)}</Link>{next.fee_cents !== null && (next.paid_at ? ", paid" : ", not paid yet")}</>}
+                {next && openToday !== null && " · "}
+                {openToday !== null && <>{openToday === 1 ? "One open time" : `${openToday} open times`} left today · <Link href="/calendar/">Calendar</Link></>}
+              </p>
+            )}
+            {engine && <LaptopStatus engine={engine} />}
           </div>
           <Link href="/consultations/new/" className="wa-button wa-button--primary">
             <Plus aria-hidden className="wa-icon" />New consultation
@@ -89,10 +109,12 @@ function Dashboard() {
         </div>
         {rows && rows.length > 0 && (
           <div className="wa-stats">
-            <a className="wa-stat wa-stat--lamp" href="#needs"><span className="wa-stat__value">{needYou.length}</span><span className="wa-stat__label">Need you</span></a>
-            <a className="wa-stat" href="#working"><span className="wa-stat__value">{working.length}</span><span className="wa-stat__label">Watson is working</span></a>
-            <span className="wa-stat"><span className="wa-stat__value">{today}</span><span className="wa-stat__label">Booked today</span></span>
-            <a className="wa-stat" href="#done"><span className="wa-stat__value">{approved}</span><span className="wa-stat__label">Approved this week</span></a>
+            {TILES.map(([key, label]) => (
+              <button key={key} type="button" className={key === "needs" ? "wa-stat wa-stat--lamp" : "wa-stat"} aria-pressed={filter === key}
+                onClick={() => setFilter(filter === key ? null : key)}>
+                <span className="wa-stat__value">{count(key)}</span><span className="wa-stat__label">{label}</span>
+              </button>
+            ))}
           </div>
         )}
       </section>
@@ -119,6 +141,10 @@ function Dashboard() {
         </div>
       ) : (
         <>
+          {shown.length === 0 && (
+            <Notice title="Nothing here" actions={<button type="button" className="wa-button wa-button--secondary wa-button--small"
+              onClick={() => setFilter(null)}>Show all consultations</button>}>No consultation matches this number right now.</Notice>
+          )}
           {needYou.length > 0 && (
             <section className="wa-shelf" aria-labelledby="needs">
               <div className="wa-shelf__head"><h2 className="wa-heading" id="needs">Needs you</h2></div>
@@ -127,13 +153,7 @@ function Dashboard() {
           )}
           {working.length > 0 && (
             <section className="wa-shelf" aria-labelledby="working">
-              <div className="wa-shelf__head">
-                <h2 className="wa-heading" id="working">Watson is working</h2>
-                <p className="wa-engine" style={{ margin: 0 }}>
-                  <Server aria-hidden className="wa-icon wa-icon--sm" />
-                  {engine?.online ? `Engine online${lastReport === null ? "" : ` · last report ${lastReport} s ago`}` : "Engine offline: work waits until it is back"}
-                </p>
-              </div>
+              <div className="wa-shelf__head"><h2 className="wa-heading" id="working">Watson is working</h2></div>
               <div className="wa-cases">{working.map((row) => <Case key={row.id} row={row} />)}</div>
             </section>
           )}
@@ -156,6 +176,21 @@ function Dashboard() {
     </>
   );
 }
+
+/** The four numbers on Home, each a filter on the consultations below it. Pressed again: all. */
+type Filter = "needs" | "working" | "today" | "approved";
+const WEEK_MS = 7 * 86_400_000;
+const FILTER: Record<Filter, (row: Row, now: Date) => boolean> = {
+  needs: (row) => summarise(row.status).group === "Needs you",
+  working: (row) => summarise(row.status).group === "Watson is working",
+  today: (row, now) => new Date(row.scheduled_at).toDateString() === now.toDateString(),
+  approved: (row, now) => ["approved", "corrected"].includes(row.status) && Date.parse(row.updated_at) > now.getTime() - WEEK_MS,
+};
+const TILES: [Filter, string][] = [["needs", "Need you"], ["working", "Watson is working"], ["today", "Booked today"], ["approved", "Approved this week"]];
+
+/** "at 11:00" today, else "on Thu 22 Oct 2026, 11:00". */
+const nextWhen = (iso: string, now: Date) =>
+  new Date(iso).toDateString() === now.toDateString() ? `at ${clockTime(iso, viewerZone())}` : `on ${dateTime(iso)}`;
 
 function Case({ row }: { row: Row }) {
   const { tone, stages } = summarise(row.status);

@@ -1,14 +1,15 @@
 "use client";
 
-import { ChevronLeft, Copy, Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
+import { ChevronLeft, Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { CopyButton } from "@/components/copy-button";
 import { Notice } from "@/components/status";
 import { call as rpc, explain } from "@/lib/api";
 import { clock } from "@/lib/audio";
-import { connect, inviteLink, recordCall, type CallState, type Recording } from "@/lib/call";
+import { connect, patientLink, recordCall, type CallState, type Recording } from "@/lib/call";
 import type { Tables } from "@/lib/database.types";
 import { RequireSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
@@ -49,7 +50,6 @@ function Room({ userId }: { userId: string }) {
   const [unsaved, setUnsaved] = useState<Recording | null>(null);
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [recording, setRecording] = useState(false);
   const localVideo = useRef<HTMLVideoElement>(null);
@@ -175,18 +175,8 @@ function Room({ userId }: { userId: string }) {
     else setCameraOff(off);
   }
 
-  async function copy(link: string) {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  }
-
   const note = state === null ? ["Start the call, then send the patient the link.", ""] : NOTE[state];
-  const link = token ? inviteLink(token) : null;
+  const link = token && consultation ? patientLink(consultation.short_code) : null;
   return (
     <>
       {back}
@@ -202,9 +192,7 @@ function Room({ userId }: { userId: string }) {
             <label className="wa-label" htmlFor="invite">Send this link to the patient</label>
             <div className="wa-invite">
               <input id="invite" className="wa-input" readOnly value={link} onFocus={(event) => event.target.select()} />
-              <button type="button" className="wa-button wa-button--secondary" onClick={() => copy(link)}>
-                <Copy aria-hidden className="wa-icon" />{copied ? "Copied" : "Copy link"}
-              </button>
+              <CopyButton text={link} />
             </div>
           </div>
         )}

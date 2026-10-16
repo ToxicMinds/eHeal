@@ -11,10 +11,10 @@
   },
   "groups": [],
   "lastChange": {
-    "at": "2026-10-15T04:57:55Z",
+    "at": "2026-10-16T16:00:00Z",
     "by": "Nikhil Shanbhag",
     "via": "Claude Code",
-    "note": "Owner approved the night sign-in: ScreenSignIn and ScreenPhoneSignIn are now the night door with Watson's notebook; the proposal copies are removed. Documents and WhatsApp styles (wa-docs, wa-chat, wa-whatsapp, wa-link) are in the bundle, as built."
+    "note": "Owner's critique (16 Oct): Home's numbers are filter buttons; New consultation has no reference field and starts in English; patient links are short (/j/K7P4QX9M); the front page is the patients' Find a practitioner (one filter, language); the audio upload and microphone boxes are gone (AudioSlot, ScreenAudio, ScreenPhoneAudio removed with their styles): the video call records both voices. Field shows the affixed fee instead of the reference."
   },
   "layout": "files",
   "libraries": [],

@@ -14,6 +14,8 @@
 # and given these response headers for every path: Content-Security-Policy:
 # frame-ancestors 'none'; X-Frame-Options: DENY; X-Content-Type-Options: nosniff;
 # Referrer-Policy: no-referrer (set through the API: POST /v1/services/<id>/headers).
+# Short links: a rewrite /j/* -> /j/index.html (POST /v1/services/<id>/routes), so /j/K7P4QX9M
+# serves the page that opens the patient's link (apps/web/public/serve.json does the same locally).
 # The old address, eheal-app.onrender.com (srv-db79jlivcj2c73cpibsg), now publishes only
 # robots.txt and redirects /* to the same path here.
 set -euo pipefail

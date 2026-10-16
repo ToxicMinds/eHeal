@@ -1,75 +1,50 @@
-import { fileURLToPath } from "node:url";
 import { expect, signIn, test } from "./account";
+import { attachTrack, browserClient, localStack, rpc, sqlAsOwner } from "../tests/local-stack";
 
-const FIXTURE = fileURLToPath(new URL("../../../packages/test-fixtures/audio/en-patient-sleep.wav", import.meta.url));
 
-test("create a consultation, record consent, attach and remove audio", async ({ page, account, problems }) => {
-  const digits = String(Math.floor(1000 + Math.random() * 9000));
-  const reference = `SYN-${digits}`;
+test("create a consultation, Watson numbers it, record consent; the video call is the only way to record", async ({ page, account, problems }) => {
   await signIn(page, account);
 
-  // A name is refused before anything is sent: the reference takes digits only.
+  // No reference to type (owner, 16 Oct, B): Watson numbers the consultation itself.
   await page.getByRole("link", { name: "New consultation" }).first().click();
-  await page.getByLabel("Patient reference").fill("Maria Novak");
-  await page.getByLabel("Language spoken").selectOption("en");
-  await page.getByRole("button", { name: "Create consultation" }).click();
-  await expect(page.getByText("Use up to eight digits, for example 0042.")).toBeVisible();
-
-  await page.getByLabel("Patient reference").fill(digits);
+  await expect(page.getByLabel("Patient reference")).toHaveCount(0);
   await page.getByLabel("Notes").fill("sleep complaint, patient mentions a supplement");
   await page.getByLabel(/Consent to transcription is recorded/).uncheck();
   await page.getByRole("button", { name: "Create consultation" }).click();
+  const heading = page.getByRole("heading", { level: 1, name: /^SYN-\d{6}$/ });
+  await expect(heading).toBeVisible();
+  const reference = (await heading.textContent())!;
 
-  // Without consent, nothing can be attached.
-  await expect(page.getByRole("heading", { name: reference })).toBeVisible();
   await expect(page.getByText("Not recorded yet", { exact: true })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Practitioner track" })).toHaveCount(0);
   await page.getByRole("button", { name: "Record consent" }).click();
   await expect(page.getByText(/^Recorded \d+ \w+$/)).toBeVisible();
-  await expect(page.getByText("Waiting for both tracks")).toBeVisible();
 
-  // The practitioner's track from a file.
-  const practitioner = page.getByRole("region", { name: "Practitioner track" });
-  const patient = page.getByRole("region", { name: "Patient track" });
-  await practitioner.getByLabel("Practitioner audio file").setInputFiles(FIXTURE);
-  await expect(practitioner.getByText("WAV", { exact: true })).toBeVisible();
-  await expect(practitioner.locator(".wa-player__time")).toContainText("0:07");
-  await expect(practitioner.getByText("323 KB")).toBeVisible();
-  await practitioner.getByText("Details").click();
-  await expect(practitioner.getByText(/^SHA-256 [0-9a-f]{64}$/)).toBeVisible();
-
-  // A file that is not audio is refused with a reason.
-  await patient.getByLabel("Patient audio file").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("not audio") });
-  await expect(patient.getByRole("alert")).toContainText("This audio format is not supported.");
-
-  // The patient's track from the microphone.
-  await patient.getByRole("button", { name: "Record with microphone" }).click();
-  await expect(patient.getByRole("timer")).toHaveText(/^0:0\d$/);
-  await page.waitForTimeout(1500);
-  await patient.getByRole("button", { name: "Stop" }).click();
-  await expect(patient.getByText(/^Recording ready:/)).toBeVisible();
-  await patient.getByRole("button", { name: "Attach this recording" }).click();
-  await expect(patient.getByText("WEBM", { exact: true })).toBeVisible();
-  await expect(page.getByText("Ready to start")).toBeVisible();
-
-  // The declaration survives a reload.
-  const together = page.getByLabel(/Both tracks were recorded together/);
-  await together.click(); // the box follows the stored value, which arrives a moment later
-  await expect(together).toBeChecked();
-  await page.reload();
-  await expect(page.getByLabel(/Both tracks were recorded together/)).toBeChecked();
-
-  // Removing a track steps the consultation back.
-  await page.getByRole("button", { name: "Remove patient audio" }).click();
-  await expect(page.getByText("Waiting for the patient track")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Patient track" }).getByLabel("Patient audio file")).toBeAttached();
+  // No boxes to upload or record audio (owner, 16 Oct, D): the call records both voices.
+  await expect(page.getByRole("region", { name: /track/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Start video call" })).toBeVisible();
 
   // The list shows it, and its row leads back here.
   await page.getByRole("link", { name: "Consultations", exact: true }).click();
   const row = page.getByRole("link", { name: new RegExp(reference) });
-  await expect(row).toContainText("Waiting for audio");
+  await expect(row).toContainText("Waiting for the call");
   await row.click();
   await expect(page.getByRole("heading", { name: reference })).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
+test("a call saved only in part can be discarded and made again", async ({ page, account, problems }) => {
+  test.skip(Boolean(process.env.E2E_BASE_URL), "attaches one track directly through the local database functions");
+  const client = browserClient(localStack());
+  const { data } = await client.auth.signInWithPassword({ email: account.email, password: account.password });
+  const who = { id: data.user!.id, email: account.email, client };
+  const made = await rpc(client, "create_consultation", { p_scheduled_at: new Date().toISOString(), p_language: "en", p_consent_recorded: true });
+  await attachTrack(who, made.consultation_id!, "practitioner");
+
+  await signIn(page, account);
+  await page.goto(`/consultation/?id=${made.consultation_id}`);
+  const half = page.getByRole("status").filter({ hasText: "The last call was saved only in part" });
+  await half.getByRole("button", { name: "Discard and call again" }).click();
+  await expect(page.getByRole("link", { name: "Start video call" })).toBeVisible();
   expect(problems).toEqual([]);
 });
 
@@ -79,4 +54,55 @@ test("a consultation that is not yours looks the same as one that does not exist
   await expect(page.getByText("This consultation does not exist, or it is not yours.")).toBeVisible();
   await page.goto("/consultation/?id=not-an-id");
   await expect(page.getByText("This consultation does not exist, or it is not yours.")).toBeVisible();
+});
+
+test("a new consultation starts in English, and says another language can be chosen", async ({ page, account, problems }) => {
+  await signIn(page, account);
+  await page.getByRole("link", { name: "New consultation" }).first().click();
+  await expect(page.getByLabel("Language spoken")).toHaveValue("en");
+  await expect(page.getByText("English unless you choose another.")).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
+test("the numbers on Home filter the consultations below them", async ({ page, account, problems }) => {
+  test.skip(Boolean(process.env.E2E_BASE_URL), "prepares an approved consultation directly in the local database");
+  const client = browserClient(localStack());
+  await client.auth.signInWithPassword({ email: account.email, password: account.password });
+  const made = await rpc(client, "create_consultation", {
+    p_synthetic_patient_ref: "SYN-0099", p_scheduled_at: new Date().toISOString(), p_language: "en", p_consent_recorded: true,
+  });
+  sqlAsOwner(`update public.consultations set status = 'approved' where id = '${made.consultation_id}';`);
+
+  await signIn(page, account);
+  const needYou = page.getByRole("button", { name: /Need you/ });
+  await expect(needYou).toHaveAttribute("aria-pressed", "false");
+  await needYou.click();
+  await expect(needYou).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("heading", { name: "Needs you" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Done" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Approved this week/ }).click();
+  await expect(page.getByRole("heading", { name: "Done" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Needs you" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Approved this week/ }).click(); // pressed again: everything
+  await expect(page.getByRole("heading", { name: "Needs you" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Done" })).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
+test("the patient's link is short enough to read out, and opens the patient's page however it is typed", async ({ page, account, browser, problems }) => {
+  await signIn(page, account);
+  await page.getByRole("link", { name: "New consultation" }).first().click();
+  await page.getByRole("button", { name: "Create consultation" }).click();
+  const link = await page.getByLabel("Link for the patient").inputValue();
+  expect(link).toMatch(/\/j\/[2-9A-HJ-NP-Z]{8}$/);
+
+  const patient = await (await browser.newContext()).newPage();
+  await patient.goto(link.toLowerCase().replace(/^https?:\/\/[^/]+/, ""));
+  await expect(patient.getByRole("heading", { name: "Your consultation" })).toBeVisible();
+  await expect(patient).toHaveURL(/\/join\/\?t=[0-9a-f]{64}$/);
+  await patient.goto("/j/ZZZZZZZZ");
+  await expect(patient.getByText("This link does not lead to a consultation")).toBeVisible();
+  expect(problems).toEqual([]);
 });

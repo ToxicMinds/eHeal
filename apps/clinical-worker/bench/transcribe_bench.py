@@ -16,9 +16,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from clinical_worker.config import Settings  # noqa: E402
 from clinical_worker.transcribe import transcribe_track  # noqa: E402
 
-NUMBERS = {"0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven",
-           "8": "eight", "9": "nine", "10": "ten", "11": "eleven", "19": "nineteen", "21": "twenty-one",
-           "28": "twenty-eight", "42": "forty-two"}
+NUMBERS = {
+    "0": "zero",
+    "1": "one",
+    "2": "two",
+    "3": "three",
+    "4": "four",
+    "5": "five",
+    "6": "six",
+    "7": "seven",
+    "8": "eight",
+    "9": "nine",
+    "10": "ten",
+    "11": "eleven",
+    "19": "nineteen",
+    "21": "twenty-one",
+    "28": "twenty-eight",
+    "42": "forty-two",
+}
 
 
 def words(text: str) -> list[str]:
@@ -68,8 +83,17 @@ def main() -> None:
             total["errors"] += rate * len(ref)
             total["words"] += len(ref)
             print(f"{speaker:13} WER {rate:6.1%}  {seconds:6.1f} s")
-    print(json.dumps({"model": model, "language": language, "wer": round(total["errors"] / total["words"], 4),
-                      "transcribe_seconds": round(total["seconds"], 1), "audio_seconds": round(total["audio"], 1)}))
+    print(
+        json.dumps(
+            {
+                "model": model,
+                "language": language,
+                "wer": round(total["errors"] / total["words"], 4),
+                "transcribe_seconds": round(total["seconds"], 1),
+                "audio_seconds": round(total["audio"], 1),
+            }
+        )
+    )
 
 
 if __name__ == "__main__":

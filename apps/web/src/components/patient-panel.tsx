@@ -1,32 +1,20 @@
 "use client";
 
-import { Check, Copy, MessageCircle } from "lucide-react";
-import { useState } from "react";
-import { inviteLink } from "@/lib/call";
+import { Check, MessageCircle } from "lucide-react";
+import { CopyButton } from "@/components/copy-button";
+import { patientLink } from "@/lib/call";
 import type { Tables } from "@/lib/database.types";
+import { euros } from "@/lib/fee";
 import { dateTime } from "@/lib/status";
 import { patientMessage, whatsappLink } from "@/lib/whatsapp";
-
-export const euros = (cents: number) => `€${(cents / 100).toFixed(2)}`;
 
 /** The patient's link, a way to send it on WhatsApp, and whether they have paid. */
 export function PatientPanel({ consultation, patient }: {
   consultation: Tables<"consultations">;
   patient: { name: string; phone: string | null } | null;
 }) {
-  const [copied, setCopied] = useState(false);
-  const link = inviteLink(consultation.invite_token);
+  const link = patientLink(consultation.short_code);
   const fee = consultation.fee_cents;
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  }
 
   return (
     <section className="wa-panel" aria-labelledby="patient-title">
@@ -52,9 +40,7 @@ export function PatientPanel({ consultation, patient }: {
               <MessageCircle aria-hidden className="wa-icon" />Send on WhatsApp
             </a>
           )}
-          <button type="button" className="wa-button wa-button--secondary" onClick={copy}>
-            <Copy aria-hidden className="wa-icon" />{copied ? "Copied" : "Copy link"}
-          </button>
+          <CopyButton text={link} />
         </div>
         <p className="wa-hint">
           {fee === null ? "The patient opens the link and waits for you to start the call."

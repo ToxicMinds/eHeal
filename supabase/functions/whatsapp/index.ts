@@ -3,27 +3,20 @@
 // https://developers.facebook.com/docs/graph-api/webhooks/getting-started (signatures).
 // Meta calls this with every message sent to Watson's number. Nothing here trusts the request:
 // each call must carry Meta's signature, made with the app secret only Meta and Watson hold.
-import { createClient } from "npm:@supabase/supabase-js@2.117.2";
+// The database's schedule calls it too, with its own secret, to send the reminders that are due.
+import { admin, env, SITE, sameSecret } from "../_shared/server.ts";
 import * as say from "./messages.ts";
 
 const GRAPH = "https://graph.facebook.com/v26.0";
-const env = (name: string) => Deno.env.get(name) ?? "";
-const SITE = env("SITE_URLS").split(",")[0]?.trim() || "https://watson-app.onrender.com";
 const READABLE = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 10 * 1024 * 1024;
 
-// The service key may call the whatsapp_* functions; nothing reaches a browser.
-const admin = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
-
-async function signedByMeta(body: Uint8Array, header: string | null): Promise<boolean> {
+async function signedByMeta(body: Uint8Array<ArrayBuffer>, header: string | null): Promise<boolean> {
   const secret = env("META_APP_SECRET");
   if (!secret || !header?.startsWith("sha256=")) return false;
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const expected = [...new Uint8Array(await crypto.subtle.sign("HMAC", key, body))].map((b) => b.toString(16).padStart(2, "0")).join("");
-  const given = header.slice("sha256=".length);
-  let difference = given.length ^ expected.length;
-  for (let i = 0; i < expected.length; i++) difference |= (given.charCodeAt(i) || 0) ^ expected.charCodeAt(i);
-  return difference === 0;
+  return sameSecret(header.slice("sha256=".length), expected);
 }
 
 async function graph(path: string, init: RequestInit = {}): Promise<Response> {
@@ -33,18 +26,15 @@ async function graph(path: string, init: RequestInit = {}): Promise<Response> {
   });
 }
 
-/** Sends a text inside the 24 hours that follow the patient's own message, and records it. */
-async function reply(phone: string, view: say.View | null, body: string): Promise<void> {
+/** Sends one WhatsApp message and records it, delivered or not. `text` is what the patient reads. */
+async function send(phone: string, consultationId: string | null, message: Record<string, unknown>, text: string): Promise<void> {
   let id: string | null = null;
   let error: string | null = null;
   try {
     const response = await graph(`${env("WHATSAPP_PHONE_NUMBER_ID")}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messaging_product: "whatsapp", recipient_type: "individual", to: phone.slice(1),
-        type: "text", text: { body, preview_url: false },
-      }),
+      body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: phone.slice(1), ...message }),
     });
     const answer = await response.json();
     id = answer?.messages?.[0]?.id ?? null;
@@ -53,8 +43,39 @@ async function reply(phone: string, view: say.View | null, body: string): Promis
     error = `Not sent: ${exception instanceof Error ? exception.name : "error"}`;
   }
   await admin.rpc("whatsapp_sent", {
-    p_wa_message_id: id, p_phone: phone, p_consultation_id: view?.consultation_id ?? null, p_body: body, p_error: error,
+    p_wa_message_id: id, p_phone: phone, p_consultation_id: consultationId, p_body: text, p_error: error,
   });
+}
+
+/** Sends a text inside the 24 hours that follow the patient's own message, and records it. */
+function reply(phone: string, view: say.View | null, body: string): Promise<void> {
+  return send(phone, view?.consultation_id ?? null, { type: "text", text: { body, preview_url: false } }, body);
+}
+
+/**
+ * The reminders due now (an hour before the call). A template, because the patient may not have
+ * written in the last 24 hours; its button opens the patient's own link.
+ */
+async function remind(): Promise<number> {
+  const { data } = await admin.rpc("whatsapp_due_reminders");
+  const due = (data?.reminders ?? []) as (say.View & { phone: string })[];
+  for (const view of due) {
+    // Claimed first: another run that got here at the same moment skips it.
+    const { data: claim } = await admin.rpc("whatsapp_reminder_sent", { p_consultation: view.consultation_id });
+    if (!claim?.ok) continue;
+    const { language, first, time, text } = say.reminder(view);
+    await send(view.phone, view.consultation_id, {
+      type: "template",
+      template: {
+        name: "watson_today", language: { code: language },
+        components: [
+          { type: "body", parameters: [{ type: "text", text: first }, { type: "text", text: time }] },
+          { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: view.invite_token }] },
+        ],
+      },
+    }, text);
+  }
+  return due.length;
 }
 
 type Message = {
@@ -113,6 +134,12 @@ Deno.serve(async (request) => {
     return ok ? new Response(url.searchParams.get("hub.challenge") ?? "") : new Response("Forbidden", { status: 403 });
   }
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
+  // The database's schedule, every five minutes: send the reminders that are due.
+  const cron = request.headers.get("x-watson-cron");
+  if (cron !== null) {
+    if (!sameSecret(cron, env("CRON_SECRET"))) return new Response("Forbidden", { status: 403 });
+    return Response.json({ ok: true, sent: await remind() });
+  }
   const raw = new Uint8Array(await request.arrayBuffer());
   if (!(await signedByMeta(raw, request.headers.get("x-hub-signature-256")))) return new Response("Forbidden", { status: 403 });
 

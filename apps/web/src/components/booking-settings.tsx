@@ -1,0 +1,186 @@
+"use client";
+
+import { ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { useState, type ReactNode } from "react";
+import { CopyButton } from "@/components/copy-button";
+import { FieldError, Notice } from "@/components/status";
+import { call, explain } from "@/lib/api";
+import { HOUR_CHOICES, WEEKDAYS, type Hours, type OwnPage } from "@/lib/booking";
+import { feeSchema, fromCents, toCents } from "@/lib/fee";
+import { LANGUAGE_LABEL, type ConsultationLanguage } from "@/lib/status";
+
+// The hours patients can book and the page they see (design system: ScreenCalendar).
+// One form, one save: save_booking_page checks everything again and writes it in one go.
+
+const LANGUAGES: ConsultationLanguage[] = ["en", "sk", "de"];
+const DEFAULT_SPAN: [string, string] = ["09:00", "17:00"];
+
+/** What each refused field should say. */
+const FIELD: Record<string, string> = {
+  display_name: "Enter the name patients should see.",
+  hours: "Each day needs a start before its end.",
+  languages: "Choose the languages you consult in.",
+  fee_cents: "Enter an amount between 0.50 and 1000, for example 40 or 40.00, or leave it empty.",
+};
+
+/** quietSave: another button on the screen is the one next step (Connect Google Calendar). */
+export function BookingSettings({ page, aside, quietSave, onSaved }: {
+  page: OwnPage | null; aside?: ReactNode; quietSave?: boolean; onSaved: () => void;
+}) {
+  const [hours, setHours] = useState<Hours>(page?.hours ?? {});
+  const [length, setLength] = useState(page?.length_minutes ?? 45);
+  const [gap, setGap] = useState(page?.gap_minutes ?? 15);
+  const [fee, setFee] = useState(fromCents(page?.fee_cents ?? null));
+  const [name, setName] = useState(page?.display_name ?? "");
+  const [offer, setOffer] = useState(page?.offer ?? "");
+  const [about, setAbout] = useState(page?.about ?? "");
+  const [languages, setLanguages] = useState<ConsultationLanguage[]>(page?.languages ?? []);
+  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
+  const [problem, setProblem] = useState<{ field?: string; message: string } | null>(null);
+  const link = page ? `${typeof window === "undefined" ? "" : window.location.origin}/book/?p=${page.slug}` : null;
+
+  const setDay = (day: string, span: [string, string] | undefined) => setHours((now) => ({ ...now, [day]: span }));
+
+  async function save() {
+    setProblem(null);
+    if (!feeSchema.safeParse(fee).success) return setProblem({ field: "fee_cents", message: FIELD.fee_cents });
+    setState("saving");
+    const outcome = await call<{ slug: string }>("save_booking_page", {
+      p_display_name: name, p_offer: offer, p_about: about, p_languages: languages,
+      p_hours: Object.fromEntries(Object.entries(hours).filter(([, span]) => span)),
+      p_length_minutes: length, p_gap_minutes: gap, p_fee_cents: toCents(fee) as number,
+    });
+    if (!outcome.ok) {
+      setState("idle");
+      return setProblem({ field: outcome.field, message: (outcome.field && FIELD[outcome.field]) ?? explain(outcome.error_category) });
+    }
+    setState("saved");
+    onSaved();
+  }
+
+  const error = (field: string) => (problem?.field === field ? problem.message : null);
+  return (
+    <form className="wa-form" noValidate onSubmit={(event) => { event.preventDefault(); void save(); }}>
+      <div className="wa-split">
+        <section className="wa-panel" aria-labelledby="hours">
+          <div className="wa-panel__head"><h2 className="wa-heading" id="hours">Hours patients can book</h2></div>
+          <ul className="wa-hours">
+            {WEEKDAYS.map((weekday, i) => {
+              const day = String(i + 1);
+              const span = hours[day];
+              return (
+                <li key={day}>
+                  <label className="wa-check">
+                    <input type="checkbox" checked={Boolean(span)} onChange={(e) => setDay(day, e.target.checked ? DEFAULT_SPAN : undefined)} />
+                    <span className="wa-check__text"><span className="wa-check__label">{weekday}</span></span>
+                  </label>
+                  {span ? (
+                    <div className="wa-hours__times">
+                      {([0, 1] as const).map((end) => (
+                        <span key={end} style={{ display: "contents" }}>
+                          {end === 1 && "to"}
+                          <div className="wa-select">
+                            <select aria-label={`${weekday} ${end ? "until" : "from"}`} value={span[end]}
+                              onChange={(e) => setDay(day, end ? [span[0], e.target.value] : [e.target.value, span[1]])}>
+                              {HOUR_CHOICES.map((time) => <option key={time}>{time}</option>)}
+                            </select>
+                          </div>
+                        </span>
+                      ))}
+                    </div>
+                  ) : <div className="wa-hours__times">Patients cannot book</div>}
+                </li>
+              );
+            })}
+          </ul>
+          <FieldError id="hours-error" message={error("hours")} />
+          <div className="wa-fields-row">
+            <div className="wa-field">
+              <label className="wa-label" htmlFor="length">Each consultation</label>
+              <div className="wa-select">
+                <select id="length" value={length} onChange={(e) => setLength(Number(e.target.value))}>
+                  {[30, 45, 60, 90].map((m) => <option key={m} value={m}>{m} minutes</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="wa-field">
+              <label className="wa-label" htmlFor="gap">Time between</label>
+              <div className="wa-select">
+                <select id="gap" value={gap} onChange={(e) => setGap(Number(e.target.value))}>
+                  {[0, 15, 30].map((m) => <option key={m} value={m}>{m ? `${m} minutes` : "None"}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="wa-field">
+              <label className="wa-label" htmlFor="fee">Fee</label>
+              <div className="wa-affixed">
+                <span className="wa-affix" aria-hidden>€</span>
+                <input id="fee" className="wa-input" inputMode="decimal" autoComplete="off" placeholder="40.00" value={fee}
+                  aria-invalid={Boolean(error("fee_cents"))} aria-describedby="fee-error" onChange={(e) => setFee(e.target.value)} />
+              </div>
+              <FieldError id="fee-error" message={error("fee_cents")} />
+            </div>
+          </div>
+          <p className="wa-hint">Leave the fee empty for free consultations. Patients pay it when they book.</p>
+        </section>
+
+        <div style={{ display: "grid", gap: 24, alignContent: "start" }}>
+          <section className="wa-panel" aria-labelledby="yours">
+            <div className="wa-panel__head">
+              <h2 className="wa-heading" id="yours">Your page for patients</h2>
+              {page && <Link className="wa-button wa-button--quiet wa-button--small" href={`/book/?p=${page.slug}`} target="_blank">
+                <ExternalLink aria-hidden className="wa-icon wa-icon--sm" />See it as a patient</Link>}
+            </div>
+            <div className="wa-field">
+              <label className="wa-label" htmlFor="shown">Name patients see</label>
+              <input id="shown" className="wa-input" value={name} aria-invalid={Boolean(error("display_name"))} aria-describedby="shown-error"
+                onChange={(e) => setName(e.target.value)} />
+              <FieldError id="shown-error" message={error("display_name")} />
+            </div>
+            <div className="wa-field">
+              <label className="wa-label" htmlFor="offer">What you offer</label>
+              <p className="wa-hint" id="offer-hint">One line, under your name.</p>
+              <input id="offer" className="wa-input" maxLength={140} aria-describedby="offer-hint" value={offer} onChange={(e) => setOffer(e.target.value)} />
+            </div>
+            <fieldset className="wa-field" style={{ border: 0, margin: 0, padding: 0 }}>
+              <legend className="wa-label" style={{ marginBottom: 8 }}>Languages you consult in</legend>
+              <div className="wa-actions">
+                {LANGUAGES.map((language) => (
+                  <label key={language} className="wa-check">
+                    <input type="checkbox" checked={languages.includes(language)}
+                      onChange={(e) => setLanguages((now) => (e.target.checked ? [...now, language] : now.filter((l) => l !== language)))} />
+                    <span className="wa-check__text"><span className="wa-check__label">{LANGUAGE_LABEL[language]}</span></span>
+                  </label>
+                ))}
+              </div>
+              <FieldError id="languages-error" message={error("languages")} />
+            </fieldset>
+            <div className="wa-field">
+              <label className="wa-label" htmlFor="about">About you</label>
+              <textarea id="about" className="wa-textarea" maxLength={1000} value={about} onChange={(e) => setAbout(e.target.value)} />
+            </div>
+            {link && (
+              <div className="wa-field">
+                <span className="wa-label" id="link-label">Your booking link</span>
+                <div className="wa-invite">
+                  <input className="wa-input" readOnly value={link} aria-labelledby="link-label" />
+                  <CopyButton text={link} />
+                </div>
+                <p className="wa-hint">Put it on your website or send it to new patients.</p>
+              </div>
+            )}
+          </section>
+          {aside}
+        </div>
+      </div>
+      {problem && !problem.field && <Notice tone="failed" title="Not saved">{problem.message}</Notice>}
+      <div className="wa-actions">
+        <button type="submit" className={`wa-button ${quietSave ? "wa-button--secondary" : "wa-button--primary"}`} disabled={state === "saving"} aria-busy={state === "saving" || undefined}>
+          Save changes
+        </button>
+        {state === "saved" && <span role="status" className="wa-meta">Saved</span>}
+      </div>
+    </form>
+  );
+}

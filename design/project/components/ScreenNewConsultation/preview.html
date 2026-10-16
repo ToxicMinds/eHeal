@@ -14,16 +14,11 @@
     <div class="wa-split">
       <section class="wa-panel" aria-label="Consultation details">
         <div class="wa-form">
-          <div class="wa-field">
-            <label class="wa-label" for="ref">Patient reference</label>
-            <p class="wa-hint" id="ref-hint">Digits only.</p>
-            <div class="wa-affixed" style="max-width: 280px"><span class="wa-affix" aria-hidden="true">SYN-</span><input class="wa-input" id="ref" inputmode="numeric" value="0061" aria-describedby="ref-hint"></div>
-          </div>
           <div class="wa-fields-row">
             <div class="wa-field"><label class="wa-label" for="when">Date and time</label><input class="wa-input" id="when" type="datetime-local" value="2026-10-14T11:15"></div>
-            <div class="wa-field"><label class="wa-label" for="lang">Language spoken</label><div class="wa-select"><select id="lang"><option>Slovak</option><option>English</option><option>German</option><option>Mixed or unsure</option></select></div></div>
+            <div class="wa-field"><label class="wa-label" for="lang">Language spoken</label><div class="wa-select"><select id="lang"><option selected>English</option><option>German</option><option>Slovak</option><option>Mixed or unsure</option></select></div></div>
           </div>
-          <p class="wa-hint" style="margin-top: -12px">The transcript is made in this language. "Mixed or unsure" lets the engine guess, which is less reliable.</p>
+          <p class="wa-hint" style="margin-top: -12px">English unless you choose another. The transcript is made in this language; "Mixed or unsure" lets Watson guess, which is less reliable.</p>
           <div class="wa-field">
             <label class="wa-label" for="fee">Fee</label>
             <p class="wa-hint" id="fee-hint">The patient pays this when they open your link, before the call. Leave it empty for a free consultation.</p>
@@ -34,7 +29,7 @@
             <p class="wa-hint" id="notes-hint">For example "sleep complaint, patient mentions a supplement".</p>
             <textarea class="wa-textarea" id="notes" aria-describedby="notes-hint">follow-up, joint stiffness</textarea>
           </div>
-          <label class="wa-check"><input type="checkbox" id="consent" checked><span class="wa-check__text"><span class="wa-check__label">Consent to transcription is recorded</span><span class="wa-hint">Without it, no audio can be attached or transcribed. You can record it later.</span></span></label>
+          <label class="wa-check"><input type="checkbox" id="consent" checked><span class="wa-check__text"><span class="wa-check__label">Consent to transcription is recorded</span><span class="wa-hint">If you leave this off, it is recorded when you start the video call.</span></span></label>
           <div class="wa-actions"><button class="wa-button wa-button--primary" type="button">Create consultation</button><a class="wa-button wa-button--secondary" href="#list">Cancel</a></div>
         </div>
       </section>
