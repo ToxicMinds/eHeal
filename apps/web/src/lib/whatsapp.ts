@@ -9,7 +9,7 @@ export function whatsappLink(phone: string, text: string): string {
   return `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 }
 
-/** Watson's own WhatsApp number (Meta's test number until there are paying customers). */
+/** Watson's built-in WhatsApp number (Meta's test number); the gateway's number comes from the database. */
 export const WATSON_WHATSAPP = process.env.NEXT_PUBLIC_WATSON_WHATSAPP ?? "+15556623667";
 
 /** The message for the patient's link: an invitation before the day, a reminder on the day. */

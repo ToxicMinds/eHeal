@@ -42,6 +42,12 @@ print(json.dumps([
 ]))
 EOF
 supabase secrets set --project-ref "$SUPABASE_PROJECT_REF" WHATSAPP_GATEWAY_URL="$url" >/dev/null
+# The number patients message (the owner's own, in ~/.config/watson/owner-whatsapp): Vault, for
+# patients' links only (public.watson_whatsapp), never the website's code.
+python3 -c 'import json,sys; print(json.dumps({"query": sys.argv[1]}))' "delete from vault.secrets where name = 'watson_whatsapp_number';
+select vault.create_secret('$(cat "$dir/owner-whatsapp")', 'watson_whatsapp_number');" |
+  curl -fsS -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+    -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d @- >/dev/null
 
 render deploys create "$id" --confirm -o json >/dev/null
 for _ in $(seq 1 90); do

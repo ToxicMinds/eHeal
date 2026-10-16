@@ -180,6 +180,7 @@ async function connect() {
     if (connection === "close") {
       const loggedOut = lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut;
       status = loggedOut ? "LOGGED_OUT" : "RECONNECTING";
+      qr = null; // an old code would only fail to scan
       console.log(`[gateway] ${status.toLowerCase()}`);
       if (loggedOut) await auth.forget().catch(() => {});
       setTimeout(() => connect().catch((error) => console.log("[gateway] connect failed:", String(error))), loggedOut ? 1000 : 5000);
