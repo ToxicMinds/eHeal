@@ -1,4 +1,4 @@
-"""`clinical-worker engine` runs the engine.
+"""`clinical-worker engine` runs the engine; `clinical-worker drain` runs it on demand (cloud).
 
 `fetch-model`, `fetch-form-model`, `fetch-ocr-model` and `export-schema` are setup commands."""
 
@@ -52,7 +52,7 @@ def _fetch_ocr_model(settings: Settings) -> None:
     print(f"OCR models ready: {settings.ocr_model_dir}")
 
 
-def _run_engine(settings: Settings) -> None:
+def _run_engine(settings: Settings, on_demand: bool = False) -> None:
     from .engine import Engine
 
     os.environ.setdefault("HF_HUB_OFFLINE", "1")  # models come from disk only
@@ -67,7 +67,8 @@ def _run_engine(settings: Settings) -> None:
         sys.exit(
             "Set WATSON_ENGINE_EMAIL, WATSON_ENGINE_PASSWORD, WATSON_SUPABASE_PUBLISHABLE_KEY."
         )
-    Engine(settings).run_forever()
+    engine = Engine(settings)
+    engine.run_on_demand() if on_demand else engine.run_forever()
 
 
 def main() -> None:
@@ -75,6 +76,8 @@ def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else "engine"
     if command == "engine":
         _run_engine(settings)
+    elif command == "drain":
+        _run_engine(settings, on_demand=True)
     elif command == "fetch-model":
         _fetch_model(settings)
     elif command == "fetch-form-model":
@@ -89,7 +92,7 @@ def main() -> None:
     else:
         sys.exit(
             "usage: clinical-worker "
-            "[engine|fetch-model|fetch-form-model|fetch-ocr-model|export-schema]"
+            "[engine|drain|fetch-model|fetch-form-model|fetch-ocr-model|export-schema]"
         )
 
 

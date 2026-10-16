@@ -28,6 +28,9 @@ class Settings(BaseModel):
     engine_password: SecretStr = SecretStr("")
 
     poll_seconds: float = Field(default=10, gt=0)  # idle engines ask this often (section 12.7)
+    # An engine started on demand stops after this long without work: longer than the two minutes
+    # after which a job whose engine vanished can be claimed again (decision 0009).
+    idle_seconds: float = Field(default=150, gt=120)
     heartbeat_seconds: float = Field(default=20, gt=0)  # must stay under 30
     low_confidence_threshold: float = Field(default=0.5, ge=0, le=1)
     no_speech_threshold: float = Field(default=0.6, ge=0, le=1)
