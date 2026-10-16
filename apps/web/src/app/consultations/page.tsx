@@ -32,8 +32,8 @@ export default function ConsultationsPage() {
 /** What the practitioner does next, on the card. */
 const NEXT: Partial<Record<ConsultationStatus, string>> = {
   consent_pending: "Record the patient's consent",
-  ready_for_audio: "Start the call, or add its recordings",
-  audio_imported: "Start the transcript",
+  ready_for_audio: "Start the call",
+  audio_imported: "The call is recorded: start the transcript",
   transcription_processing: "Watson is writing the transcript",
   transcription_failed: "The transcript stopped. Try again.",
   transcript_ready: "Fill in the form",

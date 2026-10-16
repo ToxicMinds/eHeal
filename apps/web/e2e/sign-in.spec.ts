@@ -24,7 +24,7 @@ test("empty fields are explained before anything is sent", async ({ page }) => {
 });
 
 test("a practitioner signs in, sees their consultations, and signs out", async ({ page, account, problems }) => {
-  await page.goto("/");
+  await page.goto("/sign-in/"); // the front page is for patients (owner, 16 Oct, E)
   await page.getByLabel("Name").fill(account.email.replace(/@watson\.test$/, ""));
   await page.getByLabel("Password").fill(account.password);
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -34,7 +34,7 @@ test("a practitioner signs in, sees their consultations, and signs out", async (
   if (account.references.length > 0) {
     await expect(page.getByRole("link", { name: /SYN-0043/ })).toContainText("Slovak");
     await expect(page.getByRole("link", { name: /SYN-0043/ })).toContainText("Waiting for consent");
-    await expect(page.getByRole("link", { name: /SYN-0042/ })).toContainText("Waiting for audio");
+    await expect(page.getByRole("link", { name: /SYN-0042/ })).toContainText("Waiting for the call");
   }
 
   // The session survives a reload, and ends on sign-out.
@@ -43,6 +43,14 @@ test("a practitioner signs in, sees their consultations, and signs out", async (
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await page.goto("/consultations/");
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
+test("the front page is for patients: practitioners to choose from, and a way in for practitioners", async ({ page, problems }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Find a practitioner" })).toBeVisible();
+  await page.getByRole("link", { name: "Practitioner sign-in" }).click();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   expect(problems).toEqual([]);
 });

@@ -1,18 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { clock, formatOfFile, formatOfRecording, humanSize, sha256Hex } from "./audio";
+import { clock, formatOfRecording, humanSize, sha256Hex } from "./audio";
 
 describe("audio helpers", () => {
-  it("reads the format from a file name, whatever its case", () => {
-    expect(formatOfFile("patient.WAV")).toBe("wav");
-    expect(formatOfFile("visit.final.m4a")).toBe("m4a");
-  });
-
-  it("refuses anything that is not a supported audio format", () => {
-    expect(formatOfFile("notes.pdf")).toBeNull();
-    expect(formatOfFile("no-extension")).toBeNull();
-    expect(formatOfFile("malware.exe")).toBeNull();
-  });
-
   it("reads the format of a browser recording from its media type", () => {
     expect(formatOfRecording("audio/webm;codecs=opus")).toBe("webm");
     expect(formatOfRecording("audio/ogg; codecs=opus")).toBe("ogg");

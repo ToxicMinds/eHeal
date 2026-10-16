@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { AudioSlot } from "@/components/audio-slot";
 import { DocumentsPanel } from "@/components/documents-panel";
 import { WhatsAppPanel } from "@/components/whatsapp-panel";
 import { FormPanel } from "@/components/form-panel";
@@ -28,7 +27,6 @@ type Loaded = { consultation: Consultation; tracks: Track[]; audioLeft: boolean;
 const SPEAKERS = ["practitioner", "patient"] as const;
 const FORM_STATUSES = ["transcript_ready", "transcript_reviewed", "extraction_processing", "extraction_failed",
   "draft_ready", "under_review", "approved"];
-const AUDIO_CAN_CHANGE = ["ready_for_audio", "audio_imported", "transcription_failed"];
 const HAS_TRANSCRIPT = ["transcript_ready", "transcript_under_review", "transcript_reviewed", "extraction_processing",
   "extraction_failed", "draft_ready", "under_review", "approved", "corrected", "archived"];
 
@@ -53,12 +51,10 @@ const back = (
 /** What each of the four steps says under its bar. */
 function stepLines({ consultation, tracks }: Loaded): string[] {
   const { stages } = summarise(consultation.status);
-  const missing = SPEAKERS.filter((speaker) => !tracks.some((track) => track.speaker === speaker));
   return [
     consultation.consent_withdrawn_at ? `Withdrawn ${dayMonth(consultation.consent_withdrawn_at)}`
       : consultation.consent_recorded_at ? `Recorded ${dayMonth(consultation.consent_recorded_at)}` : "Not recorded yet",
-    stages[1] === "done" ? "Both tracks attached" : stages[1] === "current"
-      ? missing.length === 2 ? "Waiting for both tracks" : `Waiting for the ${missing[0]} track` : "Not yet",
+    stages[1] === "done" ? "Recorded" : stages[1] === "current" && tracks.length > 0 ? "Saved in part" : "Not yet",
     { current: consultation.status === "transcription_processing" ? "Transcribing" : "Ready to start", failed: "Failed", done: "Done" }[
       stages[2] as "current" | "failed" | "done"] ?? "Not yet",
     ({ transcript_ready: "Not set up", transcript_reviewed: "Not set up", extraction_processing: "Filling in",
@@ -112,8 +108,6 @@ function ConsultationView({ userId }: { userId: string }) {
 
   const { consultation, tracks, audioLeft, patient } = loaded;
   const status = consultation.status;
-  const editable = consultation.consent_recorded_at !== null && AUDIO_CAN_CHANGE.includes(status);
-  const both = tracks.length === 2;
   const language = LANGUAGE_LABEL[consultation.language];
 
   async function run(step: () => Promise<void>) {
@@ -127,11 +121,12 @@ function ConsultationView({ userId }: { userId: string }) {
     const outcome = await call(name, { p_consultation_id: consultation.id });
     if (!outcome.ok) setProblem(explain(outcome.error_category));
   });
-  const declare = (recordedTogether: boolean) => run(async () => {
-    const outcome = await call("declare_recorded_together", {
-      p_consultation_id: consultation.id, p_recorded_together: recordedTogether,
-    });
-    if (!outcome.ok) setProblem(explain(outcome.error_category));
+  // A call whose upload stopped half way: drop what arrived, so the call can be made again.
+  const discard = () => run(async () => {
+    for (const track of tracks) {
+      const outcome = await call("remove_audio_track", { p_consultation_id: consultation.id, p_speaker: track.speaker });
+      if (!outcome.ok) return setProblem(explain(outcome.error_category));
+    }
   });
   async function deleteAudio() {
     await supabase.storage.from("audio").remove(SPEAKERS.map((speaker) => `${userId}/${consultation.id}/${speaker}`));
@@ -177,6 +172,25 @@ function ConsultationView({ userId }: { userId: string }) {
       <Journey status={status} lines={stepLines(loaded)} />
       {problem && <Notice tone="failed" title="That did not work">{problem}</Notice>}
 
+      {status === "ready_for_audio" && tracks.length > 0 && (
+        <Notice tone="attention" title="The last call was saved only in part" actions={
+          <button type="button" className="wa-button wa-button--secondary" disabled={busy} onClick={discard}>Discard and call again</button>
+        }>
+          One voice was saved, the other was not, so there is nothing to transcribe yet. Discard what was saved and call the patient again.
+        </Notice>
+      )}
+
+      {status === "audio_imported" && (
+        <section className="wa-panel" aria-labelledby="recorded-title">
+          <h2 className="wa-heading" id="recorded-title">The call is recorded</h2>
+          <p className="wa-text">Both voices are saved. Watson writes the transcript, then fills in your form.</p>
+          <div className="wa-actions">
+            <button type="button" className="wa-button wa-button--primary" disabled={busy} aria-busy={busy || undefined}
+              onClick={() => perform("start_transcription")}>Start transcription</button>
+          </div>
+        </section>
+      )}
+
       {["consent_pending", "ready_for_audio"].includes(status) && tracks.length === 0 && (
         <section className="wa-panel" aria-labelledby="call-title">
           <h2 className="wa-heading" id="call-title">Consultation call</h2>
@@ -192,7 +206,7 @@ function ConsultationView({ userId }: { userId: string }) {
       {status === "consent_pending" && (
         <section className="wa-panel" aria-labelledby="consent-title">
           <h2 className="wa-heading" id="consent-title">Consent</h2>
-          <p className="wa-text">Consent to transcription is not recorded yet. Without it, no audio can be attached or transcribed.</p>
+          <p className="wa-text">Consent to recording and transcription is not recorded yet. Starting the call records it.</p>
           <div className="wa-actions">
             <button type="button" className="wa-button wa-button--primary" disabled={busy} onClick={() => perform("record_consent")}>Record consent</button>
           </div>
@@ -225,41 +239,6 @@ function ConsultationView({ userId }: { userId: string }) {
 
       {HAS_TRANSCRIPT.includes(status) && <TranscriptView consultationId={consultation.id} language={language} />}
 
-      {AUDIO_CAN_CHANGE.includes(status) && (
-        <section className="wa-panel" aria-labelledby="audio-title">
-          <div className="wa-panel__head">
-            <h2 className="wa-heading" id="audio-title">Audio</h2>
-            <span className="wa-hint">One track for each speaker</span>
-          </div>
-          <div className="wa-slots">
-            {SPEAKERS.map((speaker) => (
-              <AudioSlot key={speaker} speaker={speaker} track={tracks.find((track) => track.speaker === speaker)}
-                consultationId={consultation.id} userId={userId} editable={editable} onChanged={load} />
-            ))}
-          </div>
-          <label className="wa-check">
-            <input type="checkbox" checked={consultation.recorded_together} disabled={!editable || busy}
-              onChange={(event) => declare(event.target.checked)} />
-            <span className="wa-check__text">
-              <span className="wa-check__label">Both tracks were recorded together and start at the same moment</span>
-              <span className="wa-hint">Leave this off if you are not sure. The transcript then shows the order of turns as a best guess and says so.</span>
-            </span>
-          </label>
-          {status !== "transcription_failed" && (
-            <div className="wa-actions">
-              <button type="button" className="wa-button wa-button--primary" disabled={!both || busy}
-                aria-busy={busy || undefined} onClick={() => perform("start_transcription")}>
-                Start transcription
-              </button>
-              {!both && (
-                <p className="wa-hint">
-                  {tracks.length === 0 ? "Attach both tracks first." : `Attach the ${tracks[0].speaker === "patient" ? "practitioner" : "patient"} track first.`}
-                </p>
-              )}
-            </div>
-          )}
-        </section>
-      )}
 
       {(status === "transcription_processing" || HAS_TRANSCRIPT.includes(status)) && tracks.length > 0 && (
         <aside className="wa-aside" aria-labelledby="audio-summary">

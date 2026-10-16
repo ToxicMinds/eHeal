@@ -44,7 +44,7 @@ function Book() {
   }, [slug]);
 
   if (offer === "missing") {
-    return <Notice title="This page does not exist" actions={<Link className="wa-button wa-button--secondary" href="/find/">Find a practitioner</Link>}>
+    return <Notice title="This page does not exist" actions={<Link className="wa-button wa-button--secondary" href="/">Find a practitioner</Link>}>
       Check the link you were given, or find your practitioner in the list.</Notice>;
   }
   if (offer === null) return <p className="wa-meta" role="status">Opening the times…</p>;
@@ -100,7 +100,7 @@ function Choose({ offer }: { offer: Offer }) {
   );
   return (
     <>
-      <Link className="wa-crumb" href="/find/"><ChevronLeft aria-hidden className="wa-icon wa-icon--sm" />All practitioners</Link>
+      <Link className="wa-crumb" href="/"><ChevronLeft aria-hidden className="wa-icon wa-icon--sm" />All practitioners</Link>
       <div className="wa-split" style={{ gridTemplateColumns: undefined }}>
         <div style={{ display: "grid", gap: 24, alignContent: "start" }}><Profile page={page} /><span className="wa-only-wide">{how}</span></div>
         <div style={{ display: "grid", gap: 16, alignContent: "start" }}>

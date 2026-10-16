@@ -2,7 +2,7 @@ import { explain, type Outcome } from "./api";
 import { supabase } from "./supabase";
 
 /** What the engine can read: PDFs, and photos or scans as images. */
-export const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+const DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 export const DOCUMENT_ACCEPT = DOCUMENT_TYPES.join(",");
 const MAX_BYTES = 10 * 1024 * 1024;
 

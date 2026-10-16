@@ -15,7 +15,6 @@ import { RequireSession } from "@/lib/session";
 import { LANGUAGE_LABEL } from "@/lib/status";
 
 const schema = z.object({
-  reference: z.string().regex(/^\d{1,8}$/, "Use up to eight digits, for example 0042."),
   scheduled_at: z.string().min(1, "Choose the date and time of the consultation."),
   language: z.enum(["en", "de", "sk", "auto"], "Choose the language of the consultation."),
   consent_recorded: z.boolean(),
@@ -38,7 +37,7 @@ function NewConsultation() {
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { reference: "", scheduled_at: "", language: "en", consent_recorded: true, scenario_notes: "", fee: "" },
+    defaultValues: { scheduled_at: "", language: "en", consent_recorded: true, scenario_notes: "", fee: "" },
   });
 
   useEffect(() => {
@@ -51,7 +50,6 @@ function NewConsultation() {
   async function create(values: Values) {
     setFailure(null);
     const outcome = await call<{ consultation_id: string }>("create_consultation", {
-      p_synthetic_patient_ref: `SYN-${values.reference}`,
       p_scheduled_at: new Date(values.scheduled_at).toISOString(),
       p_language: values.language,
       p_consent_recorded: values.consent_recorded,
@@ -69,17 +67,6 @@ function NewConsultation() {
       <div className="wa-split">
         <form onSubmit={handleSubmit(create)} noValidate className="wa-panel" aria-label="Consultation details">
           <div className="wa-form">
-            <div className="wa-field">
-              <label className="wa-label" htmlFor="ref">Patient reference</label>
-              <p className="wa-hint" id="ref-hint">Digits only.</p>
-              <div className="wa-affixed" style={{ maxWidth: 280 }}>
-                <span className="wa-affix" aria-hidden>SYN-</span>
-                <input id="ref" className="wa-input" inputMode="numeric" autoComplete="off" spellCheck={false}
-                  aria-invalid={Boolean(errors.reference)} aria-describedby="ref-hint ref-error" {...register("reference")} />
-              </div>
-              <FieldError id="ref-error" message={errors.reference?.message} />
-            </div>
-
             <div className="wa-fields-row">
               <div className="wa-field">
                 <label className="wa-label" htmlFor="when">Date and time</label>
@@ -143,6 +130,7 @@ function NewConsultation() {
         <aside className="wa-aside" aria-labelledby="next-title">
           <h2 className="wa-heading" id="next-title" style={{ color: "var(--ink)" }}>What happens next</h2>
           <ol>
+            <li>Watson numbers the consultation. Add the patient&apos;s name on the next page.</li>
             <li>Send the patient their link. If you set a fee, they pay it there.</li>
             <li>Start the video call. Both voices are recorded.</li>
             <li>When you end the call, Watson writes the transcript and fills in your form.</li>
