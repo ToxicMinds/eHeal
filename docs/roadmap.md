@@ -60,7 +60,9 @@ declares them recorded together and starts transcription. Tested live with two b
 
 Left over:
 
-- [ ] No relay (TURN): calls between some strict networks may not connect. Test laptop on
+- [ ] No relay (TURN): calls between some strict networks may not connect. Matters now that the
+      test drive is remote (16 Oct). Free option checked: Metered's Open Relay, 20 GB a month with a
+      free sign-up (no card mentioned). Cloudflare's TURN is free only with its SFU, else $0.05/GB. Test laptop on
       Wi-Fi with a phone on mobile data; add a free relay if needed.
 - [ ] A call that is cut off before "End call" loses its recording (kept in the browser).
 - [ ] Design system: add the call room screens.
@@ -115,6 +117,17 @@ product's selling point; the transcript and form are what assist the practitione
 - [ ] **Sign-in**: proposal ScreenSignInNight in the design system awaits the owner's answer.
 
 ## First measurements (slice 1.7, started 14 October)
+
+**Ayurvedic vocabulary hints (16 Oct).** The speech model now gets a list of Ayurvedic terms as
+hints (`WATSON_VOCABULARY`). Invented consultations through 32 kbit/s Opus, large-v3-turbo:
+English 2.4% → 2.3% word errors ("avipattikar churna" now right; the synthetic voice's
+"abhyanga" still comes out as "a piano"); Slovak 27.1% → 24.1%.
+
+**Dress rehearsal (16 Oct, live, two robot browsers):** payment, document read in 5.6 s, WhatsApp
+link, a 4-minute call, transcript of 8.3 minutes of audio in 2 minutes, Dr. Robin's form 22 of 22
+in 5 minutes; no browser errors. The form quoted no document: the invented call never mentions
+the lab results.
+
 
 Invented calls spoken by text-to-speech, two tracks squeezed through the browser's 32 kbit/s
 Opus, transcribed on the owner's laptop (`bench/transcribe_bench.py`):

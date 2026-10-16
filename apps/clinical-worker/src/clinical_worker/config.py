@@ -35,6 +35,15 @@ class Settings(BaseModel):
     max_bytes: int = Field(default=50 * 1024 * 1024, gt=0)
     max_duration_seconds: float = Field(default=2 * 60 * 60, gt=0)
 
+    # Words the speech model would otherwise mishear: Ayurvedic terms, given to it as hints.
+    # Measured 16 Oct on the invented English consultation: see docs/roadmap.md.
+    vocabulary: str = (
+        "Ayurveda, dosha, vata, pitta, kapha, agni, ama, prakriti, vikriti, abhyanga, "
+        "shirodhara, panchakarma, nasya, basti, virechana, swedana, udvartana, pranayama, "
+        "sheetali, nadi shodhana, churna, avipattikar, triphala, ashwagandha, brahmi, "
+        "shatavari, guduchi, tulsi, chyawanprash, ghee, kitchari, dinacharya, amla pitta"
+    )
+
     # The model that fills in forms (decision 0005): a GGUF file, fetched once with
     # `clinical-worker fetch-form-model`, run on this computer by llama.cpp.
     form_model_repository: str = "unsloth/Qwen3.5-4B-GGUF"

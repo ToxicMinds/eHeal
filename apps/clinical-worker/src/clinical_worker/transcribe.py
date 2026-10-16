@@ -69,6 +69,7 @@ def transcribe_track(
             vad_filter=True,  # digital silence produces no text
             condition_on_previous_text=False,  # limits runaway repetition
             temperature=(0.0, 0.2, 0.4),  # at most three attempts per window
+            hotwords=settings.vocabulary or None,  # Ayurvedic terms, so "abhyanga" is not "piano"
         )
         segments = []
         for raw in raw_segments:  # lazy: decoding happens as we iterate
