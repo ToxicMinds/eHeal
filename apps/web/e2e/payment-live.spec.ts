@@ -7,7 +7,6 @@ test("a patient pays the fee on Stripe and the practitioner sees it paid", async
   test.setTimeout(120_000);
   await signIn(page, account);
   await page.getByRole("link", { name: "New consultation" }).click();
-  await page.getByLabel("Patient reference").fill("0099");
   await page.getByLabel("Language spoken").selectOption("en");
   await page.getByLabel("Fee").fill("12.50");
   await page.getByRole("button", { name: "Create consultation" }).click();
