@@ -932,7 +932,7 @@ export type Database = {
           p_language: Database["public"]["Enums"]["consultation_language"]
           p_scenario_notes?: string
           p_scheduled_at: string
-          p_synthetic_patient_ref: string
+          p_synthetic_patient_ref?: string
         }
         Returns: Json
       }

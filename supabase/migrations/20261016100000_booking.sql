@@ -270,7 +270,7 @@ begin
   begin
     insert into public.consultations (practitioner_id, synthetic_patient_ref, scheduled_at, duration_minutes,
         language, status, fee_cents, booked_at, hold_until, remind_whatsapp)
-      values (v_page.practitioner_id, 'SYN-' || lpad(floor(random() * 100000000)::bigint::text, 8, '0'),
+      values (v_page.practitioner_id, private.new_reference(),
         p_starts_at, v_page.length_minutes, p_language, 'consent_pending', v_page.fee_cents, now(),
         case when v_page.fee_cents is not null then now() + interval '35 minutes' end, coalesce(p_remind_whatsapp, false))
       returning * into v_consultation;
