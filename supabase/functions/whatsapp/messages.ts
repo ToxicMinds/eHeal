@@ -11,8 +11,11 @@ export const language = (view: View | null): Language => writtenLanguage(view?.l
 
 const when = (view: View, lang: Language) => dayAndTime(view.scheduled_at, lang);
 
-/** The answer to a patient who just linked their number. */
-export function welcome(view: View, site: string): string {
+/**
+ * The answer to a patient who just linked their number. On Watson's own number (the gateway) what
+ * patients type stays in the chat, so the welcome does not promise it reaches the practitioner.
+ */
+export function welcome(view: View, site: string, { textsReachPractitioner = true } = {}): string {
   const lang = language(view);
   const first = (view.patient_name ?? "").trim().split(/\s+/)[0];
   const { day, time } = when(view, lang);
@@ -20,13 +23,16 @@ export function welcome(view: View, site: string): string {
   return {
     en: `Hello${first ? ` ${first}` : ""}, this is Watson, your practitioner's assistant. Your consultation is on ${day} at ${time}, by video. `
       + `${view.must_pay ? "Pay and join here" : "Join here"}: ${link}\n\n`
-      + "You can also send me lab results, reports or a list of your medicines right here, as photos or PDFs, and I will pass them on. Anything you write here reaches your practitioner too.",
+      + "You can also send me lab results, reports or a list of your medicines right here, as photos or PDFs, and I will pass them on."
+      + (textsReachPractitioner ? " Anything you write here reaches your practitioner too." : ""),
     sk: `Dobrý deň${first ? `, ${first}` : ""}, tu je Watson, asistent vášho lekára. Vaša konzultácia je ${day} o ${time}, cez video. `
       + `${view.must_pay ? "Zaplatiť a pripojiť sa môžete tu" : "Pripojiť sa môžete tu"}: ${link}\n\n`
-      + "Výsledky vyšetrení, lekárske správy alebo zoznam liekov mi môžete poslať aj sem, ako fotku alebo PDF, a odovzdám ich ďalej. Všetko, čo sem napíšete, uvidí aj váš lekár.",
+      + "Výsledky vyšetrení, lekárske správy alebo zoznam liekov mi môžete poslať aj sem, ako fotku alebo PDF, a odovzdám ich ďalej."
+      + (textsReachPractitioner ? " Všetko, čo sem napíšete, uvidí aj váš lekár." : ""),
     de: `Guten Tag${first ? `, ${first}` : ""}, hier ist Watson, der Assistent Ihrer Praxis. Ihr Termin ist am ${day} um ${time} Uhr, per Video. `
       + `${view.must_pay ? "Hier bezahlen und verbinden" : "Hier verbinden"}: ${link}\n\n`
-      + "Befunde, Arztbriefe oder Ihre Medikamentenliste können Sie mir auch hier schicken, als Foto oder PDF, und ich gebe sie weiter. Was Sie hier schreiben, sieht auch Ihre Praxis.",
+      + "Befunde, Arztbriefe oder Ihre Medikamentenliste können Sie mir auch hier schicken, als Foto oder PDF, und ich gebe sie weiter."
+      + (textsReachPractitioner ? " Was Sie hier schreiben, sieht auch Ihre Praxis." : ""),
   }[lang];
 }
 
@@ -71,4 +77,17 @@ export function reminder(view: View) {
   const first = (view.patient_name ?? "").trim().split(/\s+/)[0];
   const { time } = when(view, lang);
   return { language: lang, first, time, text: REMINDER[lang](first, time) };
+}
+
+// On Watson's own number there is no template and no button: the reminder writes the link out.
+const REMINDER_WITH_LINK: Record<Language, (first: string, time: string, link: string) => string> = {
+  en: (first, time, link) => `Hello ${first}, this is Watson. Your video consultation is today at ${time}. Join here when you are ready: ${link}`,
+  sk: (first, time, link) => `Dobrý deň, ${first}, tu je Watson. Vaša videokonzultácia je dnes o ${time}. Pripojiť sa môžete tu: ${link}`,
+  de: (first, time, link) => `Guten Tag, ${first}, hier ist Watson. Ihr Videotermin ist heute um ${time} Uhr. Hier können Sie sich verbinden: ${link}`,
+};
+
+/** The day-of reminder as plain text with the patient's short link, for Watson's own number. */
+export function reminderWithLink(view: View, site: string): string {
+  const { language: lang, first, time } = reminder(view);
+  return REMINDER_WITH_LINK[lang](first, time, `${site}/j/${view.short_code}`);
 }

@@ -1142,6 +1142,7 @@ export type Database = {
         Returns: Json
       }
       whatsapp_due_reminders: { Args: never; Returns: Json }
+      whatsapp_gateway_contacts: { Args: never; Returns: Json }
       whatsapp_receive: {
         Args: {
           p_body: string
