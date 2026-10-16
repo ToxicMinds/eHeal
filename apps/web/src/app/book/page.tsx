@@ -42,6 +42,11 @@ function Book() {
     call<Offer>("booking_times", { p_slug: slug, p_from: now.toISOString(), p_to: until.toISOString() })
       .then((answer) => setOffer(answer.ok ? answer : "missing"));
   }, [slug]);
+  // One page serves every practitioner, so the tab (and a search result) takes their name once known.
+  const name = offer && offer !== "missing" ? offer.practitioner.display_name : null;
+  useEffect(() => {
+    if (name) document.title = `${name} · Watson`;
+  }, [name]);
 
   if (offer === "missing") {
     return <Notice title="This page does not exist" actions={<Link className="wa-button wa-button--secondary" href="/">Find a practitioner</Link>}>

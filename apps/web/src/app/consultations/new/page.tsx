@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { AppShell } from "@/components/app-shell";
 import { FieldError, Notice } from "@/components/status";
 import { call, explain } from "@/lib/api";
