@@ -3,7 +3,7 @@
 The plan is defined in [MASTER_BUILD_SPEC.md](../MASTER_BUILD_SPEC.md), section 21.
 This file only tracks where we are. Update it at the end of every slice.
 
-Last updated: 14 October 2026 (order changed by [decision 0005](decision-log/0005-call-to-form.md); payment added by [decision 0007](decision-log/0007-patient-payment.md)).
+Last updated: 16 October 2026 (order changed by [decision 0005](decision-log/0005-call-to-form.md); payment added by [decision 0007](decision-log/0007-patient-payment.md); the engine and WhatsApp moved by [decision 0009](decision-log/0009-cloud-engine-and-whatsapp-gateway.md)).
 
 | Slice | When it is done, you can | Status |
 |---|---|---|
@@ -17,6 +17,9 @@ Last updated: 14 October 2026 (order changed by [decision 0005](decision-log/000
 | 1.5b Patient payment (decision 0007) | Set a fee; the patient pays on Stripe Checkout from their link, then joins; see "Paid" | Live 14 Oct (Stripe test mode); a test-card payment passes against the hosted app |
 | 1.6 Transcript review | Search, play back, correct, mark reviewed, export, delete audio | Folded into 1.5 where the form needs it |
 | 1.7 Fixtures and benchmark | Read measured accuracy and speed per language | Started 14 Oct (first measurements below) |
+| 1.8 Booking and the front page (owner, 16 Oct) | Patients find a practitioner and book a time; practitioners open hours in Calendar; reminders, short links, fill in again | Live 16 Oct; Google Calendar built, not yet connected |
+| 1.9 The engine in the cloud (decision 0009) | Transcripts, documents and forms are made with the laptop off, on Modal, started by the database | Live 16 Oct |
+| 1.10 Watson's own WhatsApp (decision 0009) | Patients link their number and send photos; a reminder before the call | Built 16 Oct; waits for its Google Cloud machine |
 | **Phase 2 — Structured draft, approval and report** | | Not started |
 | 2.1 Draft generation | Generate a structured draft in which every item shows its evidence | Not started |
 | 2.2 Draft review | Accept, edit, reject and add items in a split view | Not started |
