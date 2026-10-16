@@ -1177,6 +1177,10 @@ export type Database = {
       }
       whatsapp_due_reminders: { Args: never; Returns: Json }
       whatsapp_gateway_contacts: { Args: never; Returns: Json }
+      whatsapp_gateway_seen: { Args: { p_status: string }; Returns: Json }
+      whatsapp_gateway_state_read: { Args: never; Returns: Json }
+      whatsapp_gateway_state_write: { Args: { p_changes: Json }; Returns: Json }
+      whatsapp_gateway_unreachable: { Args: never; Returns: Json }
       whatsapp_receive: {
         Args: {
           p_body: string

@@ -49,3 +49,45 @@ describe("the patients the WhatsApp gateway may pass messages on from", () => {
     expect(practitioner).not.toBeNull();
   });
 });
+
+// On Render's free plan the gateway's disk is wiped at every restart (owner, 16 Oct), so its WhatsApp
+// pairing lives here, sealed by the gateway (this sees only ciphertext). Watson's schedule checks on
+// it every five minutes and emails the owner when WhatsApp needs linking again or stops answering.
+describe("the WhatsApp gateway's pairing and health", () => {
+  const read = async () => (await rpc(server, "whatsapp_gateway_state_read")).state as Record<string, string>;
+
+  it("keeps the sealed pairing: written, changed and removed key by key", async () => {
+    expect(await rpc(server, "whatsapp_gateway_state_write", { p_changes: { "creds": "sealed-1", "session-a": "sealed-2" } })).toEqual({ ok: true });
+    expect(await rpc(server, "whatsapp_gateway_state_write", { p_changes: { "creds": "sealed-3", "session-a": null } })).toEqual({ ok: true });
+    const state = await read();
+    expect(state.creds).toBe("sealed-3");
+    expect(state).not.toHaveProperty("session-a");
+    expect(await rpc(server, "whatsapp_gateway_state_write", { p_changes: "creds" })).toMatchObject({ ok: false, error_category: "VALIDATION" });
+  });
+
+  it("emails the owner once a day when WhatsApp needs linking again", async () => {
+    sqlAsOwner("delete from private.owner_notices where key like 'whatsapp-%';");
+    expect(await rpc(server, "whatsapp_gateway_seen", { p_status: "CONNECTED" })).toEqual({ ok: true });
+    expect(sqlAsOwner("select count(*) from private.owner_notices where key like 'whatsapp-%';")).toBe("0");
+    await rpc(server, "whatsapp_gateway_seen", { p_status: "SCAN_QR" });
+    await rpc(server, "whatsapp_gateway_seen", { p_status: "LOGGED_OUT" });
+    expect(sqlAsOwner("select key from private.owner_notices where key like 'whatsapp-%';")).toBe(`whatsapp-link-${new Date().toISOString().slice(0, 10)}`);
+  });
+
+  it("emails the owner when the gateway has not answered for twenty minutes, not after one missed knock", async () => {
+    sqlAsOwner("delete from private.owner_notices where key like 'whatsapp-%';");
+    await rpc(server, "whatsapp_gateway_seen", { p_status: "CONNECTED" });
+    expect(await rpc(server, "whatsapp_gateway_unreachable")).toEqual({ ok: true });
+    expect(sqlAsOwner("select count(*) from private.owner_notices where key like 'whatsapp-%';")).toBe("0");
+    sqlAsOwner("update private.whatsapp_gateway_health set seen_at = now() - interval '21 minutes';");
+    await rpc(server, "whatsapp_gateway_unreachable");
+    expect(sqlAsOwner("select key from private.owner_notices where key like 'whatsapp-%';")).toBe(`whatsapp-down-${new Date().toISOString().slice(0, 10)}`);
+    sqlAsOwner("delete from private.owner_notices where key like 'whatsapp-%';");
+  });
+
+  it("is for the server only", async () => {
+    for (const name of ["whatsapp_gateway_state_read", "whatsapp_gateway_state_write", "whatsapp_gateway_seen", "whatsapp_gateway_unreachable"]) {
+      expect((await eva.client.rpc(name as never, {} as never)).error).not.toBeNull();
+    }
+  });
+});

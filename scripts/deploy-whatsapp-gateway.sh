@@ -1,34 +1,55 @@
 #!/usr/bin/env bash
-# Watson's own WhatsApp gateway on the owner's Google Cloud (owner's decision of 16 Oct 2026).
-# Creates the machine once (free-tier e2-micro with a standard disk; its internet address costs about
-# $3.65 a month), then copies apps/whatsapp-gateway there, builds it and (re)starts it. The pairing
-# with the WhatsApp number lives on the machine and survives every redeploy.
-# usage: CLOUDSDK_ACTIVE_CONFIG_NAME=watson scripts/deploy-whatsapp-gateway.sh <google-cloud-project>
-# The secret (shared with the whatsapp function) is in ~/.config/watson/whatsapp-gateway-secret.
+# Watson's WhatsApp gateway on Render's free plan (owner's decisions of 16 Oct 2026: no card).
+# Creates the service once (Docker, Frankfurt, free), gives it its secrets from ~/.config/watson,
+# points the whatsapp function at it, and deploys the latest commit on main. Safe to run again.
+# Then link the number on its pairing page: user `watson`, password in
+# ~/.config/watson/whatsapp-gateway-pairing-password.
 set -euo pipefail
-: "${CLOUDSDK_ACTIVE_CONFIG_NAME:?run with CLOUDSDK_ACTIVE_CONFIG_NAME=watson, the gcloud configuration of the owner account}"
-project=${1:?usage: scripts/deploy-whatsapp-gateway.sh <google-cloud-project>}
-zone=us-central1-a # a free-tier region
-vm=watson-whatsapp
-secret=$(cat ~/.config/watson/whatsapp-gateway-secret)
-url="https://mconctpleszerqhgaarj.supabase.co/functions/v1/whatsapp"
-g() { gcloud --project "$project" "$@"; }
-on_vm() { g compute ssh "$vm" --zone "$zone" --command "$1"; }
+: "${SUPABASE_ACCESS_TOKEN:?set by .envrc}" "${SUPABASE_PROJECT_REF:?set by .envrc}"
+export RENDER_CLI_CONFIG_PATH="${RENDER_CLI_CONFIG_PATH:-$HOME/.render/profiles/watson.yaml}"
+dir="$HOME/.config/watson"
+name=watson-whatsapp
+render_key=$(sed -n 's/^ *key: *//p' "$RENDER_CLI_CONFIG_PATH" | head -1)
+api() { curl -fsS -H "Authorization: Bearer $render_key" -H "Content-Type: application/json" "$@"; }
+secret_file() { # a random secret kept in ~/.config/watson, created once
+  [ -s "$dir/$1" ] || (umask 077; openssl rand -hex 32 | tr -d '\n' > "$dir/$1")
+}
+secret_file whatsapp-gateway-state-key
+secret_file whatsapp-gateway-pairing-password
 
-if ! g compute instances describe "$vm" --zone "$zone" >/dev/null 2>&1; then
-  g compute instances create "$vm" --zone "$zone" --machine-type e2-micro \
-    --image-family debian-12 --image-project debian-cloud --boot-disk-size 20GB --boot-disk-type pd-standard \
-    --metadata startup-script='#!/bin/sh
-command -v docker >/dev/null || (apt-get update && apt-get install -y docker.io)'
+id=$(render services list -o json --confirm | python3 -c "import json,sys
+for item in json.load(sys.stdin):
+    s = item.get('service', item)
+    if s['name'] == '$name': print(s['id'])")
+if [ -z "$id" ]; then
+  id=$(render services create --name "$name" --type web_service --runtime docker \
+    --repo https://github.com/ToxicMinds/watson --branch main --root-directory apps/whatsapp-gateway \
+    --plan free --region frankfurt --health-check-path /health -o json --confirm |
+    python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('service', d)['id'])")
 fi
-on_vm 'until command -v docker >/dev/null; do sleep 5; done; mkdir -p gateway'
-g compute scp --zone "$zone" apps/whatsapp-gateway/{Dockerfile,package.json,package-lock.json,server.mjs,filter.mjs} "$vm:gateway/"
-on_vm "umask 077; printf 'WATSON_URL=%s\nWATSON_GATEWAY_SECRET=%s\n' '$url' '$secret' > gateway/gateway.env"
-on_vm 'set -e; cd gateway
-  sudo docker build -q -t watson-whatsapp .
-  sudo mkdir -p /var/lib/watson-whatsapp && sudo chown 1000:1000 /var/lib/watson-whatsapp
-  sudo docker rm -f watson-whatsapp >/dev/null 2>&1 || true
-  sudo docker run -d --name watson-whatsapp --restart unless-stopped -p 127.0.0.1:8080:8080 \
-    -v /var/lib/watson-whatsapp:/sessions --env-file gateway.env watson-whatsapp'
-echo "Deployed. To link a number: gcloud --project $project compute ssh $vm --zone $zone -- -L 8080:127.0.0.1:8080 -N"
-echo "then open http://localhost:8080 and scan the code with WhatsApp (Settings, Linked devices, Link a device)."
+url=$(api "https://api.render.com/v1/services/$id" | python3 -c "import json,sys; print(json.load(sys.stdin)['serviceDetails']['url'])")
+
+# Its secrets, from files (never on a command line).
+python3 - "$dir" "$SUPABASE_PROJECT_REF" <<'EOF' | api -X PUT "https://api.render.com/v1/services/$id/env-vars" -d @- >/dev/null
+import json, sys
+folder, ref = sys.argv[1], sys.argv[2]
+read = lambda name: open(f"{folder}/{name}").read().strip()
+print(json.dumps([
+    {"key": "WATSON_URL", "value": f"https://{ref}.supabase.co/functions/v1/whatsapp"},
+    {"key": "WATSON_GATEWAY_SECRET", "value": read("whatsapp-gateway-secret")},
+    {"key": "WATSON_STATE_KEY", "value": read("whatsapp-gateway-state-key")},
+    {"key": "PAIRING_PASSWORD", "value": read("whatsapp-gateway-pairing-password")},
+]))
+EOF
+supabase secrets set --project-ref "$SUPABASE_PROJECT_REF" WHATSAPP_GATEWAY_URL="$url" >/dev/null
+
+render deploys create "$id" --confirm -o json >/dev/null
+for _ in $(seq 1 90); do
+  status=$(render deploys list "$id" -o json --confirm | python3 -c "import json,sys; d=json.load(sys.stdin)[0]; print(d.get('deploy', d).get('status'))")
+  case "$status" in
+    live) echo "Deployed. Pairing page: $url (user watson, password in $dir/whatsapp-gateway-pairing-password)"; exit 0 ;;
+    build_failed|update_failed|canceled|deactivated) echo "deploy $status"; exit 1 ;;
+  esac
+  sleep 10
+done
+echo "deploy still running after 15 minutes"; exit 1
