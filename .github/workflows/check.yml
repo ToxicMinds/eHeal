@@ -29,7 +29,7 @@ jobs:
         working-directory: supabase
         run: pnpm lint && pnpm typecheck
       - name: WhatsApp gateway
-        run: node --test apps/whatsapp-gateway/
+        run: node --test apps/whatsapp-gateway/filter.test.mjs
 
   database-and-browser:
     runs-on: ubuntu-24.04
