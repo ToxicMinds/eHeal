@@ -193,6 +193,23 @@ async function handle(send: Channel, message: Incoming): Promise<void> {
   // Other texts are kept for the practitioner, without an answer from Watson.
 }
 
+/**
+ * The schedule's knock on the gateway, every five minutes: it keeps Render's free service awake, and
+ * what it answers is recorded; the database emails the owner when WhatsApp needs linking again or
+ * the gateway stays silent.
+ */
+async function checkGateway(): Promise<string> {
+  try {
+    const response = await fetch(`${env("WHATSAPP_GATEWAY_URL")}/health`, { signal: AbortSignal.timeout(20_000) });
+    const status = String((await response.json())?.status ?? "UNKNOWN").slice(0, 40);
+    await admin.rpc("whatsapp_gateway_seen", { p_status: status });
+    return status;
+  } catch {
+    await admin.rpc("whatsapp_gateway_unreachable");
+    return "UNREACHABLE";
+  }
+}
+
 /** The gateway: what it passed on, a minute's check for reminders, or a message it could not send. */
 async function fromTheGateway(request: Request): Promise<Response> {
   if (!GATEWAY || !sameSecret(request.headers.get("x-watson-gateway") ?? "", env("WHATSAPP_GATEWAY_SECRET"))) {
@@ -203,6 +220,15 @@ async function fromTheGateway(request: Request): Promise<Response> {
   const send = byGateway(outbox);
   // The numbers it may pass photos on from; sent back with every answer, so a patient who just linked counts at once.
   const contacts = async () => ((await admin.rpc("whatsapp_gateway_contacts")).data?.phones ?? []) as string[];
+  // Its WhatsApp pairing, sealed by the gateway: Render's free plan wipes its disk at every restart.
+  if (body?.event === "state-read") {
+    const { data } = await admin.rpc("whatsapp_gateway_state_read");
+    return Response.json({ ok: true, state: data?.state ?? {} });
+  }
+  if (body?.event === "state-write" && body.changes && typeof body.changes === "object") {
+    const { data } = await admin.rpc("whatsapp_gateway_state_write", { p_changes: body.changes });
+    return Response.json({ ok: Boolean(data?.ok) });
+  }
   if (body?.event === "message" && body.message?.id && body.message?.from) {
     await handle(send, fromGateway(body.message));
   } else if (body?.event === "poll") {
@@ -225,12 +251,13 @@ Deno.serve(async (request) => {
   }
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
   if (request.headers.has("x-watson-gateway")) return await fromTheGateway(request);
-  // The database's schedule, every five minutes: send the reminders that are due. With the gateway,
-  // the gateway asks for them itself.
+  // The database's schedule, every five minutes: send the reminders that are due by Meta. With the
+  // gateway, the gateway asks for them itself, and the schedule checks on the gateway instead.
   const cron = request.headers.get("x-watson-cron");
   if (cron !== null) {
     if (!sameSecret(cron, env("CRON_SECRET"))) return new Response("Forbidden", { status: 403 });
-    return Response.json({ ok: true, sent: GATEWAY ? 0 : await remind(byMeta) });
+    if (GATEWAY) return Response.json({ ok: true, sent: 0, gateway: await checkGateway() });
+    return Response.json({ ok: true, sent: await remind(byMeta) });
   }
   const raw = new Uint8Array(await request.arrayBuffer());
   if (!(await signedByMeta(raw, request.headers.get("x-hub-signature-256")))) return new Response("Forbidden", { status: 403 });
