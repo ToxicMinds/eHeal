@@ -9,7 +9,6 @@ test("a patient sends a document from their link, and the practitioner sees it",
   test.setTimeout(90_000);
   await signIn(page, account);
   await page.getByRole("link", { name: "New consultation" }).click();
-  await page.getByLabel("Patient reference").fill("0081");
   await page.getByLabel("Language spoken").selectOption("en");
   await page.getByRole("button", { name: "Create consultation" }).click();
   const link = await page.getByLabel("Link for the patient").inputValue();

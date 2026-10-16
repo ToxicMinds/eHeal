@@ -9,7 +9,7 @@ import { CopyButton } from "@/components/copy-button";
 import { Notice } from "@/components/status";
 import { call as rpc, explain } from "@/lib/api";
 import { clock } from "@/lib/audio";
-import { connect, inviteLink, recordCall, type CallState, type Recording } from "@/lib/call";
+import { connect, patientLink, recordCall, type CallState, type Recording } from "@/lib/call";
 import type { Tables } from "@/lib/database.types";
 import { RequireSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
@@ -176,7 +176,7 @@ function Room({ userId }: { userId: string }) {
   }
 
   const note = state === null ? ["Start the call, then send the patient the link.", ""] : NOTE[state];
-  const link = token ? inviteLink(token) : null;
+  const link = token && consultation ? patientLink(consultation.short_code) : null;
   return (
     <>
       {back}

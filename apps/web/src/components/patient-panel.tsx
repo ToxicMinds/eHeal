@@ -2,7 +2,7 @@
 
 import { Check, MessageCircle } from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
-import { inviteLink } from "@/lib/call";
+import { patientLink } from "@/lib/call";
 import type { Tables } from "@/lib/database.types";
 import { euros } from "@/lib/fee";
 import { dateTime } from "@/lib/status";
@@ -13,7 +13,7 @@ export function PatientPanel({ consultation, patient }: {
   consultation: Tables<"consultations">;
   patient: { name: string; phone: string | null } | null;
 }) {
-  const link = inviteLink(consultation.invite_token);
+  const link = patientLink(consultation.short_code);
   const fee = consultation.fee_cents;
 
   return (

@@ -185,6 +185,7 @@ export type Database = {
           reminder_sent_at: string | null
           scenario_notes: string
           scheduled_at: string
+          short_code: string
           status: Database["public"]["Enums"]["consultation_status"]
           stripe_checkout_session_id: string | null
           synthetic_patient_ref: string
@@ -214,6 +215,7 @@ export type Database = {
           reminder_sent_at?: string | null
           scenario_notes?: string
           scheduled_at: string
+          short_code?: string
           status: Database["public"]["Enums"]["consultation_status"]
           stripe_checkout_session_id?: string | null
           synthetic_patient_ref: string
@@ -243,6 +245,7 @@ export type Database = {
           reminder_sent_at?: string | null
           scenario_notes?: string
           scheduled_at?: string
+          short_code?: string
           status?: Database["public"]["Enums"]["consultation_status"]
           stripe_checkout_session_id?: string | null
           synthetic_patient_ref?: string
@@ -1027,6 +1030,7 @@ export type Database = {
         Returns: Json
       }
       invite_details: { Args: { p_token: string }; Returns: Json }
+      open_short_link: { Args: { p_code: string }; Returns: Json }
       patient_add_document: {
         Args: {
           p_file_name: string

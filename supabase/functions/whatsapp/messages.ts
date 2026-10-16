@@ -3,7 +3,7 @@
 import { dayAndTime, type Language, writtenLanguage } from "../_shared/wording.ts";
 
 export type View = {
-  consultation_id: string; scheduled_at: string; language: string; invite_token: string;
+  consultation_id: string; scheduled_at: string; language: string; invite_token: string; short_code: string;
   must_pay: boolean; patient_name: string | null;
 };
 
@@ -16,7 +16,7 @@ export function welcome(view: View, site: string): string {
   const lang = language(view);
   const first = (view.patient_name ?? "").trim().split(/\s+/)[0];
   const { day, time } = when(view, lang);
-  const link = `${site}/join/?t=${view.invite_token}`;
+  const link = `${site}/j/${view.short_code}`;
   return {
     en: `Hello${first ? ` ${first}` : ""}, this is Watson, your practitioner's assistant. Your consultation is on ${day} at ${time}, by video. `
       + `${view.must_pay ? "Pay and join here" : "Join here"}: ${link}\n\n`

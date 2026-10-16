@@ -90,3 +90,19 @@ test("the numbers on Home filter the consultations below them", async ({ page, a
   await expect(page.getByRole("heading", { name: "Done" })).toBeVisible();
   expect(problems).toEqual([]);
 });
+
+test("the patient's link is short enough to read out, and opens the patient's page however it is typed", async ({ page, account, browser, problems }) => {
+  await signIn(page, account);
+  await page.getByRole("link", { name: "New consultation" }).first().click();
+  await page.getByRole("button", { name: "Create consultation" }).click();
+  const link = await page.getByLabel("Link for the patient").inputValue();
+  expect(link).toMatch(/\/j\/[2-9A-HJ-NP-Z]{8}$/);
+
+  const patient = await (await browser.newContext()).newPage();
+  await patient.goto(link.toLowerCase().replace(/^https?:\/\/[^/]+/, ""));
+  await expect(patient.getByRole("heading", { name: "Your consultation" })).toBeVisible();
+  await expect(patient).toHaveURL(/\/join\/\?t=[0-9a-f]{64}$/);
+  await patient.goto("/j/ZZZZZZZZ");
+  await expect(patient.getByText("This link does not lead to a consultation")).toBeVisible();
+  expect(problems).toEqual([]);
+});
