@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { expect, signIn, test } from "./account";
+import { browserClient, localStack, rpc, sqlAsOwner } from "../tests/local-stack";
 
 const FIXTURE = fileURLToPath(new URL("../../../packages/test-fixtures/audio/en-patient-sleep.wav", import.meta.url));
 
@@ -79,4 +80,39 @@ test("a consultation that is not yours looks the same as one that does not exist
   await expect(page.getByText("This consultation does not exist, or it is not yours.")).toBeVisible();
   await page.goto("/consultation/?id=not-an-id");
   await expect(page.getByText("This consultation does not exist, or it is not yours.")).toBeVisible();
+});
+
+test("a new consultation starts in English, and says another language can be chosen", async ({ page, account, problems }) => {
+  await signIn(page, account);
+  await page.getByRole("link", { name: "New consultation" }).first().click();
+  await expect(page.getByLabel("Language spoken")).toHaveValue("en");
+  await expect(page.getByText("English unless you choose another.")).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
+test("the numbers on Home filter the consultations below them", async ({ page, account, problems }) => {
+  test.skip(Boolean(process.env.E2E_BASE_URL), "prepares an approved consultation directly in the local database");
+  const client = browserClient(localStack());
+  await client.auth.signInWithPassword({ email: account.email, password: account.password });
+  const made = await rpc(client, "create_consultation", {
+    p_synthetic_patient_ref: "SYN-0099", p_scheduled_at: new Date().toISOString(), p_language: "en", p_consent_recorded: true,
+  });
+  sqlAsOwner(`update public.consultations set status = 'approved' where id = '${made.consultation_id}';`);
+
+  await signIn(page, account);
+  const needYou = page.getByRole("button", { name: /Need you/ });
+  await expect(needYou).toHaveAttribute("aria-pressed", "false");
+  await needYou.click();
+  await expect(needYou).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("heading", { name: "Needs you" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Done" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Approved this week/ }).click();
+  await expect(page.getByRole("heading", { name: "Done" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Needs you" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Approved this week/ }).click(); // pressed again: everything
+  await expect(page.getByRole("heading", { name: "Needs you" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Done" })).toBeVisible();
+  expect(problems).toEqual([]);
 });

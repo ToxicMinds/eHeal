@@ -52,6 +52,7 @@ function Dashboard() {
   const [engine, setEngine] = useState<Engine | null>(null);
   const [failed, setFailed] = useState(false);
   const [openToday, setOpenToday] = useState<number | null>(null);
+  const [filter, setFilter] = useState<Filter | null>(null);
 
   useEffect(() => {
     // Row-level security returns only the signed-in practitioner's consultations.
@@ -70,19 +71,19 @@ function Dashboard() {
   }, []);
 
   const now = new Date();
-  const group = (name: string) => rows?.filter((row) => summarise(row.status).group === name) ?? [];
+  const count = (key: Filter) => rows?.filter((row) => FILTER[key](row, now)).length ?? 0;
+  // The numbers count every consultation; the shelves show what the pressed number picks.
+  const shown = rows?.filter((row) => !filter || FILTER[filter](row, now)) ?? [];
+  const group = (name: string) => shown.filter((row) => summarise(row.status).group === name);
   const needYou = group("Needs you");
   const working = group("Watson is working");
   const done = group("Done");
-  const today = rows?.filter((row) => new Date(row.scheduled_at).toDateString() === now.toDateString()).length ?? 0;
-  const weekAgo = now.getTime() - 7 * 86_400_000;
-  const approved = done.filter((row) => ["approved", "corrected"].includes(row.status) && Date.parse(row.updated_at) > weekAgo).length;
   const next = rows?.filter((row) => Date.parse(row.scheduled_at) > now.getTime() && summarise(row.status).stages[1] !== "done")
     .sort((a, b) => Date.parse(a.scheduled_at) - Date.parse(b.scheduled_at))[0];
 
   const summary = rows === null ? " " : [
-    needYou.length ? `${plural(needYou.length, "consultation needs", "consultations need")} you.` : "Nothing needs you right now.",
-    working.length ? `Watson is working on ${working.length === 1 ? "one" : working.length}.` : "",
+    count("needs") ? `${plural(count("needs"), "consultation needs", "consultations need")} you.` : "Nothing needs you right now.",
+    count("working") ? `Watson is working on ${count("working") === 1 ? "one" : count("working")}.` : "",
   ].join(" ");
 
   return (
@@ -108,10 +109,12 @@ function Dashboard() {
         </div>
         {rows && rows.length > 0 && (
           <div className="wa-stats">
-            <a className="wa-stat wa-stat--lamp" href="#needs"><span className="wa-stat__value">{needYou.length}</span><span className="wa-stat__label">Need you</span></a>
-            <a className="wa-stat" href="#working"><span className="wa-stat__value">{working.length}</span><span className="wa-stat__label">Watson is working</span></a>
-            <span className="wa-stat"><span className="wa-stat__value">{today}</span><span className="wa-stat__label">Booked today</span></span>
-            <a className="wa-stat" href="#done"><span className="wa-stat__value">{approved}</span><span className="wa-stat__label">Approved this week</span></a>
+            {TILES.map(([key, label]) => (
+              <button key={key} type="button" className={key === "needs" ? "wa-stat wa-stat--lamp" : "wa-stat"} aria-pressed={filter === key}
+                onClick={() => setFilter(filter === key ? null : key)}>
+                <span className="wa-stat__value">{count(key)}</span><span className="wa-stat__label">{label}</span>
+              </button>
+            ))}
           </div>
         )}
       </section>
@@ -138,6 +141,10 @@ function Dashboard() {
         </div>
       ) : (
         <>
+          {shown.length === 0 && (
+            <Notice title="Nothing here" actions={<button type="button" className="wa-button wa-button--secondary wa-button--small"
+              onClick={() => setFilter(null)}>Show all consultations</button>}>No consultation matches this number right now.</Notice>
+          )}
           {needYou.length > 0 && (
             <section className="wa-shelf" aria-labelledby="needs">
               <div className="wa-shelf__head"><h2 className="wa-heading" id="needs">Needs you</h2></div>
@@ -169,6 +176,17 @@ function Dashboard() {
     </>
   );
 }
+
+/** The four numbers on Home, each a filter on the consultations below it. Pressed again: all. */
+type Filter = "needs" | "working" | "today" | "approved";
+const WEEK_MS = 7 * 86_400_000;
+const FILTER: Record<Filter, (row: Row, now: Date) => boolean> = {
+  needs: (row) => summarise(row.status).group === "Needs you",
+  working: (row) => summarise(row.status).group === "Watson is working",
+  today: (row, now) => new Date(row.scheduled_at).toDateString() === now.toDateString(),
+  approved: (row, now) => ["approved", "corrected"].includes(row.status) && Date.parse(row.updated_at) > now.getTime() - WEEK_MS,
+};
+const TILES: [Filter, string][] = [["needs", "Need you"], ["working", "Watson is working"], ["today", "Booked today"], ["approved", "Approved this week"]];
 
 /** "at 11:00" today, else "on Thu 22 Oct 2026, 11:00". */
 const nextWhen = (iso: string, now: Date) =>

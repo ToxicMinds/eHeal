@@ -38,7 +38,7 @@ function NewConsultation() {
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { reference: "", scheduled_at: "", consent_recorded: true, scenario_notes: "", fee: "" },
+    defaultValues: { reference: "", scheduled_at: "", language: "en", consent_recorded: true, scenario_notes: "", fee: "" },
   });
 
   useEffect(() => {
@@ -90,9 +90,8 @@ function NewConsultation() {
               <div className="wa-field">
                 <label className="wa-label" htmlFor="language">Language spoken</label>
                 <div className="wa-select">
-                  <select id="language" defaultValue="" aria-invalid={Boolean(errors.language)}
+                  <select id="language" aria-invalid={Boolean(errors.language)}
                     aria-describedby="language-hint language-error" {...register("language")}>
-                    <option value="" disabled>Choose…</option>
                     {Object.entries(LANGUAGE_LABEL).map(([code, label]) => (
                       <option key={code} value={code}>{label}</option>
                     ))}
@@ -102,7 +101,7 @@ function NewConsultation() {
               </div>
             </div>
             <p className="wa-hint" id="language-hint" style={{ marginTop: -12 }}>
-              The transcript is made in this language. &ldquo;Mixed or unsure&rdquo; lets the engine guess, which is less reliable.
+              English unless you choose another. The transcript is made in this language; &ldquo;Mixed or unsure&rdquo; lets Watson guess, which is less reliable.
             </p>
 
             <div className="wa-field">

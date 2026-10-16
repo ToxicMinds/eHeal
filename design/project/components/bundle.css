@@ -455,3 +455,7 @@ body {
 /* One layout for wide screens, another for phones, where both are in the page. */
 @media (max-width: 720px) { .wa-only-wide { display: none !important; } }
 @media (min-width: 721px) { .wa-only-narrow { display: none !important; } }
+/* The numbers on Home are filters (owner, 16 Oct): pressed, a lamplight ring. */
+button.wa-stat { border: 0; font: inherit; text-align: left; cursor: pointer; }
+.wa-stat:hover { background: color-mix(in srgb, var(--on-night) 14%, transparent); }
+.wa-stat[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--lamp); }
