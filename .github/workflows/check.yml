@@ -28,6 +28,8 @@ jobs:
       - name: Edge functions
         working-directory: supabase
         run: pnpm lint && pnpm typecheck
+      - name: WhatsApp gateway
+        run: node --test apps/whatsapp-gateway/
 
   database-and-browser:
     runs-on: ubuntu-24.04
@@ -38,6 +40,9 @@ jobs:
         with: { node-version: 24.11.1, cache: pnpm }
       - uses: supabase/setup-cli@v1
         with: { version: 2.106.0 }
+      # The WhatsApp function's tests run it with Deno against the local database.
+      - uses: denoland/setup-deno@v2
+        with: { deno-version: v2.5.6 }
       - run: supabase start -x analytics,vector,imgproxy,edge-runtime,studio,inbucket
       - run: pnpm install --frozen-lockfile
       - name: Database tests

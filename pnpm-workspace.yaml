@@ -1,5 +1,8 @@
 packages:
   - "apps/*"
+  # The WhatsApp gateway ships as its own Docker image with its own npm install (as Synculariti's
+  # sidecar does): its WhatsApp library stays out of every other install and CI run.
+  - "!apps/whatsapp-gateway"
   - "packages/*"
   - "supabase"
 allowBuilds:
