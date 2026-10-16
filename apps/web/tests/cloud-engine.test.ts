@@ -66,6 +66,18 @@ describe("the cloud engine", () => {
     expect(await rpc(cara.client, "engine_status")).toMatchObject({ on_demand: true, paused: false });
   });
 
+  it("tells the owner once a month, by email, when the allowance stops work that waits", async () => {
+    const notices = () => sqlAsOwner("select key from private.owner_notices where key like 'engine-allowance-%';");
+    sqlAsOwner(`delete from private.owner_notices; delete from public.engine_runs;
+      insert into public.engine_runs (engine_user_id, started_at, finished_at)
+        values ('${cloud.id}', now() - interval '3 hours 1 minute', now());`);
+    await waitingForm();
+    expect(notices()).toBe(`engine-allowance-${new Date().toISOString().slice(0, 7)}`);
+    await waitingForm(); // more work, the same month: no second email
+    expect(notices().split("\n")).toHaveLength(1);
+    sqlAsOwner("delete from private.owner_notices; delete from public.engine_runs;");
+  });
+
   it("is not woken where no engine runs on demand (the laptop engine)", async () => {
     sqlAsOwner("update public.engines set on_demand = false;");
     expect(decision()).toBe("no on-demand engine");
