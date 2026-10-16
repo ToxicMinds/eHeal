@@ -11,7 +11,9 @@ from pathlib import Path
 from .config import Settings, load_settings
 from .schema import SCHEMA_VERSION, Transcript
 
-SCHEMA_DIR = Path(__file__).resolve().parents[4] / "packages" / "schemas"
+# The repository's packages/schemas, for `export-schema`, a development command. An engine installed
+# elsewhere (on Modal, /root/clinical_worker) never uses it, and must still load.
+SCHEMA_DIR = Path(*Path(__file__).resolve().parts[:-5]) / "packages" / "schemas"
 
 
 def schema_json() -> str:
