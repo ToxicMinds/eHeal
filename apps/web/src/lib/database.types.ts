@@ -1162,6 +1162,7 @@ export type Database = {
         Args: { p_consultation_id: string }
         Returns: boolean
       }
+      watson_whatsapp: { Args: { p_token: string }; Returns: Json }
       whatsapp_add_document: {
         Args: {
           p_file_name: string

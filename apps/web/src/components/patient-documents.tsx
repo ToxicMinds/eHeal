@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, Check, FileText, ImageIcon, Lock, MessageCircle, Plus } from "lucide-react";
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Notice } from "@/components/status";
 import { call, explain, FIELD_MESSAGE } from "@/lib/api";
 import { DOCUMENT_ACCEPT, fileSize, sendDocument } from "@/lib/documents";
@@ -25,6 +25,12 @@ export function PatientDocuments({ token, whatsappCode, patient, documents, onCh
   const [fieldError, setFieldError] = useState<{ field: string; message: string } | null>(null);
   const [sending, setSending] = useState<string[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
+  // On Watson's own gateway the number is the owner's: given to this link only, never in the page's code.
+  const [watson, setWatson] = useState(WATSON_WHATSAPP);
+  useEffect(() => {
+    call<{ number: string | null }>("watson_whatsapp", { p_token: token })
+      .then((answer) => { if (answer.ok && answer.number) setWatson(answer.number); });
+  }, [token]);
   const files = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
 
@@ -144,7 +150,7 @@ export function PatientDocuments({ token, whatsappCode, patient, documents, onCh
       <div className="wa-whatsapp">
         <p className="wa-text" style={{ margin: 0 }}>On your phone? Send them on WhatsApp instead. Watson answers there with your link.</p>
         <a className="wa-button wa-button--secondary" target="_blank" rel="noopener noreferrer"
-          href={whatsappLink(WATSON_WHATSAPP, `Watson ${whatsappCode}`)}>
+          href={whatsappLink(watson, `Watson ${whatsappCode}`)}>
           <MessageCircle aria-hidden className="wa-icon" />Message Watson on WhatsApp
         </a>
       </div>

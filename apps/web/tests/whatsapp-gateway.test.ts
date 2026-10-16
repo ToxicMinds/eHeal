@@ -91,3 +91,21 @@ describe("the WhatsApp gateway's pairing and health", () => {
     }
   });
 });
+
+// The number patients message: on the gateway it is the owner's own, so it is given only to someone
+// holding a patient's link, never published in the website's code (owner, 16 Oct).
+describe("Watson's WhatsApp number", () => {
+  it("is given to a patient's link, and to nobody else", async () => {
+    const made = await rpc(eva.client, "create_consultation", { p_scheduled_at: "2026-10-20T07:30:00Z", p_language: "en", p_consent_recorded: true });
+    const token = sqlAsOwner(`select invite_token from public.consultations where id = '${made.consultation_id}';`);
+    const visitor = browserClient(stack);
+    expect(await rpc(visitor, "watson_whatsapp", { p_token: token })).toEqual({ ok: true, number: null });
+    sqlAsOwner("select vault.create_secret('+421900000123', 'watson_whatsapp_number');");
+    try {
+      expect(await rpc(visitor, "watson_whatsapp", { p_token: token })).toEqual({ ok: true, number: "+421900000123" });
+      expect(await rpc(visitor, "watson_whatsapp", { p_token: "0".repeat(64) })).toEqual({ ok: false, error_category: "NOT_FOUND" });
+    } finally {
+      sqlAsOwner("delete from vault.secrets where name = 'watson_whatsapp_number';");
+    }
+  });
+});
