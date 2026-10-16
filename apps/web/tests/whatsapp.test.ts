@@ -33,7 +33,7 @@ describe("a patient's WhatsApp number", () => {
     const linked = await receive(number, `Watson ${code.toLowerCase()}`);
     expect(linked).toEqual({
       ok: true, linked: true,
-      consultation: { consultation_id: id, scheduled_at: "2026-10-20T07:30:00+00:00", language: "sk", invite_token: token, must_pay: true, patient_name: "Jana Nováková" },
+      consultation: { consultation_id: id, scheduled_at: "2026-10-20T07:30:00+00:00", language: "sk", invite_token: token, short_code: expect.stringMatching(/^[2-9A-HJ-NP-Z]{8}$/), must_pay: true, patient_name: "Jana Nováková" },
     });
     const { data: patient } = await eva.client.from("patients").select("name, phone").single();
     expect(patient).toEqual({ name: "Jana Nováková", phone: number });

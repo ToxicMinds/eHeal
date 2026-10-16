@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { adminClient, browserClient, localStack, rpc, sqlAsOwner } from "../tests/local-stack";
+import { adminClient, browserClient, localStack, newPractitioner, PASSWORD, rpc, sqlAsOwner } from "../tests/local-stack";
 import { expect, signIn, test } from "./account";
 
 const TEMPLATE = readFileSync(new URL("../../../packages/test-fixtures/templates/ayurveda-intake.json", import.meta.url), "utf8");
@@ -112,14 +112,13 @@ test("set a fee, send the patient's link; the patient sees the fee, then pays an
   test.skip(Boolean(process.env.E2E_BASE_URL), "records the payment directly in the local database");
   await signIn(page, account);
   await page.getByRole("link", { name: "New consultation" }).click();
-  await page.getByLabel("Patient reference").fill("0062");
   await page.getByLabel("Language spoken").selectOption("en");
   await page.getByLabel("Fee").fill("40");
   await page.getByRole("button", { name: "Create consultation" }).click();
   await expect(page.getByText("Fee €40.00")).toBeVisible();
   await expect(page.getByText("Not paid yet")).toBeVisible();
   const link = await page.getByLabel("Link for the patient").inputValue();
-  expect(link).toMatch(/\/join\/\?t=[0-9a-f]{64}$/);
+  expect(link).toMatch(/\/j\/[2-9A-HJ-NP-Z]{8}$/);
 
   const patient = await page.context().browser()!.newPage();
   await patient.goto(link);
@@ -140,13 +139,14 @@ test("set a fee, send the patient's link; the patient sees the fee, then pays an
   expect(problems).toEqual([]);
 });
 
-test("a document that arrives after the form was filled in offers to fill the form in again", async ({ page, account, problems }) => {
+test("a document that arrives after the form was filled in offers to fill the form in again", async ({ page, problems }) => {
   test.skip(Boolean(process.env.E2E_BASE_URL), "prepares a filled-in form directly in the local database");
+  // An account of its own: setting a form template here must not change the shared test account.
+  const own = await newPractitioner(localStack(), "again");
+  const account = { email: own.email, password: PASSWORD, references: [] };
   const { id } = await consultation(account);
   filledForm(id);
-  const client = browserClient(localStack());
-  await client.auth.signInWithPassword({ email: account.email, password: account.password });
-  expect(await rpc(client, "set_form_template", { p_definition: JSON.parse(TEMPLATE) })).toEqual({ ok: true });
+  expect(await rpc(own.client, "set_form_template", { p_definition: JSON.parse(TEMPLATE) })).toEqual({ ok: true });
   sqlAsOwner(`
     insert into public.patient_documents (id, practitioner_id, patient_id, consultation_id, storage_path, file_name,
                                           media_type, size_bytes, source, uploaded_at, reading, page_texts, read_at)

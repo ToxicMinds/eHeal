@@ -44,7 +44,7 @@ describe("a WhatsApp reminder", () => {
     const all = await due();
     expect(all.find((r) => r.consultation_id === soon.id)).toEqual({
       consultation_id: soon.id, phone: soon.contact, scheduled_at: expect.any(String), language: "sk",
-      invite_token: soon.token, must_pay: false, patient_name: "Jana Nováková",
+      invite_token: soon.token, short_code: expect.stringMatching(/^[2-9A-HJ-NP-Z]{8}$/), must_pay: false, patient_name: "Jana Nováková",
     });
     expect(await isDue(later.id)).toBe(false);
   });
@@ -78,7 +78,7 @@ describe("a WhatsApp reminder", () => {
   });
 
   it("names the patient by first name and the time on the practitioner's clock, in the consultation's language", () => {
-    const view = { consultation_id: "c", scheduled_at: "2026-10-26T08:00:00+00:00", language: "sk", invite_token: "t", must_pay: false, patient_name: "Jana Nováková" };
+    const view = { consultation_id: "c", scheduled_at: "2026-10-26T08:00:00+00:00", language: "sk", invite_token: "t", short_code: "K7P4QX9M", must_pay: false, patient_name: "Jana Nováková" };
     expect(reminder(view)).toEqual({ language: "sk", first: "Jana", time: "09:00", text: "Dobrý deň, Jana, tu je Watson. Vaša videokonzultácia je dnes o 09:00. Pripojiť sa môžete tlačidlom nižšie." });
     expect(reminder({ ...view, language: "auto", patient_name: null }).language).toBe("en");
   });
