@@ -143,14 +143,36 @@ export type Database = {
           },
         ]
       }
+      busy_times: {
+        Row: {
+          ends_at: string
+          practitioner_id: string
+          starts_at: string
+        }
+        Insert: {
+          ends_at: string
+          practitioner_id: string
+          starts_at: string
+        }
+        Update: {
+          ends_at?: string
+          practitioner_id?: string
+          starts_at?: string
+        }
+        Relationships: []
+      }
       consultations: {
         Row: {
+          booked_at: string | null
           consent_recorded_at: string | null
           consent_recorded_by: string | null
           consent_withdrawn_at: string | null
           consent_withdrawn_by: string | null
           created_at: string
+          duration_minutes: number
           fee_cents: number | null
+          google_event_id: string | null
+          hold_until: string | null
           id: string
           invite_token: string
           language: Database["public"]["Enums"]["consultation_language"]
@@ -159,6 +181,8 @@ export type Database = {
           patient_id: string | null
           practitioner_id: string
           recorded_together: boolean
+          remind_whatsapp: boolean
+          reminder_sent_at: string | null
           scenario_notes: string
           scheduled_at: string
           status: Database["public"]["Enums"]["consultation_status"]
@@ -168,12 +192,16 @@ export type Database = {
           whatsapp_code: string
         }
         Insert: {
+          booked_at?: string | null
           consent_recorded_at?: string | null
           consent_recorded_by?: string | null
           consent_withdrawn_at?: string | null
           consent_withdrawn_by?: string | null
           created_at?: string
+          duration_minutes?: number
           fee_cents?: number | null
+          google_event_id?: string | null
+          hold_until?: string | null
           id?: string
           invite_token?: string
           language: Database["public"]["Enums"]["consultation_language"]
@@ -182,6 +210,8 @@ export type Database = {
           patient_id?: string | null
           practitioner_id: string
           recorded_together?: boolean
+          remind_whatsapp?: boolean
+          reminder_sent_at?: string | null
           scenario_notes?: string
           scheduled_at: string
           status: Database["public"]["Enums"]["consultation_status"]
@@ -191,12 +221,16 @@ export type Database = {
           whatsapp_code?: string
         }
         Update: {
+          booked_at?: string | null
           consent_recorded_at?: string | null
           consent_recorded_by?: string | null
           consent_withdrawn_at?: string | null
           consent_withdrawn_by?: string | null
           created_at?: string
+          duration_minutes?: number
           fee_cents?: number | null
+          google_event_id?: string | null
+          hold_until?: string | null
           id?: string
           invite_token?: string
           language?: Database["public"]["Enums"]["consultation_language"]
@@ -205,6 +239,8 @@ export type Database = {
           patient_id?: string | null
           practitioner_id?: string
           recorded_together?: boolean
+          remind_whatsapp?: boolean
+          reminder_sent_at?: string | null
           scenario_notes?: string
           scheduled_at?: string
           status?: Database["public"]["Enums"]["consultation_status"]
@@ -418,6 +454,36 @@ export type Database = {
           },
         ]
       }
+      google_calendars: {
+        Row: {
+          calendar_id: string
+          checked_at: string | null
+          connected_at: string
+          email: string
+          practitioner_id: string
+          problem: string | null
+          refresh_token: string
+        }
+        Insert: {
+          calendar_id: string
+          checked_at?: string | null
+          connected_at?: string
+          email: string
+          practitioner_id: string
+          problem?: string | null
+          refresh_token: string
+        }
+        Update: {
+          calendar_id?: string
+          checked_at?: string | null
+          connected_at?: string
+          email?: string
+          practitioner_id?: string
+          problem?: string | null
+          refresh_token?: string
+        }
+        Relationships: []
+      }
       patient_documents: {
         Row: {
           claimed_at: string | null
@@ -522,6 +588,51 @@ export type Database = {
           name?: string
           phone?: string | null
           practitioner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      practitioner_profiles: {
+        Row: {
+          about: string
+          display_name: string
+          fee_cents: number | null
+          gap_minutes: number
+          hours: Json
+          languages: Database["public"]["Enums"]["consultation_language"][]
+          length_minutes: number
+          offer: string
+          practitioner_id: string
+          slug: string
+          time_zone: string
+          updated_at: string
+        }
+        Insert: {
+          about?: string
+          display_name: string
+          fee_cents?: number | null
+          gap_minutes?: number
+          hours?: Json
+          languages?: Database["public"]["Enums"]["consultation_language"][]
+          length_minutes?: number
+          offer?: string
+          practitioner_id: string
+          slug: string
+          time_zone?: string
+          updated_at?: string
+        }
+        Update: {
+          about?: string
+          display_name?: string
+          fee_cents?: number | null
+          gap_minutes?: number
+          hours?: Json
+          languages?: Database["public"]["Enums"]["consultation_language"][]
+          length_minutes?: number
+          offer?: string
+          practitioner_id?: string
+          slug?: string
+          time_zone?: string
           updated_at?: string
         }
         Relationships: []
@@ -789,6 +900,22 @@ export type Database = {
         Returns: Json
       }
       approve_form: { Args: { p_form_id: string }; Returns: Json }
+      book_time: {
+        Args: {
+          p_contact: string
+          p_language: Database["public"]["Enums"]["consultation_language"]
+          p_name: string
+          p_remind_whatsapp: boolean
+          p_slug: string
+          p_starts_at: string
+        }
+        Returns: Json
+      }
+      booking_times: {
+        Args: { p_from: string; p_slug: string; p_to: string }
+        Returns: Json
+      }
+      calendar_week: { Args: { p_from: string; p_to: string }; Returns: Json }
       cancel_transcription: {
         Args: { p_consultation_id: string }
         Returns: Json
@@ -874,6 +1001,25 @@ export type Database = {
         Returns: Json
       }
       engine_status: { Args: never; Returns: Json }
+      find_practitioners: { Args: never; Returns: Json }
+      google_disconnect: { Args: { p_practitioner: string }; Returns: Json }
+      google_problem: {
+        Args: { p_practitioner: string; p_problem: string }
+        Returns: Json
+      }
+      google_replace_busy: {
+        Args: { p_busy: Json; p_practitioner: string }
+        Returns: Json
+      }
+      google_save_connection: {
+        Args: {
+          p_calendar_id: string
+          p_email: string
+          p_practitioner: string
+          p_refresh_token: string
+        }
+        Returns: Json
+      }
       invite_details: { Args: { p_token: string }; Returns: Json }
       patient_add_document: {
         Args: {
@@ -929,12 +1075,26 @@ export type Database = {
         Returns: Json
       }
       remove_document: { Args: { p_document_id: string }; Returns: Json }
+      renew_hold: { Args: { p_token: string }; Returns: Json }
       review_form_answer: {
         Args: {
           p_decision: string
           p_field_key: string
           p_form_id: string
           p_text?: string
+        }
+        Returns: Json
+      }
+      save_booking_page: {
+        Args: {
+          p_about: string
+          p_display_name: string
+          p_fee_cents: number
+          p_gap_minutes: number
+          p_hours: Json
+          p_languages: Database["public"]["Enums"]["consultation_language"][]
+          p_length_minutes: number
+          p_offer: string
         }
         Returns: Json
       }
