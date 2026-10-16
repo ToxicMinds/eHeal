@@ -437,3 +437,28 @@ class TestOnDemand:
         # A job whose engine vanished is claimable again after two minutes; an engine started again
         # by Modal must still be there to claim it.
         assert load_settings({"WATSON_ENV_FILE": "/nonexistent"}).idle_seconds > 120
+
+
+def test_the_engines_commands_load_outside_the_repository() -> None:
+    # On Modal the package sits at /root/clinical_worker, two folders from the root, not inside
+    # the repository (decision 0009).
+    import shutil
+    import subprocess
+    import sys
+    import tempfile
+
+    import clinical_worker
+
+    shallow = Path(tempfile.mkdtemp(dir="/tmp"))
+    try:
+        shutil.copytree(Path(clinical_worker.__file__).parent, shallow / "clinical_worker")
+        loaded = subprocess.run(
+            [sys.executable, "-c", "import clinical_worker.__main__"],
+            cwd=shallow,
+            capture_output=True,
+            text=True,
+            env={"PYTHONPATH": str(shallow), "PATH": ""},
+        )
+    finally:
+        shutil.rmtree(shallow)
+    assert loaded.returncode == 0, loaded.stderr[-300:]

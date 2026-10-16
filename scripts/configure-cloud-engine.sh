@@ -46,7 +46,7 @@ modal secret create --force watson-engine WATSON_SUPABASE_URL="$SUPABASE_URL" \
 modal secret create --force watson-engine-wake WAKE_SECRET="$wake_key" >/dev/null
 
 # 3. The deploy; the models the first time (or with --models).
-url=$(modal deploy modal_engine.py | tee /dev/stderr | grep -o 'https://[^ ]*--watson-engine-wake\.modal\.run' | head -1)
+url=$(modal deploy modal_engine.py | tee /dev/stderr | grep -o 'https://[^ ]*--watson-engine-wake[.a-z0-9-]*\.modal\.run' | head -1)
 [ -n "$url" ] || { echo "The deploy printed no wake address." >&2; exit 1; }
 if [ "${1:-}" = "--models" ] || ! modal volume ls watson-models llm >/dev/null 2>&1; then
   modal run modal_engine.py::fetch_models
