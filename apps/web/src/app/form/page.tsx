@@ -1,8 +1,8 @@
 "use client";
 
-import { Check, ChevronLeft, FileText, Pencil, X } from "lucide-react";
+import { Check, ChevronLeft, FileText, Pencil, RefreshCw, X } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Notice } from "@/components/status";
@@ -27,6 +27,16 @@ type Loaded = {
   segments: Map<number, Segment>;
   // The patient's documents the answers quote: name and where to open it.
   documents: Map<string, { file_name: string; storage_path: string }>;
+  // Documents Watson did not have when it filled the form in (read after the engine took the job,
+  // and not quoted): reason to fill it in again.
+  late: { file_name: string; source: string; uploaded_at: string }[];
+};
+
+/** Who sent a document, in the practitioner's words. */
+const SENT_BY: Record<string, string> = {
+  whatsapp: "sent by the patient on WhatsApp",
+  patient: "sent by the patient from their link",
+  practitioner: "added by you",
 };
 const documentQuotes = (answer: Answer) => (answer.document_quotes ?? []) as unknown as DocumentQuote[];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,7 +58,7 @@ export default function FormPage() {
 async function fetchForm(id: string): Promise<Loaded | "missing" | "failed"> {
   const [consultation, form] = await Promise.all([
     supabase.from("consultations").select("*").eq("id", id).maybeSingle(),
-    supabase.from("forms").select("*").eq("consultation_id", id).neq("status", "superseded").maybeSingle(),
+    supabase.from("forms").select("*, form_jobs(claimed_at)").eq("consultation_id", id).neq("status", "superseded").maybeSingle(),
   ]);
   if (consultation.error || form.error) return "failed";
   if (!consultation.data || !form.data) return "missing";
@@ -59,13 +69,15 @@ async function fetchForm(id: string): Promise<Loaded | "missing" | "failed"> {
   ]);
   if (answers.error || segments.error) return "failed";
   const quoted = [...new Set(answers.data.flatMap((answer) => documentQuotes(answer).map((quote) => quote.document_id)))];
-  const [patient, documents] = await Promise.all([
+  const [patient, documents, late] = await Promise.all([
     consultation.data.patient_id
       ? supabase.from("patients").select("name").eq("id", consultation.data.patient_id).maybeSingle()
       : Promise.resolve({ data: null }),
     quoted.length > 0
       ? supabase.from("patient_documents").select("id, file_name, storage_path").in("id", quoted)
       : Promise.resolve({ data: [] }),
+    supabase.from("patient_documents").select("id, file_name, source, uploaded_at").eq("consultation_id", id)
+      .eq("reading", "read").gt("read_at", form.data.form_jobs?.claimed_at ?? form.data.created_at).order("uploaded_at"),
   ]);
   return {
     consultation: consultation.data,
@@ -74,6 +86,7 @@ async function fetchForm(id: string): Promise<Loaded | "missing" | "failed"> {
     answers: answers.data,
     segments: new Map(segments.data.map((segment) => [segment.position, segment])),
     documents: new Map((documents.data ?? []).map((document) => [document.id, document])),
+    late: (late.data ?? []).filter((document) => document.uploaded_at !== null && !quoted.includes(document.id)) as Loaded["late"],
   };
 }
 
@@ -93,6 +106,7 @@ function FormView() {
   const [problem, setProblem] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const aside = useRef<HTMLElement>(null);
+  const router = useRouter();
 
   const load = useCallback(() => {
     fetchForm(id).then(setLoaded);
@@ -120,7 +134,7 @@ function FormView() {
   if (loaded === "failed") return <>{back}<Notice tone="failed" title="The form could not be loaded">Check your connection and reload the page.</Notice></>;
   if (loaded === null) return <p className="wa-meta" role="status">Loading the form…</p>;
 
-  const { consultation, patientName, form, answers, segments, documents } = loaded;
+  const { consultation, patientName, form, answers, segments, documents, late } = loaded;
   const template = form.template as unknown as Template;
   const fields = new Map(template.sections.flatMap((section) => section.fields).map((field) => [field.key, field]));
   const byKey = new Map(answers.map((answer) => [answer.field_key, answer]));
@@ -152,6 +166,14 @@ function FormView() {
     setBusy(false);
     if (!outcome.ok) return setProblem(explain(outcome.error_category));
     load();
+  }
+  async function fillAgain() {
+    setBusy(true);
+    setProblem(null);
+    const outcome = await call("fill_form_again", { p_consultation_id: consultation.id });
+    if (outcome.ok) return router.push(`/consultation/?id=${consultation.id}`);
+    setBusy(false);
+    setProblem(explain(outcome.error_category));
   }
   function edit(answer: Answer) {
     setEditing(answer.field_key);
@@ -279,6 +301,14 @@ function FormView() {
       </section>
       {approved && (
         <Notice title={`Approved ${form.approved_at ? dateTime(form.approved_at) : ""}`}>This form is final. It is the record of the consultation.</Notice>
+      )}
+      {!approved && late.length > 0 && ["draft_ready", "under_review"].includes(consultation.status) && (
+        <Notice tone="attention" title={late.length === 1 ? "A document arrived after Watson filled this in" : `${late.length} documents arrived after Watson filled this in`}
+          actions={<button type="button" className="wa-button wa-button--secondary wa-button--small" disabled={busy} onClick={fillAgain}>
+            <RefreshCw aria-hidden className="wa-icon wa-icon--sm" />Fill in again</button>}>
+          {late.map((document) => `${document.file_name}, ${SENT_BY[document.source] ?? "sent"} on ${dateTime(document.uploaded_at)}`).join("; ")}.
+          {" "}Watson can fill in the form again with {late.length === 1 ? "it" : "them"}, in about 5 minutes. Answers you have already checked stay as you left them.
+        </Notice>
       )}
       {problem && <Notice tone="failed" title="That did not work">{problem}</Notice>}
       <div className="wa-review">

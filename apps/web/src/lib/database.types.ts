@@ -1001,6 +1001,7 @@ export type Database = {
         Returns: Json
       }
       engine_status: { Args: never; Returns: Json }
+      fill_form_again: { Args: { p_consultation_id: string }; Returns: Json }
       find_practitioners: { Args: never; Returns: Json }
       google_disconnect: { Args: { p_practitioner: string }; Returns: Json }
       google_event_written: {

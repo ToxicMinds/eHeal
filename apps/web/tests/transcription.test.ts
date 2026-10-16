@@ -3,26 +3,15 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
-  adminClient, attachTrack, createConsultation, localStack, newPractitioner, SHA256_OF_FIXTURE, sqlAsOwner,
+  adminClient, attachTrack, createConsultation, localStack, newEngine, newPractitioner, rpc, SHA256_OF_FIXTURE, sqlAsOwner,
   type Practitioner,
 } from "./local-stack";
 
 const stack = localStack();
-type Answer = Record<string, unknown>;
 type Job = { job_id: string; attempt: number; consultation_id: string; language: string; tracks: { storage_path: string }[] };
 
-async function call(who: Practitioner, name: string, args: object = {}): Promise<Answer> {
-  const { data, error } = await who.client.rpc(name as never, args as never);
-  if (error) throw new Error(`${name}: ${error.message}`);
-  return data as Answer;
-}
-
-async function newEngine(label: string) {
-  const who = await newPractitioner(stack, label);
-  const { error } = await adminClient(stack).rpc("register_engine", { p_user_id: who.id, p_label: label });
-  if (error) throw error;
-  return who;
-}
+/** Calls a database function as this practitioner or engine. */
+const call = (who: Practitioner, name: string, args: object = {}) => rpc(who.client, name, args);
 
 /** A consultation with consent and both tracks, ready for transcription. */
 async function ready(who: Practitioner) {
@@ -74,7 +63,7 @@ const eventsOf = async (id: string) =>
 
 beforeAll(async () => {
   cara = await newPractitioner(stack, "cara");
-  engine = await newEngine("engine");
+  engine = await newEngine(stack, "engine");
 });
 beforeEach(() => {
   // One queue serves every test; start each from an empty one.
@@ -142,7 +131,7 @@ describe("a job from start to transcript", () => {
   });
 
   it("never hands one job to two engines", async () => {
-    const second = await newEngine("engine-two");
+    const second = await newEngine(stack, "engine-two");
     await call(cara, "start_transcription", { p_consultation_id: await ready(cara) });
     const answers = await Promise.all([call(engine, "engine_claim_job"), call(second, "engine_claim_job")]);
     expect(answers.filter((a) => a.job).length).toBe(1);

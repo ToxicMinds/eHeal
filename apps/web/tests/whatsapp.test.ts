@@ -12,11 +12,7 @@ beforeAll(async () => {
   eva = await newPractitioner(stack, "eva");
 });
 
-async function serverCall(name: string, args: object): Promise<Record<string, unknown>> {
-  const { data, error } = await server.rpc(name as never, args as never);
-  if (error) throw new Error(`${name}: ${error.message}`);
-  return data as Record<string, unknown>;
-}
+const serverCall = (name: string, args: object) => rpc(server, name, args);
 
 async function consultation() {
   const made = await rpc(eva.client, "create_consultation", {

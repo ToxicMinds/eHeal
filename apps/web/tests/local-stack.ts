@@ -45,13 +45,50 @@ export async function newPractitioner(stack: Stack, label: string) {
 }
 export type Practitioner = Awaited<ReturnType<typeof newPractitioner>>;
 
-type Result = { ok: boolean; error_category?: string; field?: string; consultation_id?: string; track_id?: string };
+/** A database function's answer: {ok: true, ...} or {ok: false, error_category, field?}. */
+export type Answer = Record<string, unknown> & {
+  ok: boolean; error_category?: string; field?: string; consultation_id?: string; track_id?: string;
+};
 
-/** Calls a database function and returns its {ok, ...} answer. */
-export async function rpc(client: Practitioner["client"], name: string, args: object): Promise<Result> {
+/** Calls a database function as this client and returns its answer; a refused call fails the test. */
+export async function rpc(client: Practitioner["client"], name: string, args: object = {}): Promise<Answer> {
   const { data, error } = await client.rpc(name as never, args as never);
   if (error) throw new Error(`${name}: ${error.message}`);
-  return data as unknown as Result;
+  return data as unknown as Answer;
+}
+
+/** A new account registered as an engine, the way the laptop's engine is. */
+export async function newEngine(stack: Stack, label: string) {
+  const who = await newPractitioner(stack, label);
+  const { error } = await adminClient(stack).rpc("register_engine", { p_user_id: who.id, p_label: label });
+  if (error) throw error;
+  return who;
+}
+
+export type FormJob = { job_id: string; attempt: number; consultation_id: string; documents: { document_id: string; pages: string[] }[] };
+
+/** Claims form jobs until it gets this consultation's; others left by earlier runs are failed. */
+export async function claimFormJob(engine: Practitioner, consultationId: string): Promise<FormJob> {
+  for (let i = 0; i < 50; i++) {
+    const job = (await rpc(engine.client, "engine_claim_form_job")).job as FormJob | null;
+    if (!job) break;
+    if (job.consultation_id === consultationId) return job;
+    await rpc(engine.client, "engine_fail_form_job", { p_job_id: job.job_id, p_attempt: job.attempt, p_error_category: "FORM_FAILED" });
+  }
+  throw new Error("form job was never offered to the engine");
+}
+
+/** A finished transcript of one patient line and a queued form job, as transcription would leave them. */
+export function transcriptWithFormJob(consultationId: string) {
+  sqlAsOwner(`
+    with j as (insert into public.transcription_jobs (consultation_id, requested_by, status, finished_at)
+               select id, practitioner_id, 'completed', now() from public.consultations where id = '${consultationId}' returning id),
+    t as (insert into public.transcripts (consultation_id, job_id, schema_version, ordering, low_confidence_threshold, tracks)
+          select '${consultationId}', id, '2.0.0', 'exact', 0.5, '[]' from j returning id),
+    s as (insert into public.transcript_segments (id, transcript_id, position, speaker, start_seconds, end_seconds, machine_text)
+          select gen_random_uuid(), t.id, 0, 'patient', 1, 4, 'I feel tired all the time.' from t returning 1)
+    insert into public.form_jobs (consultation_id, transcript_id) select '${consultationId}', id from t;
+    update public.consultations set status = 'extraction_processing' where id = '${consultationId}';`);
 }
 
 export async function createConsultation(who: Practitioner, options: { consent?: boolean; ref?: string } = {}) {
