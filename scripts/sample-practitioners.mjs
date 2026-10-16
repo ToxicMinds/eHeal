@@ -36,7 +36,7 @@ const SAMPLES = [
     p_length_minutes: 45, p_gap_minutes: 15, p_fee_cents: 3000,
   },
   {
-    email: "arjun.menon@watson.test", p_display_name: "Arjun Menon", p_offer: "Ayurveda · a first conversation, free",
+    email: "arjun.menon@watson.test", p_display_name: "Arjun Menon", p_offer: "Ayurveda · joint pain and low energy",
     p_about: "Ayurveda practitioner. The first conversation is free: half an hour to talk about what brings you here and whether Ayurveda can help.",
     p_languages: ["en"], p_hours: weekdays("18:00", "20:00"), p_length_minutes: 30, p_gap_minutes: 0, p_fee_cents: null,
   },
