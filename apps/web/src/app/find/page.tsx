@@ -8,7 +8,7 @@ import { Notice } from "@/components/status";
 import { initials, type PublicPage } from "@/lib/booking";
 import { euros } from "@/lib/fee";
 import { dateTime, LANGUAGE_LABEL, type ConsultationLanguage } from "@/lib/status";
-import { supabase } from "@/lib/supabase";
+import { call } from "@/lib/api";
 
 // Patients find a practitioner (design system: ScreenFind, ScreenPhoneFind). No account needed.
 
@@ -21,11 +21,7 @@ export default function FindPage() {
   const [language, setLanguage] = useState<ConsultationLanguage | "">("");
 
   useEffect(() => {
-    supabase.rpc("find_practitioners").then(({ data, error }) => {
-      const answer = data as unknown as { ok: boolean; practitioners: Listed[] } | null;
-      if (error || !answer?.ok) setFailed(true);
-      else setListed(answer.practitioners);
-    });
+    call<{ practitioners: Listed[] }>("find_practitioners").then((answer) => (answer.ok ? setListed(answer.practitioners) : setFailed(true)));
   }, []);
 
   const shown = listed?.filter((p) => !language || p.languages.includes(language)) ?? [];

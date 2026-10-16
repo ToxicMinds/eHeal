@@ -192,6 +192,16 @@ describe("booking a time", () => {
     expect((data as unknown as { scheduled_at: string }[]).map((row) => Date.parse(row.scheduled_at))).toEqual([Date.parse(ten)]);
   });
 
+  it("is limited to three upcoming times per patient, so one number cannot fill a practitioner's week", async () => {
+    const who = await newPractitioner(stack, "limit");
+    const always = Object.fromEntries(["1", "2", "3", "4", "5", "6", "7"].map((d) => [d, ["08:00", "18:00"]]));
+    const slug = await openPage(who, { p_hours: always, p_fee_cents: null });
+    const open = (await rpc(patient, "booking_times", { p_slug: slug, p_from: from, p_to: to })).times as string[];
+    for (const time of open.slice(0, 3)) expect((await rpc(patient, "book_time", booking(slug, time))).ok).toBe(true);
+    expect(await rpc(patient, "book_time", booking(slug, open[3]))).toEqual({ ok: false, error_category: "TOO_MANY_BOOKINGS" });
+    expect((await rpc(patient, "book_time", booking(slug, open[3], { p_contact: "+421 905 444 555" }))).ok).toBe(true);
+  });
+
   it("of a free consultation holds nothing: the time is simply booked", async () => {
     const who = await newPractitioner(stack, "free");
     const slug = await openPage(who, { p_fee_cents: null });

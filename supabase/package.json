@@ -1,0 +1,8 @@
+{
+  "name": "edge-functions",
+  "private": true,
+  "scripts": {
+    "lint": "deno lint functions",
+    "typecheck": "deno check --node-modules-dir=none functions/*/index.ts"
+  }
+}

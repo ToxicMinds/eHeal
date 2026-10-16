@@ -65,6 +65,13 @@ describe("a WhatsApp reminder", () => {
     expect(await isDue(soon.id)).toBe(false);
   });
 
+  it("is claimed once, so two runs of the schedule at the same moment cannot both send it", async () => {
+    const soon = await booked(20, { remind: true });
+    const claims = await Promise.all([1, 2, 3].map(() => rpc(server, "whatsapp_reminder_sent", { p_consultation: soon.id })));
+    expect(claims.filter((c) => c.ok)).toHaveLength(1);
+    expect(claims.filter((c) => !c.ok)).toEqual([{ ok: false, error_category: "ALREADY_SENT" }, { ok: false, error_category: "ALREADY_SENT" }]);
+  });
+
   it("is for the server only", async () => {
     expect((await patient.rpc("whatsapp_due_reminders" as never)).error).not.toBeNull();
     expect((await who.client.rpc("whatsapp_due_reminders" as never)).error).not.toBeNull();

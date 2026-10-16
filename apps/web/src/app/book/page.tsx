@@ -7,11 +7,10 @@ import { Suspense, useEffect, useState } from "react";
 import { PatientShell } from "@/components/patient-shell";
 import { FieldError, Notice } from "@/components/status";
 import { call, FIELD_MESSAGE } from "@/lib/api";
-import { byDay, clockTime, initials, localDay, viewerZone, zoneName, type PublicPage } from "@/lib/booking";
+import { byDay, clockTime, initials, localDay, viewerZone, WEEKDAY_SHORT, zoneName, type PublicPage } from "@/lib/booking";
 import { euros } from "@/lib/fee";
 import { payment } from "@/lib/payment";
 import { dateTime, LANGUAGE_LABEL, type ConsultationLanguage } from "@/lib/status";
-import { supabase } from "@/lib/supabase";
 
 // A patient books a time with one practitioner (design system: ScreenBook, ScreenPhoneBook,
 // ScreenPhoneBookDetails). /book/?p=<page> to choose a time; &at=<time> for their details.
@@ -19,7 +18,6 @@ import { supabase } from "@/lib/supabase";
 type Offer = { practitioner: PublicPage; times: string[] };
 const WEEKS_AHEAD = 4;
 const DAYS_SHOWN = 14;
-const SHORT = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
 
 export default function BookPage() {
   return (
@@ -41,10 +39,8 @@ function Book() {
   useEffect(() => {
     const now = new Date();
     const until = new Date(now.getTime() + WEEKS_AHEAD * 7 * 86_400_000);
-    supabase.rpc("booking_times", { p_slug: slug, p_from: now.toISOString(), p_to: until.toISOString() }).then(({ data }) => {
-      const answer = data as unknown as ({ ok: boolean } & Offer) | null;
-      setOffer(answer?.ok ? answer : "missing");
-    });
+    call<Offer>("booking_times", { p_slug: slug, p_from: now.toISOString(), p_to: until.toISOString() })
+      .then((answer) => setOffer(answer.ok ? answer : "missing"));
   }, [slug]);
 
   if (offer === "missing") {
@@ -125,7 +121,7 @@ function Choose({ offer }: { offer: Offer }) {
                       <li key={key}>
                         <button type="button" className="wa-day" aria-pressed={key === day} disabled={count === 0}
                           onClick={() => { setDay(key); setChosen(null); }}>
-                          {SHORT.format(date)}<b>{date.getDate()}</b><small>{count ? `${count} free` : "None"}</small>
+                          {WEEKDAY_SHORT.format(date)}<b>{date.getDate()}</b><small>{count ? `${count} free` : "None"}</small>
                         </button>
                       </li>
                     );
@@ -180,6 +176,9 @@ function Details({ practitioner: page, time }: { practitioner: PublicPage; time:
     if (!outcome.ok) {
       setBusy(false);
       if (outcome.error_category === "TIME_TAKEN") return setProblem({ message: "Someone booked this time a moment ago. Choose another one." });
+      if (outcome.error_category === "TOO_MANY_BOOKINGS") {
+        return setProblem({ message: "You already have three upcoming times with this practitioner. Ask them directly if you need another." });
+      }
       return setProblem({ field: outcome.field, message: (outcome.field && FIELD_MESSAGE[outcome.field]) || "Booking did not work, and nothing was booked. Try again." });
     }
     // With a fee, straight on to Stripe; if that fails, the patient's link offers to pay again.

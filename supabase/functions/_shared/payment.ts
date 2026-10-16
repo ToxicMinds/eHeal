@@ -1,6 +1,6 @@
 // Patient payment with Stripe Checkout (decision 0007), after Stripe's own guides:
 // https://docs.stripe.com/checkout/quickstart and https://docs.stripe.com/checkout/fulfillment
-import Stripe from "npm:stripe@22.6.2";
+import { Stripe } from "./deps.ts";
 import { admin } from "./server.ts";
 
 let client: Stripe | null = null;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { clockTime, gridBounds, viewerZone, WEEKDAYS, type Booking, type Busy, type Hours } from "@/lib/booking";
+import { clockTime, gridBounds, viewerZone, WEEKDAY_SHORT, WEEKDAYS, type Booking, type Busy, type Hours } from "@/lib/booking";
 
 // The practitioner's week as an appointment book (design system: ScreenCalendar, ScreenPhoneCalendar):
 // bookings in ink, open times pencilled in, Google busy time hatched, hours nobody can book sunk.
@@ -13,7 +13,6 @@ type Props = { monday: Date; hours: Hours; open: string[]; bookings: Booking[]; 
 /** Times as milliseconds: the database writes "+00:00" and the browser "Z", so strings do not compare. */
 type Item = { at: number; ends: number; kind: "booked" | "held" | "busy" | "open"; booking?: Booking };
 
-const SHORT = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
 const plus = (date: Date, days: number) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 const hourOf = (ms: number) => { const d = new Date(ms); return d.getHours() + d.getMinutes() / 60; };
 const sameDay = (iso: string, day: Date) => new Date(iso).toDateString() === day.toDateString();
@@ -65,7 +64,7 @@ export function WeekGrid({ monday, hours, open, bookings, busy, now, length }: P
         const past = plus(day, 1) <= now;
         return (
           <div key={i} className="wa-week__head" aria-current={day.toDateString() === now.toDateString() ? "date" : undefined}>
-            {SHORT.format(day)}<b>{day.getDate()}</b>
+            {WEEKDAY_SHORT.format(day)}<b>{day.getDate()}</b>
             <span>{past ? "Past" : count ? `${count} open` : hours[String(i + 1)] ? "Full" : "Not bookable"}</span>
           </div>
         );
@@ -110,7 +109,7 @@ export function DayAgenda({ monday, hours, open, bookings, busy, now, length }: 
           return (
             <li key={i}>
               <button type="button" className="wa-day" aria-pressed={i === chosen} onClick={() => setChosen(i)}>
-                {SHORT.format(day)}<b>{day.getDate()}</b><small>{plus(day, 1) <= now ? "Past" : count ? `${count} open` : hours[String(i + 1)] ? "Full" : "—"}</small>
+                {WEEKDAY_SHORT.format(day)}<b>{day.getDate()}</b><small>{plus(day, 1) <= now ? "Past" : count ? `${count} open` : hours[String(i + 1)] ? "Full" : "—"}</small>
               </button>
             </li>
           );

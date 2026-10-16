@@ -19,6 +19,8 @@ export type Booking = { consultation_id: string; starts_at: string; minutes: num
 export type Week = { page: OwnPage | null; open: string[]; bookings: Booking[]; busy: Busy[]; google: GoogleLink | null };
 
 export const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+/** "Mon", on the viewer's clock. */
+export const WEEKDAY_SHORT = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
 
 /** Opening and closing times a practitioner can pick: every half hour, and midnight to close a day. */
 export const HOUR_CHOICES = [

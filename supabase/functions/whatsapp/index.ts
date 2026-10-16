@@ -11,7 +11,7 @@ const GRAPH = "https://graph.facebook.com/v26.0";
 const READABLE = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 10 * 1024 * 1024;
 
-async function signedByMeta(body: Uint8Array, header: string | null): Promise<boolean> {
+async function signedByMeta(body: Uint8Array<ArrayBuffer>, header: string | null): Promise<boolean> {
   const secret = env("META_APP_SECRET");
   if (!secret || !header?.startsWith("sha256=")) return false;
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -60,6 +60,9 @@ async function remind(): Promise<number> {
   const { data } = await admin.rpc("whatsapp_due_reminders");
   const due = (data?.reminders ?? []) as (say.View & { phone: string })[];
   for (const view of due) {
+    // Claimed first: another run that got here at the same moment skips it.
+    const { data: claim } = await admin.rpc("whatsapp_reminder_sent", { p_consultation: view.consultation_id });
+    if (!claim?.ok) continue;
     const { language, first, time, text } = say.reminder(view);
     await send(view.phone, view.consultation_id, {
       type: "template",
@@ -71,7 +74,6 @@ async function remind(): Promise<number> {
         ],
       },
     }, text);
-    await admin.rpc("whatsapp_reminder_sent", { p_consultation: view.consultation_id });
   }
   return due.length;
 }

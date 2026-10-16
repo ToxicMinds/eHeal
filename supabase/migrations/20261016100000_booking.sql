@@ -275,6 +275,13 @@ begin
         case when v_page.fee_cents is not null then now() + interval '35 minutes' end, coalesce(p_remind_whatsapp, false))
       returning * into v_consultation;
     v_patient := private.identify_patient(v_consultation, p_name, p_contact);
+    -- One phone number or email holds at most three upcoming times with a practitioner.
+    if (v_patient ->> 'ok')::boolean and (
+      select count(*) from public.consultations c
+      where c.patient_id = (v_patient ->> 'patient_id')::uuid and c.id <> v_consultation.id
+        and c.scheduled_at > now() and private.takes_time(c)) >= 3 then
+      v_patient := private.refuse('TOO_MANY_BOOKINGS');
+    end if;
     if not (v_patient ->> 'ok')::boolean then
       raise exception using errcode = 'W0001'; -- undoes the insert above
     end if;

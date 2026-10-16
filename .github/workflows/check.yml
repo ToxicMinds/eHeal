@@ -1,0 +1,51 @@
+# Every push runs the same checks as `pnpm check` locally: lint, types and tests for the web app,
+# the engine and the edge functions, then the database and browser tests against a local Supabase.
+# Free: the repository is public. Not here: the browser test that runs the real transcription
+# engine (it needs a speech model); run it locally with `pnpm --filter web e2e` before a deploy.
+name: Checks
+on:
+  push:
+  pull_request:
+
+jobs:
+  code:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.11.1, cache: pnpm }
+      - uses: astral-sh/setup-uv@v6
+      - uses: denoland/setup-deno@v2
+        with: { deno-version: v2.5.6 }
+      - run: pnpm install --frozen-lockfile
+      - name: Web app
+        working-directory: apps/web
+        run: pnpm lint && pnpm typecheck && pnpm exec vitest run src
+      - name: Engine
+        working-directory: apps/clinical-worker
+        run: pnpm lint && pnpm typecheck && pnpm test
+      - name: Edge functions
+        working-directory: supabase
+        run: pnpm lint && pnpm typecheck
+
+  database-and-browser:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.11.1, cache: pnpm }
+      - uses: supabase/setup-cli@v1
+        with: { version: 2.106.0 }
+      - run: supabase start -x analytics,vector,imgproxy,edge-runtime,studio,inbucket
+      - run: pnpm install --frozen-lockfile
+      - name: Database tests
+        working-directory: apps/web
+        run: node scripts/use-local-stack.mjs && pnpm exec vitest run tests
+      - name: Browser tests
+        working-directory: apps/web
+        run: |
+          pnpm build
+          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright test --grep-invert "real engine"

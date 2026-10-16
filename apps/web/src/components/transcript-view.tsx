@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 type Loaded = { transcript: Tables<"transcripts">; segments: Tables<"transcript_segments">[] };
 
 /** 13.4 -> "0:13.4". */
-export function stamp(seconds: number): string {
+function stamp(seconds: number): string {
   const tenths = Math.round(seconds * 10);
   const minutes = Math.floor(tenths / 600);
   const rest = (tenths % 600) / 10;

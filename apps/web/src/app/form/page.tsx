@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Notice } from "@/components/status";
-import { call, explain } from "@/lib/api";
+import { call, explain, isId } from "@/lib/api";
 import { clock } from "@/lib/audio";
 import { openDocument } from "@/lib/documents";
 import type { Tables } from "@/lib/database.types";
@@ -39,7 +39,6 @@ const SENT_BY: Record<string, string> = {
   practitioner: "added by you",
 };
 const documentQuotes = (answer: Answer) => (answer.document_quotes ?? []) as unknown as DocumentQuote[];
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function FormPage() {
   return (
@@ -112,7 +111,7 @@ function FormView() {
     fetchForm(id).then(setLoaded);
   }, [id]);
   useEffect(() => {
-    if (!UUID.test(id)) return;
+    if (!isId(id)) return;
     let current = true;
     fetchForm(id).then((result) => current && setLoaded(result));
     return () => {
@@ -130,7 +129,7 @@ function FormView() {
   const back = (
     <Link href={`/consultation/?id=${id}`} className="wa-crumb"><ChevronLeft aria-hidden className="wa-icon wa-icon--sm" />Consultation</Link>
   );
-  if (!UUID.test(id) || loaded === "missing") return <>{back}<p className="wa-text">There is no form for this consultation yet.</p></>;
+  if (!isId(id) || loaded === "missing") return <>{back}<p className="wa-text">There is no form for this consultation yet.</p></>;
   if (loaded === "failed") return <>{back}<Notice tone="failed" title="The form could not be loaded">Check your connection and reload the page.</Notice></>;
   if (loaded === null) return <p className="wa-meta" role="status">Loading the form…</p>;
 

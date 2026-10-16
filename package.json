@@ -4,10 +4,10 @@
   "packageManager": "pnpm@11.5.2",
   "engines": { "node": ">=22" },
   "scripts": {
-    "test": "turbo run test",
+    "test": "turbo run test --concurrency=1",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "check": "turbo run test lint typecheck"
+    "check": "turbo run lint typecheck && turbo run test --concurrency=1"
   },
   "devDependencies": {
     "turbo": "2.11.7"

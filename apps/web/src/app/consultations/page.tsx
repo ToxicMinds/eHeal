@@ -1,13 +1,16 @@
 "use client";
 
-import { ArrowRight, Laptop, Plus } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { euros } from "@/lib/fee";
+import { LaptopStatus } from "@/components/laptop";
 import { Notice, StatusChip } from "@/components/status";
 import type { ConsultationStatus } from "@/lib/status";
-import { clockTime, viewerZone } from "@/lib/booking";
+import { call } from "@/lib/api";
+import { clockTime, viewerZone, type Week } from "@/lib/booking";
+import { engineStatus, type Engine } from "@/lib/engine";
 import { dateTime, LANGUAGE_LABEL, summarise } from "@/lib/status";
 import { RequireSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
@@ -21,7 +24,6 @@ type Row = {
 };
 /** The patient's name once known, else the consultation's reference. */
 const who = (row: Row) => row.patients?.name ?? row.synthetic_patient_ref;
-type Engine = { online: boolean; last_seen_at: string | null };
 
 export default function ConsultationsPage() {
   return <RequireSession>{(user) => <AppShell user={user}><Dashboard /></AppShell>}</RequireSession>;
@@ -59,12 +61,11 @@ function Dashboard() {
       .filter("released", "eq", false) // an unpaid booking whose hold ran out is not the practitioner's business
       .order("scheduled_at", { ascending: false })
       .then(({ data, error }) => (error ? setFailed(true) : setRows(data as unknown as Row[])));
-    supabase.rpc("engine_status").then(({ data }) => setEngine(data as Engine | null));
+    engineStatus().then(setEngine);
     const start = new Date();
     const midnight = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
-    supabase.rpc("calendar_week", { p_from: start.toISOString(), p_to: midnight.toISOString() }).then(({ data }) => {
-      const week = data as { ok: boolean; page: object | null; open: string[] } | null;
-      if (week?.ok && week.page) setOpenToday(week.open.length);
+    call<Week>("calendar_week", { p_from: start.toISOString(), p_to: midnight.toISOString() }).then((week) => {
+      if (week.ok && week.page) setOpenToday(week.open.length);
     });
   }, []);
 
@@ -172,18 +173,6 @@ function Dashboard() {
 /** "at 11:00" today, else "on Thu 22 Oct 2026, 11:00". */
 const nextWhen = (iso: string, now: Date) =>
   new Date(iso).toDateString() === now.toDateString() ? `at ${clockTime(iso, viewerZone())}` : `on ${dateTime(iso)}`;
-
-/** Whether the laptop that runs Watson's engine is on: transcripts and forms wait while it is off. */
-function LaptopStatus({ engine }: { engine: Engine }) {
-  const since = engine.last_seen_at ? ` since ${dateTime(engine.last_seen_at)}` : "";
-  return engine.online ? (
-    <span className="wa-laptop"><Laptop aria-hidden className="wa-icon wa-icon--sm" />Watson&apos;s laptop is on</span>
-  ) : (
-    <span className="wa-laptop wa-laptop--off">
-      <Laptop aria-hidden className="wa-icon wa-icon--sm" />Watson&apos;s laptop is off{since}: transcripts and forms wait until it is back
-    </span>
-  );
-}
 
 function Case({ row }: { row: Row }) {
   const { tone, stages } = summarise(row.status);

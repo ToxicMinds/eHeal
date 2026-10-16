@@ -1,6 +1,6 @@
 // What every Watson edge function shares: its settings, the server's database client, and how it
 // answers the web app.
-import { createClient } from "npm:@supabase/supabase-js@2.117.2";
+import { createClient } from "./deps.ts";
 
 export const env = (name: string) => Deno.env.get(name) ?? "";
 

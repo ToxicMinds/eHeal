@@ -20,13 +20,17 @@ as $$
     and (w.phone is not null or (c.remind_whatsapp and p.phone is not null));
 $$;
 
--- Once only: a reminder is recorded as sent whether or not Meta delivered it (the message itself,
--- with any error, is in whatsapp_messages), so a failing template never repeats every five minutes.
+-- Claims a reminder before it is sent: only the first claim wins, so two runs of the schedule at
+-- once cannot both send it, and a failing template never repeats every five minutes (the message,
+-- with any error, is recorded in whatsapp_messages).
 create function public.whatsapp_reminder_sent(p_consultation uuid) returns jsonb
 language plpgsql security definer set search_path = ''
 as $$
 begin
   update public.consultations set reminder_sent_at = now() where id = p_consultation and reminder_sent_at is null;
+  if not found then
+    return private.refuse('ALREADY_SENT');
+  end if;
   return jsonb_build_object('ok', true);
 end;
 $$;

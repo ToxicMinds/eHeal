@@ -7,10 +7,10 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { PatientDocuments, type SentDocument } from "@/components/patient-documents";
 import { euros } from "@/lib/fee";
 import { Notice } from "@/components/status";
+import { call } from "@/lib/api";
 import { connect, type CallState } from "@/lib/call";
 import { payment } from "@/lib/payment";
 import { dateTime } from "@/lib/status";
-import { supabase } from "@/lib/supabase";
 
 type Details = {
   scheduled_at: string; fee_cents: number | null; paid: boolean; paid_at: string | null;
@@ -65,9 +65,8 @@ function Join() {
   }, []);
 
   const fetchDetails = useCallback(async (): Promise<Details | "missing"> => {
-    const { data } = await supabase.rpc("invite_details", { p_token: token });
-    const result = data as unknown as ({ ok: boolean } & Details) | null;
-    return result?.ok ? result : "missing";
+    const result = await call<Details>("invite_details", { p_token: token });
+    return result.ok ? result : "missing";
   }, [token]);
 
   useEffect(() => {

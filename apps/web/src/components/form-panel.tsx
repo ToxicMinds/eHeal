@@ -1,16 +1,17 @@
 "use client";
 
-import { Laptop, LoaderCircle, RotateCcw } from "lucide-react";
+import { LoaderCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { LaptopLine } from "@/components/laptop";
 import { Notice } from "@/components/status";
+import { engineStatus, type Engine } from "@/lib/engine";
 import { call, explain } from "@/lib/api";
 import { clock } from "@/lib/audio";
 import type { Tables } from "@/lib/database.types";
 import { dateTime, type ConsultationStatus } from "@/lib/status";
 import { supabase } from "@/lib/supabase";
 
-type Engine = { online: boolean; last_seen_at: string | null };
 type Read = {
   job: Tables<"form_jobs"> | null;
   form: Pick<Tables<"forms">, "id" | "status" | "approved_at" | "template"> | null;
@@ -42,13 +43,13 @@ export function FormPanel({ consultationId, status, onChanged }: {
         .order("queued_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("forms").select("id, status, approved_at, template").eq("consultation_id", consultationId)
         .neq("status", "superseded").maybeSingle(),
-      supabase.rpc("engine_status"),
+      engineStatus(),
     ]);
     const answers = form.data
       ? (await supabase.from("form_answers").select("machine_text").eq("form_id", form.data.id)).data ?? []
       : [];
     return {
-      job: job.data, form: form.data, engine: engine.data as Engine | null,
+      job: job.data, form: form.data, engine,
       answered: answers.filter((answer) => answer.machine_text !== null).length, total: answers.length,
     };
   }, [consultationId]);
@@ -114,7 +115,6 @@ export function FormPanel({ consultationId, status, onChanged }: {
   }
 
   if (status === "extraction_processing") {
-    const lastReport = engine?.last_seen_at ? Math.max(0, Math.round((now - Date.parse(engine.last_seen_at)) / 1000)) : null;
     return (
       <section className="wa-panel" aria-labelledby="form-title">
         <div className="wa-job__head">
@@ -126,12 +126,7 @@ export function FormPanel({ consultationId, status, onChanged }: {
           <LoaderCircle aria-hidden className="wa-icon wa-icon--sm wa-spin" />{" "}
           {job?.status === "processing" ? "Watson is reading the conversation and writing each answer with its quote." : "Waiting for the engine."}
         </p>
-        {engine?.online ? (
-          <p className="wa-engine"><Laptop aria-hidden className="wa-icon wa-icon--sm" />
-            Engine online{lastReport === null ? "" : ` · last report ${lastReport} s ago`}</p>
-        ) : (
-          <Notice tone="attention" title="No engine is running">The form is in line and is filled in as soon as the engine is back.</Notice>
-        )}
+        <LaptopLine engine={engine} now={now} waiting="The form is in line and is filled in as soon as the laptop is back." />
         <p className="wa-hint">This takes a few minutes on a laptop. You can leave this page.</p>
       </section>
     );

@@ -1,6 +1,6 @@
 // Stripe calls this when a Checkout payment completes, so a patient who closes the tab
 // after paying is still recorded as paid. Only signed events are believed.
-import Stripe from "npm:stripe@22.6.2";
+import { Stripe } from "../_shared/deps.ts";
 import { fulfill, stripe } from "../_shared/payment.ts";
 
 const crypto = Stripe.createSubtleCryptoProvider();

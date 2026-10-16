@@ -1,8 +1,9 @@
 "use client";
 
-import { Copy, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import { CopyButton } from "@/components/copy-button";
 import { FieldError, Notice } from "@/components/status";
 import { call, explain } from "@/lib/api";
 import { HOUR_CHOICES, WEEKDAYS, type Hours, type OwnPage } from "@/lib/booking";
@@ -37,7 +38,6 @@ export function BookingSettings({ page, aside, quietSave, onSaved }: {
   const [languages, setLanguages] = useState<ConsultationLanguage[]>(page?.languages ?? []);
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
   const [problem, setProblem] = useState<{ field?: string; message: string } | null>(null);
-  const [copied, setCopied] = useState(false);
   const link = page ? `${typeof window === "undefined" ? "" : window.location.origin}/book/?p=${page.slug}` : null;
 
   const setDay = (day: string, span: [string, string] | undefined) => setHours((now) => ({ ...now, [day]: span }));
@@ -165,10 +165,7 @@ export function BookingSettings({ page, aside, quietSave, onSaved }: {
                 <span className="wa-label" id="link-label">Your booking link</span>
                 <div className="wa-invite">
                   <input className="wa-input" readOnly value={link} aria-labelledby="link-label" />
-                  <button type="button" className="wa-button wa-button--secondary"
-                    onClick={() => navigator.clipboard.writeText(link).then(() => setCopied(true))}>
-                    <Copy aria-hidden className="wa-icon" />{copied ? "Copied" : "Copy link"}
-                  </button>
+                  <CopyButton text={link} />
                 </div>
                 <p className="wa-hint">Put it on your website or send it to new patients.</p>
               </div>

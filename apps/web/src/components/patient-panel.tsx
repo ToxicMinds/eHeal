@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Copy, MessageCircle } from "lucide-react";
-import { useState } from "react";
+import { Check, MessageCircle } from "lucide-react";
+import { CopyButton } from "@/components/copy-button";
 import { inviteLink } from "@/lib/call";
 import type { Tables } from "@/lib/database.types";
 import { euros } from "@/lib/fee";
@@ -13,19 +13,8 @@ export function PatientPanel({ consultation, patient }: {
   consultation: Tables<"consultations">;
   patient: { name: string; phone: string | null } | null;
 }) {
-  const [copied, setCopied] = useState(false);
   const link = inviteLink(consultation.invite_token);
   const fee = consultation.fee_cents;
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  }
 
   return (
     <section className="wa-panel" aria-labelledby="patient-title">
@@ -51,9 +40,7 @@ export function PatientPanel({ consultation, patient }: {
               <MessageCircle aria-hidden className="wa-icon" />Send on WhatsApp
             </a>
           )}
-          <button type="button" className="wa-button wa-button--secondary" onClick={copy}>
-            <Copy aria-hidden className="wa-icon" />{copied ? "Copied" : "Copy link"}
-          </button>
+          <CopyButton text={link} />
         </div>
         <p className="wa-hint">
           {fee === null ? "The patient opens the link and waits for you to start the call."

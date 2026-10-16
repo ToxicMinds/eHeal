@@ -3,7 +3,7 @@
 import { formatOfRecording, type AudioFormat } from "./audio";
 import { supabase } from "./supabase";
 
-export type Role = "doctor" | "patient";
+type Role = "doctor" | "patient";
 export type CallState = "joining" | "waiting" | "connecting" | "connected" | "reconnecting" | "ended";
 type Message =
   | { kind: "hello" | "bye" }

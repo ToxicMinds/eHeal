@@ -14,7 +14,7 @@ import { PatientPanel } from "@/components/patient-panel";
 import { euros } from "@/lib/fee";
 import { Journey, Notice } from "@/components/status";
 import { TranscriptView } from "@/components/transcript-view";
-import { call, explain } from "@/lib/api";
+import { call, explain, isId } from "@/lib/api";
 import { clock, humanSize } from "@/lib/audio";
 import type { Tables } from "@/lib/database.types";
 import { RequireSession } from "@/lib/session";
@@ -25,7 +25,6 @@ type Consultation = Tables<"consultations">;
 type Track = Tables<"audio_tracks">;
 type Patient = Pick<Tables<"patients">, "id" | "name" | "phone" | "email">;
 type Loaded = { consultation: Consultation; tracks: Track[]; audioLeft: boolean; patient: Patient | null };
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SPEAKERS = ["practitioner", "patient"] as const;
 const FORM_STATUSES = ["transcript_ready", "transcript_reviewed", "extraction_processing", "extraction_failed",
   "draft_ready", "under_review", "approved"];
@@ -95,7 +94,7 @@ function ConsultationView({ userId }: { userId: string }) {
   }, [fetchAll]);
 
   useEffect(() => {
-    if (!UUID.test(id)) return;
+    if (!isId(id)) return;
     let current = true;
     fetchAll().then((result) => current && setLoaded(result));
     return () => {
@@ -103,7 +102,7 @@ function ConsultationView({ userId }: { userId: string }) {
     };
   }, [id, fetchAll]);
 
-  if (!UUID.test(id) || loaded === "missing") {
+  if (!isId(id) || loaded === "missing") {
     return <>{back}<p className="wa-text">This consultation does not exist, or it is not yours.</p></>;
   }
   if (loaded === "failed") {

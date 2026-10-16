@@ -10,7 +10,7 @@ import { Notice } from "@/components/status";
 import { DayAgenda, WeekGrid, WeekKeys } from "@/components/week-grid";
 import { mondayOf, type Week } from "@/lib/booking";
 import { RequireSession } from "@/lib/session";
-import { supabase } from "@/lib/supabase";
+import { call } from "@/lib/api";
 
 export default function CalendarPage() {
   return (
@@ -38,13 +38,11 @@ function Calendar() {
   const [now, setNow] = useState(() => new Date());
 
   const load = useCallback(() => {
-    supabase.rpc("calendar_week", { p_from: monday.toISOString(), p_to: plusDays(monday, 7).toISOString() })
-      .then(({ data, error }) => {
-        const answer = data as unknown as ({ ok: boolean } & Week) | null;
-        setNow(new Date());
-        if (error || !answer?.ok) setFailed(true);
-        else setWeek(answer);
-      });
+    call<Week>("calendar_week", { p_from: monday.toISOString(), p_to: plusDays(monday, 7).toISOString() }).then((answer) => {
+      setNow(new Date());
+      if (answer.ok) setWeek(answer);
+      else setFailed(true);
+    });
   }, [monday]);
   useEffect(load, [load]);
 
