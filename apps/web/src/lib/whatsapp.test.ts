@@ -17,6 +17,6 @@ describe("tap to send", () => {
 
   it("reminds on the day itself", () => {
     const now = new Date("2026-10-20T05:00:00Z");
-    expect(patientMessage({ ...base, language: "de", now })).toMatch(/^Guten Tag, Jana\. Bis um \d\d:30 Uhr\./);
+    expect(patientMessage({ ...base, language: "de", now })).toMatch(/^Guten Tag, Jana\. Bis heute um \d\d:30 Uhr\./);
   });
 });

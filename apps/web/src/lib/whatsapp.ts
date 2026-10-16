@@ -37,9 +37,9 @@ export function patientMessage(options: {
 
   if (today) {
     return {
-      en: `Good morning, ${first}. See you at ${time}. Join here when you are ready: ${link}`,
-      sk: `Dobrý deň, ${first}. Uvidíme sa o ${time}. Pripojiť sa môžete tu: ${link}`,
-      de: `Guten Tag, ${first}. Bis um ${time} Uhr. Hier können Sie sich verbinden: ${link}`,
+      en: `Hello ${first}, see you today at ${time}. Join here when you are ready: ${link}`,
+      sk: `Dobrý deň, ${first}. Uvidíme sa dnes o ${time}. Pripojiť sa môžete tu: ${link}`,
+      de: `Guten Tag, ${first}. Bis heute um ${time} Uhr. Hier können Sie sich verbinden: ${link}`,
     }[language];
   }
   return {
