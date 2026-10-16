@@ -1003,6 +1003,11 @@ export type Database = {
       engine_status: { Args: never; Returns: Json }
       find_practitioners: { Args: never; Returns: Json }
       google_disconnect: { Args: { p_practitioner: string }; Returns: Json }
+      google_event_written: {
+        Args: { p_consultation: string; p_event_id: string }
+        Returns: Json
+      }
+      google_events_due: { Args: { p_practitioner: string }; Returns: Json }
       google_problem: {
         Args: { p_practitioner: string; p_problem: string }
         Returns: Json
@@ -1067,6 +1072,12 @@ export type Database = {
         Args: { p_label: string; p_user_id: string }
         Returns: undefined
       }
+      released: {
+        Args: {
+          p_consultation: Database["public"]["Tables"]["consultations"]["Row"]
+        }
+        Returns: boolean
+      }
       remove_audio_track: {
         Args: {
           p_consultation_id: string
@@ -1125,6 +1136,7 @@ export type Database = {
         Args: { p_document_id: string }
         Returns: Json
       }
+      whatsapp_due_reminders: { Args: never; Returns: Json }
       whatsapp_receive: {
         Args: {
           p_body: string
@@ -1133,6 +1145,10 @@ export type Database = {
           p_profile_name: string
           p_wa_message_id: string
         }
+        Returns: Json
+      }
+      whatsapp_reminder_sent: {
+        Args: { p_consultation: string }
         Returns: Json
       }
       whatsapp_sent: {

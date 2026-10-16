@@ -265,3 +265,40 @@ describe("the practitioner's week", () => {
     expect((await patient.rpc("google_replace_busy" as never, { p_practitioner: eva.id, p_busy: [] } as never)).error).not.toBeNull();
   });
 });
+
+describe("bookings written into the practitioner's Google Calendar", () => {
+  it("are the upcoming paid or free ones without an event yet; an unpaid hold waits", async () => {
+    const who = await newPractitioner(stack, "events");
+    const slug = await openPage(who);
+    const [nine, ten, eleven] = (await call(patient, "booking_times", { p_slug: slug, p_from: from, p_to: to })).times as string[];
+    const paid = await call(patient, "book_time", booking(slug, nine));
+    await call(patient, "book_time", booking(slug, ten, { p_contact: "+421 905 222 333", p_name: "Held Patient" }));
+    sqlAsOwner(`update public.consultations set paid_at = now() where invite_token = '${paid.token}';`);
+    const free = await rpc(who.client, "create_consultation", { p_synthetic_patient_ref: "SYN-0104", p_scheduled_at: eleven, p_language: "en", p_consent_recorded: true });
+
+    const due = await call(server, "google_events_due", { p_practitioner: who.id });
+    expect(due.events).toEqual([
+      { consultation_id: expect.any(String), starts_at: expect.any(String), minutes: 45, who: "Jana Nováková" },
+      { consultation_id: free.consultation_id, starts_at: expect.any(String), minutes: 45, who: "SYN-0104" },
+    ]);
+    const [first] = due.events as { consultation_id: string }[];
+    expect(await call(server, "google_event_written", { p_consultation: first.consultation_id, p_event_id: "event-1" })).toEqual({ ok: true });
+    expect(((await call(server, "google_events_due", { p_practitioner: who.id })).events as unknown[]).length).toBe(1);
+    expect((await patient.rpc("google_events_due" as never, { p_practitioner: who.id } as never)).error).not.toBeNull();
+  });
+
+  it("are written again into a new calendar when the practitioner connects another one", async () => {
+    const who = await newPractitioner(stack, "again");
+    const slug = await openPage(who, { p_fee_cents: null });
+    const [nine] = (await call(patient, "booking_times", { p_slug: slug, p_from: from, p_to: to })).times as string[];
+    await call(patient, "book_time", booking(slug, nine));
+    await call(server, "google_save_connection", { p_practitioner: who.id, p_email: "a@gmail.example", p_refresh_token: "r1", p_calendar_id: "calendar-1" });
+    const [due] = (await call(server, "google_events_due", { p_practitioner: who.id })).events as { consultation_id: string }[];
+    await call(server, "google_event_written", { p_consultation: due.consultation_id, p_event_id: "event-1" });
+    // The same calendar again (a new key): nothing to write. Another calendar: everything again.
+    await call(server, "google_save_connection", { p_practitioner: who.id, p_email: "a@gmail.example", p_refresh_token: "r2", p_calendar_id: "calendar-1" });
+    expect((await call(server, "google_events_due", { p_practitioner: who.id })).events).toEqual([]);
+    await call(server, "google_save_connection", { p_practitioner: who.id, p_email: "b@gmail.example", p_refresh_token: "r3", p_calendar_id: "calendar-2" });
+    expect((await call(server, "google_events_due", { p_practitioner: who.id })).events).toHaveLength(1);
+  });
+});

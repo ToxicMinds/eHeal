@@ -422,3 +422,6 @@ verify_jwt = false
 
 [functions.whatsapp]
 verify_jwt = false
+
+[functions.google]
+verify_jwt = false

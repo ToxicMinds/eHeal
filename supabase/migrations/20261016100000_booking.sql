@@ -375,12 +375,16 @@ begin
 end;
 $$;
 
--- For the Google edge function (server key only).
+-- For the Google edge function (server key only). A different calendar than before gets every
+-- booking written again; the same calendar with a new key keeps what is already there.
 create function public.google_save_connection(p_practitioner uuid, p_email text, p_refresh_token text, p_calendar_id text)
 returns jsonb
 language plpgsql security definer set search_path = ''
 as $$
 begin
+  if p_calendar_id is distinct from (select calendar_id from public.google_calendars where practitioner_id = p_practitioner for update) then
+    update public.consultations set google_event_id = null where practitioner_id = p_practitioner and google_event_id is not null;
+  end if;
   insert into public.google_calendars (practitioner_id, email, refresh_token, calendar_id)
     values (p_practitioner, p_email, p_refresh_token, p_calendar_id)
     on conflict (practitioner_id) do update set email = excluded.email, refresh_token = excluded.refresh_token,
@@ -402,6 +406,28 @@ begin
     select p_practitioner, (b ->> 'starts_at')::timestamptz, (b ->> 'ends_at')::timestamptz
     from jsonb_array_elements(p_busy) b;
   update public.google_calendars set checked_at = now(), problem = null where practitioner_id = p_practitioner;
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
+-- Bookings to write into the practitioner's Watson calendar in Google: upcoming, still taking
+-- their time, paid or free (an unpaid hold waits until it is paid), and not written yet.
+create function public.google_events_due(p_practitioner uuid) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  select jsonb_build_object('ok', true, 'events', coalesce(jsonb_agg(jsonb_build_object(
+      'consultation_id', c.id, 'starts_at', c.scheduled_at, 'minutes', c.duration_minutes,
+      'who', coalesce(p.name, c.synthetic_patient_ref)) order by c.scheduled_at), '[]'::jsonb))
+  from public.consultations c left join public.patients p on p.id = c.patient_id
+  where c.practitioner_id = p_practitioner and c.google_event_id is null and c.scheduled_at > now()
+    and private.takes_time(c) and (c.fee_cents is null or c.paid_at is not null);
+$$;
+
+create function public.google_event_written(p_consultation uuid, p_event_id text) returns jsonb
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  update public.consultations set google_event_id = p_event_id where id = p_consultation;
   return jsonb_build_object('ok', true);
 end;
 $$;
@@ -439,7 +465,9 @@ revoke all on function
   public.google_save_connection(uuid, text, text, text),
   public.google_replace_busy(uuid, jsonb),
   public.google_problem(uuid, text),
-  public.google_disconnect(uuid)
+  public.google_disconnect(uuid),
+  public.google_events_due(uuid),
+  public.google_event_written(uuid, text)
 from public, anon, authenticated, service_role;
 grant execute on function
   public.booking_times(text, timestamptz, timestamptz),
@@ -455,7 +483,9 @@ grant execute on function
   public.google_save_connection(uuid, text, text, text),
   public.google_replace_busy(uuid, jsonb),
   public.google_problem(uuid, text),
-  public.google_disconnect(uuid)
+  public.google_disconnect(uuid),
+  public.google_events_due(uuid),
+  public.google_event_written(uuid, text)
 to service_role;
 revoke all on all functions in schema private from public, anon, service_role;
 grant execute on function private.document_access(text, text) to anon, authenticated;

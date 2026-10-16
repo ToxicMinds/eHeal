@@ -69,3 +69,19 @@ export const noVoiceYet = (view: View) => ({
 
 export const stranger =
   "Hello, this is Watson, a practitioner's assistant. To connect, open the link your practitioner sent you and tap Message Watson on WhatsApp.";
+
+// The day-of reminder is Meta's template "watson_today" (approved per language in Meta's dashboard;
+// its wording must stay the same as here). Watson keeps the text it sent in its message record.
+const REMINDER: Record<Language, (first: string, time: string) => string> = {
+  en: (first, time) => `Hello ${first}, this is Watson. Your video consultation is today at ${time}. Join with the button below when you are ready.`,
+  sk: (first, time) => `Dobrý deň, ${first}, tu je Watson. Vaša videokonzultácia je dnes o ${time}. Pripojiť sa môžete tlačidlom nižšie.`,
+  de: (first, time) => `Guten Tag, ${first}, hier ist Watson. Ihr Videotermin ist heute um ${time} Uhr. Über die Schaltfläche unten können Sie sich verbinden.`,
+};
+
+/** The reminder's template parameters (first name, time) and the text the patient reads. */
+export function reminder(view: View) {
+  const lang = language(view);
+  const first = (view.patient_name ?? "").trim().split(/\s+/)[0];
+  const { time } = when(view, lang);
+  return { language: lang, first, time, text: REMINDER[lang](first, time) };
+}

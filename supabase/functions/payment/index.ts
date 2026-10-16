@@ -1,20 +1,10 @@
 // The patient's page calls this with its link token: to start a payment, or, back from
 // Stripe, to confirm it. The token is the only credential; it names one consultation.
-import { admin, fulfill, stripe } from "../_shared/payment.ts";
+import { fulfill, stripe } from "../_shared/payment.ts";
+import { admin, reply, SITES } from "../_shared/server.ts";
 
-const SITES = (Deno.env.get("SITE_URLS") ?? "").split(",").map((site) => site.trim()).filter(Boolean);
 const TOKEN = /^[0-9a-f]{64}$/;
 const SESSION = /^cs_(test|live)_[A-Za-z0-9]{10,200}$/;
-
-function reply(origin: string | null, status: number, body: unknown) {
-  const headers: Record<string, string> = { "Content-Type": "application/json", Vary: "Origin" };
-  if (origin && SITES.includes(origin)) {
-    headers["Access-Control-Allow-Origin"] = origin;
-    headers["Access-Control-Allow-Headers"] = "content-type";
-    headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
-  }
-  return new Response(body === null ? null : JSON.stringify(body), { status, headers });
-}
 
 Deno.serve(async (request) => {
   const origin = request.headers.get("Origin");
