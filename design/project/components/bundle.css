@@ -368,3 +368,85 @@ body {
 .wa-chat__message--out { justify-self: end; background: var(--practitioner-tint); }
 .wa-chat__who { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
 .wa-chat__text { margin: 0; font-size: 15px; line-height: 22px; white-space: pre-line; overflow-wrap: anywhere; }
+/* ---------- Booking and calendar (owner approved, 16 Oct) ----------
+   The practitioner's week reads like an appointment book: booked times in ink (navy),
+   open times pencilled in (dashed), Google Calendar busy time hatched, hours nobody can book sunk. */
+.wa-nav { display: flex; gap: var(--space-1); margin-right: auto; margin-left: var(--space-4); }
+.wa-nav a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-3); border-radius: var(--radius-control); font: 600 15px/20px var(--font-text); color: var(--ink-muted); text-decoration: none; }
+.wa-nav a:hover { background: var(--paper-sunk); color: var(--ink); }
+.wa-nav a[aria-current="page"] { color: var(--practitioner); background: var(--practitioner-tint); }
+@media (max-width: 560px) {
+  .wa-header__inner { flex-wrap: wrap; row-gap: 0; padding-top: var(--space-2); }
+  .wa-nav { order: 3; width: 100%; margin: 0 0 var(--space-2); }
+}
+.wa-week { --hour: 56px; display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr)); background: var(--paper); border-radius: 10px; box-shadow: var(--shadow-raised); overflow: hidden; }
+.wa-week__head { display: grid; justify-items: center; padding: var(--space-2) 0; border-left: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font: 600 14px/20px var(--font-text); color: var(--ink-muted); }
+.wa-week__head b { font: 700 20px/26px var(--font-text); font-variant-numeric: tabular-nums; color: var(--ink); }
+.wa-week__head[aria-current="date"], .wa-week__head[aria-current="date"] b { color: var(--practitioner); }
+.wa-week__head[aria-current="date"] { box-shadow: inset 0 -3px 0 var(--practitioner); }
+.wa-week__corner { border-bottom: 1px solid var(--rule); }
+.wa-week__times { display: grid; grid-auto-rows: var(--hour); }
+.wa-week__times span { padding-right: var(--space-2); font: 500 14px/16px var(--font-mono); color: var(--ink-muted); text-align: right; transform: translateY(-8px); }
+.wa-week__times span:first-child { transform: none; }
+.wa-week__day { position: relative; border-left: 1px solid var(--rule); background: repeating-linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px var(--hour)), var(--paper-sunk); }
+.wa-week__open { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px var(--hour)), var(--paper); }
+.wa-week__now { position: absolute; left: 0; right: 0; z-index: 2; height: 2px; background: var(--practitioner); }
+.wa-week__now::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--practitioner); }
+.wa-block { position: absolute; left: 3px; right: 3px; z-index: 1; box-sizing: border-box; display: grid; align-content: start; padding: 2px 6px; border-radius: var(--radius-control); font: 600 14px/18px var(--font-text); overflow: hidden; }
+.wa-block span { font-weight: 400; }
+.wa-block--booked { background: var(--practitioner); color: var(--on-practitioner); }
+.wa-block--held { border: 1.5px dashed var(--practitioner); background: var(--practitioner-tint); color: var(--practitioner); }
+.wa-block--busy { border: 1px solid var(--rule-strong); background: repeating-linear-gradient(135deg, var(--paper-sunk) 0 6px, var(--rule) 6px 8px); color: var(--ink-muted); }
+.wa-block--open { border: 1.5px dashed var(--practitioner); color: var(--practitioner); font: 500 14px/18px var(--font-mono); }
+.wa-keys { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); margin: 0; padding: 0; list-style: none; font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+.wa-keys > li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.wa-keys .wa-block { position: static; width: 18px; height: 18px; padding: 0; }
+.wa-keys .wa-key-off { width: 18px; height: 18px; border-radius: var(--radius-control); background: var(--paper-sunk); box-shadow: inset 0 0 0 1px var(--rule); }
+/* The day as a list, on phones. */
+.wa-agenda { display: grid; margin: 0; padding: 0; list-style: none; border-radius: 10px; background: var(--paper); box-shadow: var(--shadow-raised); overflow: hidden; }
+.wa-agenda > li { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: stretch; gap: var(--space-3); padding: var(--space-2) var(--space-4); border-top: 1px solid var(--rule); }
+.wa-agenda > li:first-child { border-top: 0; }
+.wa-agenda time { padding-top: 10px; font: 500 15px/20px var(--font-mono); color: var(--ink-muted); }
+.wa-agenda .wa-block { position: static; min-height: 40px; padding: 10px var(--space-3); align-content: center; }
+.wa-agenda .wa-block--open { font-family: var(--font-text); font-weight: 600; }
+/* Bookable hours, one row per weekday. */
+.wa-hours { display: grid; margin: 0; padding: 0; list-style: none; }
+.wa-hours > li { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--rule); }
+.wa-hours__times { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--ink-muted); }
+.wa-hours__times .wa-select { width: 120px; font-family: var(--font-mono); }
+@media (max-width: 560px) { .wa-hours > li { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); } }
+.wa-linked { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); border-radius: 10px; background: var(--paper); box-shadow: var(--shadow-raised); font-size: 15px; line-height: 22px; }
+.wa-linked .wa-button { margin-left: auto; }
+.wa-promise { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.wa-promise > li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--space-3); }
+.wa-promise .wa-icon { margin-top: 2px; color: var(--practitioner); }
+/* Patients: finding a practitioner and choosing a time. */
+.wa-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-4); }
+.wa-person { display: grid; gap: var(--space-3); align-content: start; padding: var(--space-6); border-radius: 10px; background: var(--paper); box-shadow: var(--shadow-raised); }
+.wa-person__top { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; gap: var(--space-3); }
+.wa-person__name { margin: 0; font: 700 19px/26px var(--font-text); }
+.wa-person__what { margin: 0; font-size: 15px; line-height: 22px; color: var(--ink-muted); }
+.wa-monogram { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--night); color: var(--on-night); font: 700 20px/1 var(--font-text); letter-spacing: 0.02em; }
+.wa-monogram--large { width: 80px; height: 80px; font-size: 28px; }
+.wa-next { display: flex; align-items: center; gap: var(--space-2); margin: 0; font: 600 15px/22px var(--font-text); color: var(--practitioner); }
+.wa-days { display: flex; gap: var(--space-2); margin: 0; padding: 0 0 var(--space-1); list-style: none; overflow-x: auto; }
+.wa-day { box-sizing: border-box; display: grid; justify-items: center; min-width: 60px; padding: var(--space-2) var(--space-1); border: 1px solid var(--rule-strong); border-radius: var(--radius-control); background: var(--paper); color: var(--ink); font: 600 14px/18px var(--font-text); cursor: pointer; }
+.wa-day b { font: 700 20px/26px var(--font-text); font-variant-numeric: tabular-nums; }
+.wa-day small { font: 400 14px/18px var(--font-text); color: var(--ink-muted); }
+.wa-day[aria-pressed="true"] { border-color: var(--practitioner); background: var(--practitioner); color: var(--on-practitioner); }
+.wa-day[aria-pressed="true"] small { color: inherit; }
+.wa-day:disabled { border-color: var(--rule); background: var(--paper-sunk); color: var(--ink-muted); cursor: not-allowed; }
+.wa-times { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: var(--space-2); }
+.wa-time { min-height: var(--control-height); border: 1px solid var(--practitioner); border-radius: var(--radius-control); background: var(--paper); color: var(--practitioner); font: 600 16px/20px var(--font-mono); font-variant-numeric: tabular-nums; cursor: pointer; }
+.wa-time:hover { background: var(--practitioner-tint); }
+.wa-time[aria-pressed="true"] { background: var(--practitioner); color: var(--on-practitioner); }
+/* The booking itself, as a ticket in Watson's night colours. */
+.wa-ticket { display: grid; gap: var(--space-1); padding: var(--space-4) var(--space-6); border-radius: 10px; background: var(--night); color: var(--on-night); }
+.wa-ticket__when { margin: 0; font: 700 22px/28px var(--font-text); font-variant-numeric: tabular-nums; }
+.wa-ticket__meta { margin: 0; font-size: 15px; line-height: 22px; color: color-mix(in srgb, var(--on-night) 82%, transparent); }
+.wa-ticket .wa-crumb { color: var(--lamp); }
+/* Whether the laptop that runs Watson's engine is on, on Home. */
+.wa-laptop { display: inline-flex; align-items: center; gap: var(--space-2); justify-self: start; padding: 4px var(--space-3) 4px var(--space-2); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--on-night) 10%, transparent); font: 600 14px/20px var(--font-text); }
+.wa-laptop--off { background: var(--lamp-tint); color: var(--lamp-ink); }
+.wa-hero__next { margin: 0; font-size: 15px; line-height: 22px; }
+.wa-hero__next a { color: var(--on-night); font-weight: 600; }

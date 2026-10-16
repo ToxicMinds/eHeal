@@ -11,10 +11,10 @@
   },
   "groups": [],
   "lastChange": {
-    "at": "2026-10-15T04:57:55Z",
+    "at": "2026-10-16T10:30:00Z",
     "by": "Nikhil Shanbhag",
     "via": "Claude Code",
-    "note": "Owner approved the night sign-in: ScreenSignIn and ScreenPhoneSignIn are now the night door with Watson's notebook; the proposal copies are removed. Documents and WhatsApp styles (wa-docs, wa-chat, wa-whatsapp, wa-link) are in the bundle, as built."
+    "note": "Booking and calendar (owner approved 16 Oct): the practitioner's week with Google Calendar (ScreenCalendar, ScreenCalendarConnect, ScreenPhoneCalendar), patients find a practitioner and book (ScreenFind, ScreenPhoneFind, ScreenBook, ScreenPhoneBook, ScreenPhoneBookDetails), Home with the next booking and the laptop's status (ScreenHomeBooked), fill in again after a late document (ScreenFormAgain). New styles: wa-nav, wa-week, wa-block, wa-agenda, wa-hours, wa-linked, wa-promise, wa-people, wa-person, wa-monogram, wa-days, wa-day, wa-times, wa-time, wa-ticket, wa-laptop."
   },
   "layout": "files",
   "libraries": [],
