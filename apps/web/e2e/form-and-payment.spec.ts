@@ -161,6 +161,6 @@ test("a document that arrives after the form was filled in offers to fill the fo
   await expect(late).toContainText("Answers you have already checked stay as you left them.");
   await late.getByRole("button", { name: "Fill in again" }).click();
   await expect(page).toHaveURL(new RegExp(`/consultation/\\?id=${id}$`));
-  await expect(page.getByText("Filling in the form").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Filling in your form" })).toBeVisible();
   expect(problems).toEqual([]);
 });

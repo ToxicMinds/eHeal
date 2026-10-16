@@ -41,6 +41,7 @@ grant execute on function public.whatsapp_due_reminders(), public.whatsapp_remin
 -- The schedule. The functions' address and the secret live in Vault, set once per project by
 -- scripts/configure-schedule.sh; where they are missing (the local stack) the knock does nothing.
 create extension if not exists pg_cron;
+create extension if not exists pg_net;
 
 create function private.knock(p_function text, p_body jsonb) returns void
 language plpgsql security definer set search_path = ''
