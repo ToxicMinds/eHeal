@@ -1,5 +1,5 @@
 // A consultation's fee: typed in euros by the practitioner, stored in cents (fee_cents).
-import { z } from "zod";
+import { z } from "@/lib/zod";
 
 const amount = (fee: string) => Number(fee.replace(",", "."));
 

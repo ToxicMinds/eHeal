@@ -5,7 +5,7 @@ import { CircleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { Notice } from "@/components/status";
 import { loginEmail, useSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
