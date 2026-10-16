@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { euros } from "@/lib/fee";
-import { LaptopStatus } from "@/components/laptop";
+import { EngineStatus } from "@/components/engine-status";
 import { Notice, StatusChip } from "@/components/status";
 import type { ConsultationStatus } from "@/lib/status";
 import { call } from "@/lib/api";
@@ -101,7 +101,7 @@ function Dashboard() {
                 {openToday !== null && <>{openToday === 1 ? "One open time" : `${openToday} open times`} left today · <Link href="/calendar/">Calendar</Link></>}
               </p>
             )}
-            {engine && <LaptopStatus engine={engine} />}
+            {engine && <EngineStatus engine={engine} />}
           </div>
           <Link href="/consultations/new/" className="wa-button wa-button--primary">
             <Plus aria-hidden className="wa-icon" />New consultation

@@ -2,7 +2,7 @@
 
 import { Check, LoaderCircle, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { LaptopLine } from "@/components/laptop";
+import { EngineLine } from "@/components/engine-status";
 import { Notice } from "@/components/status";
 import { engineStatus, type Engine } from "@/lib/engine";
 import { call, explain } from "@/lib/api";
@@ -139,7 +139,7 @@ export function JobPanel({ consultationId, status, onChanged }: {
           </li>
         ))}
       </ol>
-      <LaptopLine engine={engine} now={now}
+      <EngineLine engine={engine} now={now}
         waiting="Your consultation is in line and starts as soon as the laptop is back. Nothing is lost while you wait." />
       <p className="wa-hint">You can leave this page. The transcript appears here when it is ready.</p>
       {job.status === "queued" && (

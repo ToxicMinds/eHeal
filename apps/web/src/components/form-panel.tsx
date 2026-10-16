@@ -3,7 +3,7 @@
 import { LoaderCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { LaptopLine } from "@/components/laptop";
+import { EngineLine } from "@/components/engine-status";
 import { Notice } from "@/components/status";
 import { engineStatus, type Engine } from "@/lib/engine";
 import { call, explain } from "@/lib/api";
@@ -126,8 +126,8 @@ export function FormPanel({ consultationId, status, onChanged }: {
           <LoaderCircle aria-hidden className="wa-icon wa-icon--sm wa-spin" />{" "}
           {job?.status === "processing" ? "Watson is reading the conversation and writing each answer with its quote." : "Waiting for the engine."}
         </p>
-        <LaptopLine engine={engine} now={now} waiting="The form is in line and is filled in as soon as the laptop is back." />
-        <p className="wa-hint">This takes a few minutes on a laptop. You can leave this page.</p>
+        <EngineLine engine={engine} now={now} waiting="The form is in line and is filled in as soon as the laptop is back." />
+        <p className="wa-hint">This takes a few minutes. You can leave this page.</p>
       </section>
     );
   }

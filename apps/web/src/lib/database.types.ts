@@ -262,20 +262,52 @@ export type Database = {
           },
         ]
       }
+      engine_runs: {
+        Row: {
+          engine_user_id: string
+          finished_at: string | null
+          id: string
+          started_at: string
+        }
+        Insert: {
+          engine_user_id: string
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+        }
+        Update: {
+          engine_user_id?: string
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engine_runs_engine_user_id_fkey"
+            columns: ["engine_user_id"]
+            isOneToOne: false
+            referencedRelation: "engines"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       engines: {
         Row: {
           label: string
           last_seen_at: string | null
+          on_demand: boolean
           user_id: string
         }
         Insert: {
           label: string
           last_seen_at?: string | null
+          on_demand?: boolean
           user_id: string
         }
         Update: {
           label?: string
           last_seen_at?: string | null
+          on_demand?: boolean
           user_id?: string
         }
         Relationships: []
@@ -1003,6 +1035,8 @@ export type Database = {
         }
         Returns: Json
       }
+      engine_run_finished: { Args: { p_run_id: string }; Returns: Json }
+      engine_run_started: { Args: never; Returns: Json }
       engine_status: { Args: never; Returns: Json }
       fill_form_again: { Args: { p_consultation_id: string }; Returns: Json }
       find_practitioners: { Args: never; Returns: Json }

@@ -9,6 +9,7 @@ import shutil
 import tempfile
 import threading
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -133,6 +134,27 @@ class Heartbeat(threading.Thread):
         self._finished.set()
 
 
+def on_demand(
+    step: Callable[[], bool],
+    finish: Callable[[], bool],
+    idle_seconds: float,
+    poll_seconds: float,
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
+    """An engine started on demand (decision 0009): works until nothing has come for `idle_seconds`,
+    then stops, unless `finish` says work arrived just as it was stopping."""
+    while True:
+        last_work = clock()
+        while clock() - last_work < idle_seconds:
+            if step():
+                last_work = clock()
+            else:
+                sleep(poll_seconds)
+        if finish():
+            return
+
+
 class Engine:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -151,13 +173,30 @@ class Engine:
             compute_type=self.settings.compute_type,
         )
         while True:
-            try:
-                worked = self.run_once()
-            except Exception as exc:
-                log_event("engine.poll_failed", exception_type=type(exc).__name__)
-                worked = False
-            if not worked:
+            if not self._step():
                 time.sleep(self.settings.poll_seconds)
+
+    def run_on_demand(self) -> None:
+        """In the cloud: started when work waits, stopped when there is none (decision 0009)."""
+        run_id = self.main.rpc("engine_run_started", {})["run_id"]
+        log_event(
+            "engine.started_on_demand", model=self.settings.model, device=self.settings.device
+        )
+        on_demand(
+            self._step,
+            lambda: bool(self.main.rpc("engine_run_finished", {"p_run_id": run_id}).get("ok")),
+            self.settings.idle_seconds,
+            self.settings.poll_seconds,
+        )
+        log_event("engine.stopped_on_demand")
+
+    def _step(self) -> bool:
+        """One job, if there is one. A failure is logged and counts as nothing done."""
+        try:
+            return self.run_once()
+        except Exception as exc:
+            log_event("engine.poll_failed", exception_type=type(exc).__name__)
+            return False
 
     def run_once(self) -> bool:
         """Claims and processes one job. False when there was nothing to do."""

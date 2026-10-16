@@ -363,3 +363,77 @@ def test_a_photo_of_a_slovak_lab_report_is_read_with_its_diacritics() -> None:
         "znížené zásoby železa",
     ):
         assert words in page
+
+
+class TestOnDemand:
+    """An engine started on demand in the cloud (decision 0009): it works until nothing has come for
+    a while, then stops, unless work arrived just as it was stopping."""
+
+    class Clock:
+        def __init__(self) -> None:
+            self.now = 0.0
+
+        def __call__(self) -> float:
+            return self.now
+
+        def sleep(self, seconds: float) -> None:
+            self.now += seconds
+
+    def test_it_works_while_there_is_work_and_stops_once_idle(self) -> None:
+        from clinical_worker.engine import on_demand
+
+        clock = self.Clock()
+        jobs = [True, True]  # two jobs waiting, each taking 30 seconds
+        steps: list[float] = []
+
+        def step() -> bool:
+            steps.append(clock.now)
+            if jobs:
+                jobs.pop()
+                clock.now += 30
+                return True
+            return False
+
+        on_demand(
+            step,
+            finish=lambda: True,
+            idle_seconds=150,
+            poll_seconds=10,
+            clock=clock,
+            sleep=clock.sleep,
+        )
+        assert steps[:3] == [0, 30, 60]
+        assert clock.now == 210  # the last job ended at 60; then 150 seconds without work
+        assert len(steps) == 2 + 15
+
+    def test_it_carries_on_when_work_arrives_as_it_stops(self) -> None:
+        from clinical_worker.engine import on_demand
+
+        clock = self.Clock()
+        answers = [False, True]  # the database refuses the first stop: a job has just arrived
+        late_job = [True]
+        done: list[float] = []
+
+        def step() -> bool:
+            if clock.now >= 150 and late_job:
+                late_job.pop()
+                done.append(clock.now)
+                return True
+            return False
+
+        on_demand(
+            step,
+            finish=lambda: answers.pop(0),
+            idle_seconds=150,
+            poll_seconds=10,
+            clock=clock,
+            sleep=clock.sleep,
+        )
+        assert done == [150]
+        assert answers == []
+        assert clock.now == 300
+
+    def test_the_idle_time_outlasts_a_lost_job_lease(self) -> None:
+        # A job whose engine vanished is claimable again after two minutes; an engine started again
+        # by Modal must still be there to claim it.
+        assert load_settings({"WATSON_ENV_FILE": "/nonexistent"}).idle_seconds > 120
